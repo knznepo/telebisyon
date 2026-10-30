@@ -75,6 +75,7 @@ This downloads the home screen, installs it, turns on the phone pages, sets the 
 
 - The first time, the TV asks **"Allow USB debugging?"**. Tick **Always allow**, press **OK**, and run the command again if it stopped.
 - If it asks to turn off the TV's own home screen, answer **y** so the Home button opens the new one. `sh undo.sh 192.168.1.50` puts everything back.
+- **TVs with Google TV** (Sony BRAVIA from 2021, TCL, Hisense and others with the "For you" screen): Home keeps opening Google TV. If you're connected over USB or Network debugging (port 5555), run `GOOGLE_TV=1 YES_SETUP=1 sh setup.sh 192.168.1.50` to turn Google TV's home off, then restart the TV once. On a **Chromecast with Google TV** don't: open Telebisyon from the apps row instead. See [step 5 in the README](README.md#download-and-install) for the details.
 - **Optional, recommended:** add a PIN for the phone pages and turn on the Files page: `PIN=123456 FILES=1 sh setup.sh 192.168.1.50`.
 - **Optional:** put photos in the `wallpapers` folder inside the Telebisyon folder first, and they're copied to the TV. You can also add them later from your phone.
 
@@ -115,7 +116,7 @@ See **"Can Home Assistant control the TV?"** in [README.md](README.md#web-page) 
 | The pages don't open | The TV must be on and on the same Wi-Fi. Run `sh messages.sh 192.168.1.50` again. |
 | The TV's clock is wrong | `sh clock.sh 192.168.1.50` turns on internet time and sets your time zone. |
 | The TV's IP address changed | Use the new one. Setting a fixed IP for the TV in your router stops this from happening. |
-| Home opens the TV's old home screen | Run `sh setup.sh 192.168.1.50` again and answer **y** when asked. |
+| Home opens the TV's old home screen | Run `sh setup.sh 192.168.1.50` again and answer **y** when asked. On Google TV, use `GOOGLE_TV=1 YES_SETUP=1` (see above). |
 | The photo frame never shows | It needs at least one picture, and the TV's own screensaver may start first: set that to start later in the TV's settings. |
 | The avatar shows the wrong letter, or none | It comes from the Google account on the TV when you install. Run `sh setup.sh 192.168.1.50` again after changing accounts, or upload a photo on the Wallpapers page. |
 | Undo everything | `sh undo.sh 192.168.1.50` |

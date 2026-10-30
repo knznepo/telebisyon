@@ -67,15 +67,29 @@ sh setup.sh 192.168.1.50
 This downloads the home screen, installs it, turns on the phone pages, sets the TV's clock and copies any photos in the `wallpapers` folder.
 
 - The first time, the TV asks **"Allow USB debugging?"**. Tick **Always allow**, press **OK**, and run the command again if it stopped.
-- If it asks to turn off the TV's own home screen, answer **y** so the Home button opens Telebisyon. `sh undo.sh 192.168.1.50` puts it back.
 - **Recommended:** add a PIN for the phone pages, and turn on the Files page: `PIN=123456 FILES=1 sh setup.sh 192.168.1.50`.
 
-**5. Turn debugging off** in **Developer options** when you're done. While it's on, other devices on your network can ask to control the TV. Turn it back on only to update or undo.
+**5. Make it open with the Home button.** This depends on your TV:
+
+| Your TV | What to do |
+|---|---|
+| **Android TV** (older Sony, Philips, Xiaomi, TCL, projectors) | Nothing more. `setup.sh` asks to turn off the TV's own home screen: answer **y**. |
+| **A TV with Google TV** (Sony BRAVIA from 2021, TCL, Hisense and others with the Google TV "For you" screen) | Home keeps opening Google TV. Run setup again with: `GOOGLE_TV=1 YES_SETUP=1 sh setup.sh 192.168.1.50` |
+| **Chromecast with Google TV, Google TV Streamer** | Leave it as it is: Home opens Google TV, and you open Telebisyon from the apps row. Everything on your phone still works. |
+
+`GOOGLE_TV=1` turns off (never deletes) Google TV's home screen, and `YES_SETUP=1` also turns off Google TV's setup app if it then takes over Home, which is what Sony BRAVIA needs. Before you use them:
+
+- **Only if you're connected over USB, or with Network debugging (port 5555).** Turning Google TV's home off has left some Google TVs stuck restarting; this way you can always reconnect and run `sh undo.sh 192.168.1.50` to turn everything back on. Over Wireless debugging (pairing code), the connection can drop, so don't.
+- You lose Google TV's own home: "For you" recommendations, profiles and the Google TV rows. Your apps and the Play Store keep working.
+- If it says it's leaving the setup app on because it saved your Wi-Fi, do what it says: forget your Wi-Fi on the TV, join it again, then run it again.
+- Afterwards, restart the TV once and check it starts normally.
+
+**6. Turn debugging off** in **Developer options** when you're done. While it's on, other devices on your network can ask to control the TV. Turn it back on only to update or undo.
 
 [**GUIDE.md**](GUIDE.md) has the same steps in more detail for **Mac, Linux and Windows**.
 
 > [!WARNING]
-> **Google TV and Chromecast with Google TV:** `setup.sh` leaves Google TV's own home screen on. Don't turn it off. On some of these devices that left them stuck restarting. **OLED TVs:** keep the screensaver on so a still picture doesn't burn into the screen. Use it at your own risk; see [TV Detox's notes and warnings](https://github.com/Ansub/tv-detox#notes-and-warnings).
+> **Use it at your own risk:** it turns off system apps, and a few TVs got stuck at the logo or kept restarting. **OLED TVs:** keep the screensaver on so a still picture doesn't burn into the screen. See [TV Detox's notes and warnings](https://github.com/Ansub/tv-detox#notes-and-warnings).
 
 ## Use it
 
