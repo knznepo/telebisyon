@@ -48,7 +48,10 @@ if [ ! -f "$APK" ]; then
     echo "Downloading the latest Telebisyon release…"
     mkdir -p out
     curl -fL --progress-bar -o "$APK" "$RELEASE" || {
-      rm -f "$APK"; echo "Couldn't download $RELEASE. Check the computer is online, or build it yourself (build.sh)." >&2; exit 1; }
+      rm -f "$APK"
+      echo "Couldn't download $RELEASE." >&2
+      echo "Check the computer is online. If it says 404, no release is published yet: build it here instead (see build.sh)." >&2
+      exit 1; }
   fi
 fi
 

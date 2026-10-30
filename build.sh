@@ -8,15 +8,19 @@ cd "$(dirname "$0")"
 
 [ -n "$JAVA_HOME" ] || for j in /opt/homebrew/opt/openjdk@17 /usr/local/opt/openjdk@17 /usr/lib/jvm/java-17-openjdk-amd64; do [ -d "$j" ] && JAVA_HOME=$j && break; done
 [ -n "$JAVA_HOME" ] && export PATH="$JAVA_HOME/bin:$PATH"
-SDK=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}
-[ -n "$SDK" ] || for d in /opt/homebrew/share/android-commandlinetools /usr/local/share/android-commandlinetools \
-  "$HOME/Library/Android/sdk" "$HOME/Android/Sdk"; do [ -d "$d/platforms" ] && SDK=$d && break; done
+# The first SDK that has what's needed: ANDROID_HOME can point at one without it.
+has_sdk() { [ -f "$1/platforms/android-34/android.jar" ] && [ -d "$1/build-tools/34.0.0" ]; }
+SDK=
+for d in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" /opt/homebrew/share/android-commandlinetools \
+  /usr/local/share/android-commandlinetools "$HOME/Library/Android/sdk" "$HOME/Android/Sdk"; do
+  [ -n "$d" ] && has_sdk "$d" && SDK=$d && break
+done
 # Else wherever sdkmanager lives: <sdk>/cmdline-tools/<version>/bin/sdkmanager.
 if [ -z "$SDK" ] && command -v sdkmanager >/dev/null 2>&1; then
   sm=$(command -v sdkmanager)
   while [ -L "$sm" ]; do l=$(readlink "$sm"); case "$l" in /*) sm=$l ;; *) sm=$(dirname "$sm")/$l ;; esac; done
   d=$(cd "$(dirname "$sm")/../../.." 2>/dev/null && pwd)
-  [ -d "$d/platforms" ] && SDK=$d
+  has_sdk "$d" && SDK=$d
 fi
 BT=$SDK/build-tools/34.0.0; JAR=$SDK/platforms/android-34/android.jar
 [ -f "$JAR" ] && [ -d "$BT" ] || { echo "Android SDK not found. Set ANDROID_HOME, and install platforms;android-34 and build-tools;34.0.0." >&2; exit 1; }
