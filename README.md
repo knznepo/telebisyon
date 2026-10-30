@@ -6,6 +6,7 @@
 
 Your apps, your photos and a clock on the TV. Messages, wallpapers and Home Assistant control from any phone on your Wi-Fi.
 
+[![Latest release](https://img.shields.io/github/v/release/knznepo/telebisyon?label=download&color=black)](https://github.com/knznepo/telebisyon/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-black)](LICENSE)
 [![Forked from TV Detox](https://img.shields.io/badge/forked_from-TV_Detox-555)](https://github.com/Ansub/tv-detox)
 
@@ -13,571 +14,105 @@ Your apps, your photos and a clock on the TV. Messages, wallpapers and Home Assi
 
 </div>
 
-<table>
-<tr>
-<td width="33%" valign="top"><b>📺 A calm home screen</b><br>Your apps, HDMI inputs, a clock and your own photos. No ads, no sponsored rows.</td>
-<td width="33%" valign="top"><b>📱 Run it from your phone</b><br>See the TV's screen, open apps, send messages and change wallpapers in a browser.</td>
-<td width="33%" valign="top"><b>🏠 Smart home ready</b><br>PiPup-style messages and Home Assistant control: pause, volume, open apps.</td>
-</tr>
-</table>
+Telebisyon is a fork of [**TV Detox**](https://github.com/Ansub/tv-detox) by Ansub Khan. It keeps TV Detox's home screen and adds a web page you open on your phone, your own photos, messages and smart home control.
 
-Telebisyon is a fork of [**TV Detox**](https://github.com/Ansub/tv-detox) by Ansub Khan. It keeps TV Detox's home screen and cleanup, and adds:
+Looking for the **TV cleanup** (turning off bloatware, ads and sponsored rows) or help with a **specific TV brand**? That's TV Detox's part. See [TV Detox's README](https://github.com/Ansub/tv-detox#readme).
+
+## What Telebisyon adds
 
 - **Your own photos** as wallpaper, shuffled on a timer, plus a **photo frame** when the TV sits idle.
-- **A web page on the TV** (`http://<TV_IP>:7979`): a live copy of the home screen whose tiles open on the TV, a message sender, a wallpaper manager, and a **file manager** for the TV's storage and USB drives. Made for phones and computers alike, and can sit behind a **PIN**.
+- **A web page on the TV** (`http://<TV_IP>:7979`) for any phone or computer on your Wi-Fi: a live copy of the home screen whose tiles open on the TV, a message sender, a wallpaper manager and a **file manager** for the TV's storage and USB drives. It can sit behind a **PIN**.
 - **Messages** over whatever is playing, compatible with PiPup, with an optional chime.
 - **Home Assistant control**: what's playing, pause and play, volume, open an app.
 - **Banners for phone apps** that don't come with one, so every tile matches.
 - **An account avatar** next to the network icon.
 - **A clock that keeps itself right**: internet time and your time zone.
-- **One-step setup** with `setup.sh`.
+- **One-step setup** with `setup.sh`, and no build tools needed.
 
-## Get started
+<table>
+<tr>
+<td width="60%" valign="top"><img src="docs/web-home.png" alt="The TV's home screen in a computer's browser"><br><sub>The TV's home screen in a browser. Tap a tile to open it on the TV.</sub></td>
+<td width="40%" valign="top"><img src="docs/web-phone.png" alt="The same page on a phone"><br><sub>The same page on a phone.</sub></td>
+</tr>
+<tr>
+<td valign="top"><img src="docs/web-files.png" alt="The file manager"><br><sub>Files on the TV and USB drives.</sub></td>
+<td valign="top"><img src="docs/web-wallpapers.png" alt="The wallpapers page"><br><sub>Wallpapers, shuffle and the photo frame.</sub></td>
+</tr>
+</table>
 
-The short version, for a computer on the same Wi-Fi as the TV:
+## Download and install
 
-```sh
-sh setup.sh <TV_IP>
-```
+You need a computer on the same Wi-Fi as the TV, only for setup. After that, everything works from your phone.
 
-[**GUIDE.md**](GUIDE.md) walks through it step by step for **Mac, Linux and Windows**: getting the TV ready, installing the tools, and using it afterwards. Read the [notes and warnings](#notes-and-warnings) first.
+**1. Get the TV ready.** On the TV, open **Settings → Device Preferences → About** and press **Build** 7 times until it says you're a developer. Then in **Developer options**, turn on **USB debugging** (and **Network debugging** if you see it). Note the TV's IP address from **Settings → Network & Internet**, for example `192.168.1.50`.
 
-### Cleaning up the TV too
+> Chromecast with Google TV and other newer Google TVs only have **Wireless debugging**, which needs pairing first. See [TV Detox's developer mode help](https://github.com/Ansub/tv-detox#help).
 
-Telebisyon keeps TV Detox's cleanup: turning off bloatware, ads and sponsored rows (apps are turned off, never deleted, and `undo.sh` turns them back on). TV Detox does it with an AI coding assistant such as [Claude Code](https://claude.com/claude-code) or [Codex](https://openai.com/codex), which asks you before every change. Open one in this folder and paste:
+**2. Install adb** on the computer:
 
-```text
-Help me clean up my Android TV and make it faster.
-My TV is a <brand and model>.
-
-1. Before you change anything, tell me in plain words:
-   this turns off system apps, and that has some risk.
-   A few TVs got stuck at the logo or kept restarting,
-   and you're an AI, so you can make mistakes. undo.sh
-   and your undo list turn everything back on. Ask me to
-   confirm I want to go ahead.
-2. Connect to my TV over Wi-Fi. Walk me through anything
-   I need to tap on the TV.
-3. Before changing anything, list every app in plain English:
-   safe to turn off, needed by the TV, and apps I use.
-   Check free memory.
-4. Ask me before every change. Turn apps off instead of
-   deleting them. Keep a list of what you changed and how
-   to undo it.
-5. Never turn off: Google Play services
-   (com.google.android.gms), Google Play, Settings,
-   System UI, setup apps, the keyboard, Bluetooth, my HDMI
-   inputs, the TV's input and tuner framework, or anything
-   else the TV needs to start. On Google TV or Chromecast,
-   also never turn off Google TV's home screen
-   (com.google.android.apps.tv.launcherx). If you're not
-   sure, leave it on.
-6. Install the home screen: run this folder's setup.sh with
-   my TV and these apps: <your apps>.
-7. Turn off animations and make the TV sleep after 5
-   minutes. Then check the model name and ask me if the TV
-   is OLED. Keep the screensaver on unless I say it's not
-   OLED.
-8. Wait 30 seconds after the last change, then restart the
-   TV once and check it starts up normally before you say
-   you're done. Show me free memory before
-   and after.
-9. Once everything is checked, remind me to turn off USB,
-   Network and Wireless debugging (or Developer options)
-   on the TV. Left on, other devices on my network can ask
-   to control it. I only turn it back on for undo.sh or
-   updates.
-```
-
-**Turn debugging off when it's done.** In **Developer options**, turn off **USB debugging**, plus **Network debugging** or **Wireless debugging** if you turned them on. Or turn off **Developer options** completely. (Run `setup.sh` again later? Turn it back on first.)
-
-### Notes and warnings
-
-> [!WARNING]
-> **Do it at your own risk.** This turns off system apps. A few TVs got stuck at the logo or kept restarting, and the AI can make mistakes. It asks you before every change, and [`undo.sh`](#undo) plus its undo list turn everything back on. This is what worked for us, not professional advice. You're responsible for your own TV, and I'm not liable if something goes wrong.
-
-> [!WARNING]
-> **Google TV and Chromecast with Google TV:** don't turn off the TV's own home screen. On some of these devices that left them stuck restarting, and the only fix was a factory reset. Since v1.4.1, `install.sh` leaves it on for Google TV unless you opt in with `GOOGLE_TV=1`. The cleanup still works and makes the TV faster. You just keep Google TV's own home screen.
-
-> [!WARNING]
-> **OLED TVs:** keep the screensaver on. It stops a still picture from burning into the screen. Don't leave any home screen, this one included, on for hours.
-
-> [!NOTE]
-> **Turn debugging off afterwards.** While USB, Network or Wireless debugging is on, other devices on your network can ask to control the TV. Turn it off once setup is done, and back on only to run `undo.sh` or update.
-
-## Help
-
-<details>
-<summary><b>How do I turn on developer mode?</b></summary>
-<br>
-
-1. On the TV, open **Settings**, then **Device Preferences** (or **System**), then **About**.
-2. Press OK on **Build** 7 times until you see "You are now a developer."
-3. Go back, open **Developer options** and turn on **USB debugging**. If you see **Network debugging** or **Wireless debugging**, turn that on too.
-4. The first time your laptop connects, the TV asks "Allow debugging?" Tick "Always allow" and press **Allow**.
-5. When setup is done, turn **USB debugging**, **Network debugging** and **Wireless debugging** off again (or turn off **Developer options**). Turn them back on only to run `undo.sh` or update.
-
-**Chromecast with Google TV and other newer Google TVs** usually only have **Wireless debugging**, which needs a pairing code. `install.sh <TV_IP>` alone won't connect. Instead:
-
-1. In **Developer options**, open **Wireless debugging** and choose **Pair device with pairing code**. Leave that screen open.
-2. On your laptop, run `adb pair <IP>:<pairing port>` with the IP and port shown under the code, and type the code.
-3. Back on the **Wireless debugging** screen, note the IP and port shown there (it's a different port), and run `adb connect <IP>:<port>`.
-4. Use that same address for every script: `sh install.sh <IP>:<port>`, `sh undo.sh <IP>:<port>`.
-
-The port changes every time the TV restarts, and the connection can drop. If a script says it can't reach the TV, pair and connect again. Don't restart the TV halfway through a cleanup.
-
-Menus differ a bit by brand. If you're stuck, ask Claude or Codex: *"I have a \<brand and model\> TV. How can you connect to it from my laptop and take control of it?"*
-
-</details>
-
-<details>
-<summary><b>Which TVs does it work on?</b></summary>
-<br>
-
-Android TV 9 (a real TV), 11 and 12, and Google TV 14 (also a real TCL TV, see [TCL notes](#tcl-notes)). Every change is tested automatically on emulators.
-
-</details>
-
-<details>
-<summary><b>Can I do this on a Fire TV, Roku, Samsung or LG?</b></summary>
-<br>
-
-- **Amazon Fire TV:** partly. Fire TV is Android underneath, so the cleanup works. Amazon blocks changing the home screen on current Fire TVs, so you keep Amazon's. Tell Claude what you want to keep, like Alexa voice search on the remote.
-- **Roku:** no. Roku runs its own system, not Android, so nothing can connect to it to turn things off.
-- **Samsung (Tizen):** no, for the same reason.
-- **LG (webOS):** no. You can still cut down the ads by turning off **Home Promotion** and **Content Recommendation** in the TV's home settings.
-
-If your TV or streaming box runs Android TV or Google TV, it should work. That includes many Sony, TCL, Hisense, Philips and Xiaomi TVs, Chromecast with Google TV and Nvidia Shield. Some of those brands also sell Roku or other non-Android models, so check **Settings > About** if you're not sure.
-
-</details>
-
-<details>
-<summary><b>What about projectors or Android phones?</b></summary>
-<br>
-
-- **Android projectors:** probably. If it has **Developer options** and **USB debugging**, the cleanup should work. Cheap projectors often run a custom Android, so the home screen may act a bit differently.
-- **Android phones:** only the cleanup. The home screen is made for a TV remote, not touch.
-
-</details>
-
-<details>
-<summary><b>Anything to watch out for on Chromecast with Google TV?</b></summary>
-<br>
-
-The cleanup works, but **leave Google TV's own home screen on**, which means you keep Google TV's home screen. At least one Chromecast got stuck restarting after it was turned off, and it needed a factory reset. `install.sh` leaves it on by default since v1.4.1.
-
-- Connect with Wireless debugging (see "How do I turn on developer mode?" above). The plain `install.sh <TV_IP>` won't reach a Chromecast.
-- The YouTube button on the remote can stop working, and some lose casting. Tell Claude to keep casting on if you use it.
-- To make Home open this home screen anyway, turn on **Settings > Accessibility > Home button**. Google TV's home screen stays on: when it opens, this one opens over it. Hold Back on this home screen to go to Google TV's, which then stays until you open "Telebisyon" from its apps row or restart the TV.
-- On Android 13+, a sideloaded app may first need **App info > ⋮ > Allow restricted settings** before the toggle works. Play Protect may warn about the app because it has an accessibility service.
-- If this home screen repeatedly fails to open, redirects stop. Open its "Telebisyon" tile to try again. To recover at any time, turn off **Home button** in Accessibility, or uninstall this app.
-
-If the Accessibility screen freezes, this adb alternative adds our service while keeping TalkBack and any other enabled services (run from a Mac/Linux terminal):
-
-```sh
-adb shell '
-service=com.knz.telebisyon/.HomeButton
-services=$(settings get secure enabled_accessibility_services)
-case "$services" in null|"") services="" ;; esac
-case ":$services:" in
-  *":$service:"*|*":com.knz.telebisyon/com.knz.telebisyon.HomeButton:"*) ;;
-  *) services="${services:+$services:}$service" ;;
-esac
-settings put secure enabled_accessibility_services "$services"
-settings put secure accessibility_enabled 1
-'
-```
-
-To remove only our service with adb, leaving the others enabled:
-
-```sh
-adb shell '
-services=$(settings get secure enabled_accessibility_services)
-keep=""
-IFS=:
-for service in $services; do
-  case "$service" in
-    ""|null|com.knz.telebisyon/.HomeButton|com.knz.telebisyon/com.knz.telebisyon.HomeButton) ;;
-    *) keep="${keep:+$keep:}$service" ;;
-  esac
-done
-if [ -n "$keep" ]; then
-  settings put secure enabled_accessibility_services "$keep"
-else
-  settings delete secure enabled_accessibility_services
-fi
-'
-```
-
-</details>
-
-<details>
-<summary><b>Home opens Google TV's setup screen instead (Sony BRAVIA and others)</b></summary>
-<br>
-
-On some Google TVs, once Google TV's home screen (`com.google.android.apps.tv.launcherx`) is off, Android picks the setup app (`com.google.android.tungsten.setupwraith`) for Home instead. `install.sh` spots this and asks before turning the setup app off too. It only asks if Home opens exactly that app, Google TV's home screen is already off and the TV has finished its first setup. Since v1.4.1 this only happens if you also opt in with `GOOGLE_TV=1`. `YES=1` doesn't turn it off; use `YES_SETUP=1` for that. This worked on a Sony BRAVIA and a TCL Smart TV Pro (Google TV 14), but it hasn't been tested on every TV. `undo.sh` turns it back on.
-
-To undo it by hand:
-
-```sh
-adb shell pm enable com.google.android.tungsten.setupwraith
-adb shell pm enable com.google.android.apps.tv.launcherx
-```
-
-If the TV ever asks to be set up again, or a setup screen won't finish, turn the setup app back on first.
-
-</details>
-
-<details>
-<summary><b>Philips Android TV: Home still opens the old screen</b></summary>
-<br>
-
-On Philips Android TVs such as the 43PUS8535, Home may go through `org.droidtv.homeintentresolver`. Keep the router and remote/system services on. `install.sh` opens Settings, confirms it left the new home screen, then presses Home to test the router before keeping stock launchers off. If verification fails, it restores what it disabled. Restart once to check the new home screen opens at boot; otherwise run `undo.sh` over USB or port 5555.
-
-Plain `check.sh` only reads state; `check.sh <TV_IP> --fix` may open Settings and press Home to test routing. If Home still opens the old screen, send the install output, firmware/Android version, and these results:
-
-```sh
-adb shell cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.HOME
-adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME
-adb shell input keyevent KEYCODE_HOME
-adb shell dumpsys window | grep mCurrentFocus
-```
-
-</details>
-
-<a id="tcl-notes"></a>
-<details>
-<summary><b>TCL TVs: what worked, and what to keep</b></summary>
-<br>
-
-Tested on a TCL Smart TV Pro (Google TV, Android 14, 2.3 GB of RAM). Every step below was followed by a restart, and the TV started normally each time. Free memory went from about 660 MB to about 1 GB, though part of that is just from restarting: the first number was taken after the TV had been on for 15 days.
-
-**Home screen.** With Google TV's home screen off, Home opened the setup app's recovery screen, as in [#16](https://github.com/Ansub/tv-detox/issues/16). Turning the setup app off too (`YES_SETUP=1`) made this home screen stick, through several restarts.
-
-**Connect on port 5555.** If you connected with **Wireless debugging** (pairing code), turning the setup app off ends that connection halfway through `install.sh`. The script then says it couldn't turn the setup app off, even though it did. On this TV, the classic port also worked, so you can reconnect with `adb connect <TV_IP>:5555`, check with `adb shell pm list packages -d`, and run `install.sh` again with that address.
-
-**Safe to turn off**, if you don't use them:
-
-| App | Package |
+| Computer | Command |
 |---|---|
-| TCL account | `com.tcl.usercenter` |
-| Built-in manual | `com.tcl.ocean.instructions` |
-| TCL Channel (free channels with ads) | `com.tcl.channelplus` |
-| TCL recommendations | `com.tcl.waterfall.overseas` |
-| TCL notifications and promos | `com.tcl.messagebox` |
-| Store demo | `com.tcl.esticker`, `com.tcl.exhibit` |
-| Alexa built-in | `com.tcl.smartalexa` |
-| Phone link | `com.tcl.magiconnectfree` |
-| Repair guide, logs | `com.tcl.repairguide`, `com.tcl.logkit` |
-| Screen mirroring | `com.tcl.miracast` |
-| TCL analytics and Alexa hooks | `com.tcl.ttvs` |
-| TCL interactive and ads service | `com.tcl.interactive` |
-| Game bar for consoles | `com.tcl.gamebar` |
-| Photo viewer, USB media player | `com.tcl.gallery`, `com.tcl.ui_mediaCenter` |
-| App manager | `com.tcl.guard` |
-| Bluetooth "listen alone" | `com.tcl.t_solo` |
-| Google TV's screensaver (about 200 MB, keep it on an OLED TV) | `com.google.android.apps.tv.dreamx` |
+| Mac | `brew install android-platform-tools` (with [Homebrew](https://brew.sh)) |
+| Linux | `sudo apt install adb curl` |
+| Windows | Follow the Windows steps in [GUIDE.md](GUIDE.md) |
 
-**Tiles that stay after the cleanup.** Two TCL tiles can still show up on this home screen. **TCL Channel** is `com.tcl.partnercustomizer`, which also handles the TCL button on the remote. **TCL Home** is `com.tcl.dashboard`, TCL's quick settings panel. Both turned off without trouble.
+**3. Download Telebisyon.** Get **Source code (zip)** from the [latest release](https://github.com/knznepo/telebisyon/releases/latest) and unzip it.
 
-**Keep these on:**
-
-- `com.tcl.tvinput`: the HDMI inputs and the tuner.
-- `com.tcl.tv`: Live TV, which is also the screen that shows HDMI. Turning it off breaks every HDMI input, even if you never watch antenna or cable TV.
-- `com.tcl.suspension`: the input picker.
-- `com.tcl.inputmethod.international`: the TCL keyboard.
-- `com.tcl.providers.config`: other TCL apps read their settings from it.
-- `com.tcl.useragreement`: TCL's privacy switches.
-
-**HDMI stopped working?** If the TV sees the device but won't switch to it, `com.tcl.tv` is probably off. `com.tcl.tvinput` only provides the signal; `com.tcl.tv`'s player is the only screen that shows it. Bring it back with `adb shell cmd package install-existing com.tcl.tv` (or `adb shell pm enable com.tcl.tv` if it was turned off rather than removed).
-
-**Optional: the phone keyboard keeps popping up.** On this TV, Google TV's phone-remote service made its phone keyboard the TV's keyboard again after every restart. If that happens to you, first note which keyboard you have now:
+**4. Install it.** In a terminal, in the unzipped folder:
 
 ```sh
-adb shell settings get secure default_input_method
+sh setup.sh 192.168.1.50
 ```
 
-Then switch to the TCL keyboard and turn the phone-remote service off:
+This downloads the home screen, installs it, turns on the phone pages, sets the TV's clock and copies any photos in the `wallpapers` folder.
 
-```sh
-adb shell ime set com.tcl.inputmethod.international/.T_IME
-adb shell pm disable-user --user 0 com.google.android.tv.remote.service
-```
+- The first time, the TV asks **"Allow USB debugging?"**. Tick **Always allow**, press **OK**, and run the command again if it stopped.
+- If it asks to turn off the TV's own home screen, answer **y** so the Home button opens Telebisyon. `sh undo.sh 192.168.1.50` puts it back.
+- **Recommended:** add a PIN for the phone pages, and turn on the Files page: `PIN=123456 FILES=1 sh setup.sh 192.168.1.50`.
 
-This also stops your phone from working as a remote: no typing, voice search or control from the Google TV or Google Home app. `undo.sh` doesn't undo it. To undo it by hand, turn the service back on and switch back to the keyboard you noted:
+**5. Turn debugging off** in **Developer options** when you're done. While it's on, other devices on your network can ask to control the TV. Turn it back on only to update or undo.
 
-```sh
-adb shell pm enable com.google.android.tv.remote.service
-adb shell ime set <the keyboard you noted>
-```
+[**GUIDE.md**](GUIDE.md) has the same steps in more detail for **Mac, Linux and Windows**.
 
-**The TCL logo at startup** is part of the TV's firmware, so it can't be turned off. On this TV, turning it off with the remote (not at the wall) let TCL's quick start wake it straight to the home screen, with no logo.
+> [!WARNING]
+> **Google TV and Chromecast with Google TV:** `setup.sh` leaves Google TV's own home screen on. Don't turn it off. On some of these devices that left them stuck restarting. **OLED TVs:** keep the screensaver on so a still picture doesn't burn into the screen. Use it at your own risk; see [TV Detox's notes and warnings](https://github.com/Ansub/tv-detox#notes-and-warnings).
 
-**TCL Q651G (Google TV, Android 12).** Also tested on two TCL Q651G TVs (43" and 50", 1.8 GB of RAM) with `GOOGLE_TV=1 YES_SETUP=1` on port 5555. Both started normally after every restart, and free memory went from about 560 MB to about 840 MB. A few notes for these TVs:
+## Use it
 
-- **Keep `com.tcl.tv` on**, same as above. It's the only app that shows HDMI on these TVs too.
-- **Wi-Fi was forgotten.** On both TVs, the TV forgot its Wi-Fi network partway through `install.sh`, which also ended the adb connection. The likely cause: Android erases the networks an app saved when that app is turned off, and Google TV's setup app had saved it (see [rule 5](docs/debloat.md#5-never-turn-off-the-app-that-saved-your-wi-fi)). `install.sh` now checks this and leaves the setup app on. To get past it, forget the network on the TV, join it again, and run `install.sh` again. If your TV has an Ethernet port, a cable avoids this.
-- **Optional: Usage & diagnostics** (Settings > Privacy) is part of the setup app, so it won't open once that app is off. Only on these TVs, after `install.sh` turned the setup app off: connect on port 5555 (not Wireless debugging), then turn the setup app on for a moment. While it's on, don't press Home, because Home opens the setup app.
+### On the TV
 
-  ```sh
-  adb shell pm enable com.google.android.tungsten.setupwraith
-  adb shell am start -a com.google.android.settings.USAGE_AND_DIAGNOSTICS_SETTING
-  # switch it off on the TV, press Back, then:
-  adb shell pm disable-user --user 0 com.google.android.tungsten.setupwraith
-  adb shell cmd role add-role-holder --user 0 android.app.role.HOME com.knz.telebisyon
-  adb shell cmd package set-home-activity com.knz.telebisyon/.MainActivity
-  ```
-
-- **The app buttons on the remote** (YouTube, Netflix and others) stopped working, even for apps that are still installed. TCL sends these buttons through one of its own apps first. We haven't confirmed which one. If you need them, try turning `com.tcl.partnercustomizer` back on, then `com.tcl.ttvs`, with `adb shell pm enable <package>`.
-- **No TCL keyboard.** `com.tcl.inputmethod.international` isn't on these TVs, so Gboard is the only keyboard: keep it on. Skip the optional keyboard step above, or set Gboard instead (find its name with `adb shell ime list -s`).
-- **Also turned off without trouble:** TCL TV+ (`com.tcl.tv.plus`, free channels with ads), Samba TV (`tv.samba.ssm.ui`, which recognises what's on screen for ads), `com.tcl.tv.tclhome_passive`, `com.tcl.smartlink.core` and `com.tcl.hotelmenu`. AirPlay (`com.tcl.airplay2`, `com.realtek.airplay2`) can be turned off too if you don't use it.
-
-**TCL 32S4K (Google TV, Android 14, MediaTek MT5867, 954 MB of RAM).** Tested with `GOOGLE_TV=1 YES_SETUP=1` on port 5555, with a restart after every batch. It started normally each time. Measured 4 minutes after a restart, compressed swap in use went from 216 MB to 132 MB and free memory from 380 MB to 419 MB, and the home screen went from 84 MB to 25 MB. Storage went from 1.41 GB to 1.95 GB free. The swap is what you feel on a TV this small: its storage writes at under 10 MB/s.
-
-- **This TV is MediaTek inside, not TCL's usual platform.** There's no `com.tcl.tv` or `com.tcl.tvinput`. HDMI goes through `com.mediatek.wwtv.tvcenter` and `com.mediatek.tvinput`, and the remote's keys through `com.mediatek.tv.service` (check with `adb shell dumpsys window policy`). Keep all three on.
-- **The setup app owned the Wi-Fi.** All saved networks had `cname=com.google.android.tungsten.setupwraith`. We forgot the network on the TV and joined it again before `install.sh`, and Wi-Fi then survived the setup app going off.
-- **Turned off without trouble:** TCL's analytics (`com.tcl.ttvs`, about 26 MB), `com.tcl.partnercustomizer`, `com.tcl.keyhelp`, `com.tcl.messagebox`, `com.tcl.logkit`, `com.tcl.browser`, two store demos (`fusion.android.tv.demo`, `com.mediatek.MtkDemo`) and Google's partner app installer (`android.autoinstalls.config.google.gtvpai`). Every remote button still worked, because on this TV they don't go through TCL's apps.
-- **Also off, because the owner didn't use them:** voice search (`com.google.android.katniss`, about 54 MB), casting, the phone remote and Google TV's screensaver. Each one is worth it on 1 GB of RAM if you can do without the feature.
-- Animations were already off, and the main apps were already compiled (`pm art dump <package>`), so neither helps here.
-
-</details>
-
-<details>
-<summary><b>OnePlus TVs: what worked, and what to keep</b></summary>
-<br>
-
-Tested on a OnePlus TV E00 (QLED, Android TV 11 with Google TV's home screen, 2.9 GB of RAM). The cleanup was followed by a restart, and the TV started normally and opened this home screen by itself. Free memory went from about 1.34 GB to about 1.67 GB, though part of that is just from restarting.
-
-**Home screen.** OnePlus ships two home screens: OxygenPlay (`com.oneplus.tv.launcher`) and Google TV's (`com.google.android.apps.tv.launcherx`). Turning off Google TV's is up to you and at your own risk: it worked on this TV, but it has left some Google TVs (like Chromecast) stuck restarting. Only try it if you can reconnect over USB or port 5555. If you leave it on, the cleanup still works and Home keeps opening Google TV's home screen. If you do turn it off and Home opens Google TV's setup app, run `install.sh` again with `GOOGLE_TV=1 YES_SETUP=1`, the same fix as on the TCL above.
-
-**Safe to turn off**, if you don't use them:
-
-| App | Package |
+| To… | Do this |
 |---|---|
-| OxygenPlay home screen | `com.oneplus.tv.launcher` |
-| OnePlus message board and promos | `com.heytap.tv.msgboard` |
-| Store demo | `fusion.android.tv.demo` |
-| User guide | `com.oneplus.tv.userguide` |
-| Weather | `net.oneplus.weather` |
-| ColorOS Relax | `com.coloros.relax.tv` |
-| Screen mirroring (Miracast) | `com.heytap.optvmiracastservice` |
-| OnePlus phone link | `com.heytap.olink`, `com.heytap.ars.sink` |
-| Bluetooth speaker mode | `com.heytap.tv.btspeaker` |
-| Camera | `com.heytap.tv.camera` |
-| AirScreen | `com.ionitech.airscreen` |
-
-**Keep these on:**
-
-- `com.heytap.tv.livetv`: Live TV, which also opens the HDMI input list. Turning it off can stop you switching inputs.
-- `com.mediatek.*`, `com.oneplus.tv.factory`, `com.oneplus.tv.remote`: the remote's buttons, the input key, the tuner and HDMI.
-
-**Remote buttons.** If you turned Google TV's home screen off, the **Guide** and **All apps** keys do nothing, because they open it. That's expected.
-
-</details>
-
-<details>
-<summary><b>The Claude app says it can't reach my TV</b></summary>
-<br>
-
-The chat in the Claude app (and claude.ai) runs on Anthropic's servers, not on your laptop, so it can't see your TV. You need something that runs on your own laptop: [Claude Code](https://claude.com/claude-code) or [Codex](https://openai.com/codex).
-
-Don't want to pay for either? Skip the AI and use `install.sh` instead (see "Can I install the home screen without AI?" below).
-
-</details>
-
-<details>
-<summary><b>Can I do it from my phone, without a laptop?</b></summary>
-<br>
-
-Not yet. Claude has to run on a computer on the same network as your TV. A phone hotspot is fine as that network, as long as the laptop and TV both join it.
-
-</details>
-
-<details>
-<summary><b>My TV is on Ethernet, not Wi-Fi</b></summary>
-<br>
-
-That works the same. Your laptop talks to the TV over its IP address on your home network, so cable or Wi-Fi doesn't matter. The laptop just has to be on the same network. You'll find the TV's IP in its network settings, or ask Claude to find it.
-
-</details>
-
-<details>
-<summary><b>Can I just do the cleanup and keep my TV's home screen?</b></summary>
-<br>
-
-Yes. Leave out step 5 of the prompt ("Install the home screen"). Your TV looks the same, just with the junk turned off.
-
-</details>
-
-<details>
-<summary><b>How do I know which apps are safe to turn off?</b></summary>
-<br>
-
-First, optionally, check the TV itself:
-
-```sh
-sh supports.sh <TV_IP>
-```
-
-It prints what the TV is (make, model, Android version, RAM), which home screens can take over, how many apps are already turned off, and whether swapping the home screen is a good idea on that set. It changes nothing.
-
-Then run the planner. It reads the TV and prints every app with a verdict, changing nothing:
-
-```sh
-sh candidates.sh <TV_IP>
-```
-
-`never` the TV needs it, `keep` it carries a feature you may use, `safe` common junk, `review` unknown. [docs/debloat.md](docs/debloat.md) explains the rules behind the verdicts, the traps — apps Android restarts whatever you do, the app that carries casting, and package names that hide what the app really is — and the never-touch and commonly-safe lists.
-
-</details>
-
-<details>
-<summary><b>Why not just use Projectivy Launcher?</b></summary>
-<br>
-
-You can. The cleanup is the part that makes the TV faster, and it works with any home screen. This one is here if you want something tiny and open source: one screen, no ads, no account, about 30 MB of RAM.
-
-</details>
-
-<details>
-<summary><b>The TV still opens Live TV or HDMI when it turns on</b></summary>
-<br>
-
-That's a TV setting, not this home screen. Ask it: *"My TV opens Live TV at startup instead of the home screen. Find that setting and turn it off."*
-
-</details>
-
-<details>
-<summary><b>A button on the remote stopped working</b></summary>
-<br>
-
-Some remote buttons are handled by the TV's own home screen or by apps the cleanup turned off. To see which app handles which button, ask Claude: *"Run `adb shell dumpsys window policy` and tell me which apps my remote's global keys go to."* If it's an app other than your TV's home screen, turn that app back on.
-
-**The YouTube button on some Google TVs** (seen on Xiaomi and Vu): it goes to Google TV's own home screen, which `install.sh` turns off, so the button does nothing. Turning that home screen back on brings the button back, but your TV may then open Google TV's home screen again instead of this one. Until there's a safe fix, open YouTube from its tile on the home screen.
-
-</details>
-
-<details>
-<summary><b>An update turned something back on</b></summary>
-<br>
-
-```sh
-sh check.sh <TV_IP>                  # check the home screen is still in charge
-sh check.sh <TV_IP> --fix            # and fix it
-sh check.sh <TV_IP> --fix my-tv.txt  # also check your own list of changes
-```
-
-Your list has one change per line, like `off com.example.app`, `global window_animation_scale 0` or `device_config activity_manager max_cached_processes 4`. Ask Claude to write it from the changes it made.
-
-</details>
-
-<details>
-<summary><b>Can I install the home screen without AI?</b></summary>
-<br>
-
-Yes. You only need `adb`. On a Mac, run `brew install android-platform-tools`. On Windows, download Google's [SDK Platform Tools](https://developer.android.com/tools/releases/platform-tools), unzip it, and run the commands below from Git Bash. Download this repo, then:
-
-```sh
-sh install.sh <TV_IP>                                               # picks your TV apps for you
-sh install.sh <TV_IP> "com.netflix.ninja,com.hulu.livingroomplus"   # or choose them
-sh install.sh <TV_IP> "" "bluetooth,sound,picture"    # add settings shortcuts
-```
-
-Most TVs keep opening their own home screen, so the script offers to turn that off. Nothing is uninstalled.
-
-The cleanup half is a judgement call per app, so it's not automated. `sh candidates.sh <TV_IP>` lists every app with a verdict and [docs/debloat.md](docs/debloat.md) gives the rules, if you'd rather decide yourself than have the AI do it.
-
-</details>
-
-<details>
-<summary><b>How do I change the apps on the home screen?</b></summary>
-<br>
-
-Use the remote. Hold **OK** on an app (or press **Menu**) to:
-
-- **Move** it: use the arrows to slide it to a new spot, then press **OK** to finish.
-- **Replace** it: pick another app to take its place.
-- **Remove** it from the home screen. The app stays installed, and you can add it back any time.
-- **Uninstall** it, for apps you installed yourself. The TV asks you to confirm first.
-- **App info**, for apps that came with the TV. They can't be uninstalled, but from there you can turn them off.
-
-To add an app, pick the **Add app** tile in the bottom row. Add as many apps as you like: they wrap into rows of six, and the page scrolls once there are more than twelve. Your changes are kept until you run `install.sh` with a new app list.
-
-HDMI tiles work the same way. Hold **OK** on one to **Rename** it — TV, PlayStation, Xbox, Switch, Laptop, PC, Blu-ray, Soundbar — or choose **Type a name…** to enter your own with the TV’s keyboard. You can also **Remove** it from the home screen. A removed input comes back by holding **OK** on the **Add app** tile. This only changes this home screen; the TV's own input names stay as they are.
-
-</details>
-
-<details>
-<summary><b>Can I change the background?</b></summary>
-<br>
-
-Yes. Pick the **Settings** tile, then **Wallpaper**. (**TV settings**, right under it, opens the TV's own settings.) There are fourteen gradients. Dark: Dusk (the default), Midnight, Plum, Forest, Graphite, Ocean and Ember. Bright: Sunset, Lagoon, Aurora, Coral, Iris, Meadow and Gold. The background changes as you move through the list; press **OK** to keep one, or **Back** to leave it as it was. They're colours only, no pictures, so every one is just as fast and uses the same memory.
-
-To use your own pictures, upload them from the [TV's web page](#web-page) (`http://<TV_IP>:7979/wallpapers`), or put them in a `wallpapers` folder next to these scripts and run `sh wallpapers.sh <TV_IP>` (or `sh wallpapers.sh <TV_IP> ~/some/folder`). They show up in the same list, after the colours. JPEG, PNG, WebP, BMP or GIF; a landscape picture the size of the screen fits best. They're darkened a little so the labels stay readable. With two or more pictures, the list ends with **Shuffle pictures**: a different one each time you come back to the home screen, or every few minutes if you set that on the web page, fading from one to the next.
-
-**Photo frame:** when Home sits untouched for a while (5 minutes unless you change it on the web page), the apps fade away and your pictures go by full screen with a big clock. Any button brings Home back, and only that: it doesn't also open an app. Set it to **Off** on the web page if you don't want it. Your TV's own screensaver still applies; if it starts first, set it later in the TV's settings.
-
-</details>
-
-<a id="everything"></a>
-<details>
-<summary><b>Can I set everything up in one go?</b></summary>
-<br>
-
-Yes, with `setup.sh`. It builds the home screen, installs it, turns on the TV's web page, sets the clock to keep itself right and copies any pictures in `./wallpapers`:
-
-```sh
-sh setup.sh <TV_IP>
-sh setup.sh <TV_IP> "com.netflix.ninja,com.google.android.youtube.tv"   # your own app list
-WEB=0 sh setup.sh <TV_IP>                                                 # without the web page
-```
-
-It needs Java 17 and the Android SDK to build (see `build.sh`), since the release download doesn't have the web page features. Run it again after any change; it updates what's there. The steps also work one at a time: `build.sh`, `install.sh`, `messages.sh`, `clock.sh` and `wallpapers.sh`.
-
-**The clock:** `clock.sh` turns on the TV's network time, so it corrects its own clock whenever it's online, and sets the time zone to where your internet connection is (or one you name: `sh clock.sh <TV_IP> Europe/London`). TVs have no mobile network to tell them the time zone, so that part is set once, from the laptop.
-
-</details>
+| Open an app | Select it and press **OK** |
+| Move, replace or remove an app | Hold **OK** on it |
+| Add an app | **Add app** tile |
+| Rename an HDMI input | Hold **OK** on it |
+| Change the wallpaper | **Settings** tile → **Wallpaper** |
+| Leave the photo frame | Press any button |
 
 <a id="web-page"></a>
-<details>
-<summary><b>Can I open the TV in a browser?</b></summary>
-<br>
+### From a phone or computer on the same Wi-Fi
 
-Yes. Turn on the TV's web page once (`setup.sh` does it, or `sh messages.sh <TV_IP>`), then open these on any phone or computer on the same Wi-Fi:
-
-| Page | What it does |
+| Open… | To… |
 |---|---|
-| `http://<TV_IP>:7979` | The TV's home screen as it is now: clock, wallpaper and tiles. Tap a tile to open it on the TV. Three extra tiles, **Message**, **Wallpapers** and **Files**, are only here, not on the TV. On a phone the tiles rearrange to fit. |
-| `http://<TV_IP>:7979/message` | Send a message that pops up over whatever is playing. |
-| `http://<TV_IP>:7979/wallpapers` | Upload or delete pictures, pick the wallpaper, shuffle timing and the photo frame. |
-| `http://<TV_IP>:7979/files` | Off until you turn it on (below). The TV's storage and USB drives, like an FTP app: browse, upload (drag files onto the page), download, rename, delete, make folders, and install an APK. |
+| `http://<TV_IP>:7979` | See the TV's home screen and tap an app to open it on the TV |
+| `http://<TV_IP>:7979/message` | Send a message that pops up over whatever is playing |
+| `http://<TV_IP>:7979/wallpapers` | Upload photos, pick the wallpaper, shuffle them, set up the photo frame and your profile picture |
+| `http://<TV_IP>:7979/files` | Browse the TV and USB drives, upload, download, rename, delete and install APKs. Off until you run `sh files.sh <TV_IP>` |
 
-The round avatar next to the network icon is the Google account signed in on the TV: `install.sh` reads its address over adb, and the home screen shows its first letter. Android doesn't let other apps use the account's own photo, so you can upload one on the Wallpapers page instead. Only the letter or photo leaves the TV, never the address. Selecting the avatar opens the TV's account settings.
+Tip: add these to your phone's home screen (in the browser's Share menu, choose **Add to Home Screen**).
 
-Anyone on your Wi-Fi can open these unless you set a PIN. To turn it all off again: `sh messages.sh <TV_IP> off`.
-
-</details>
+## FAQ
 
 <details>
-<summary><b>Can I manage the TV's files from a browser?</b></summary>
+<summary><b>How do I use my own photos?</b></summary>
 <br>
 
-Yes, on `http://<TV_IP>:7979/files`. It's off until you turn it on, because it can see and delete what's on the TV:
+Upload them on `http://<TV_IP>:7979/wallpapers`, or put them in the `wallpapers` folder and run `sh wallpapers.sh <TV_IP>`. On the TV, pick one under **Settings → Wallpaper**, after the fourteen colour gradients. JPEG, PNG, WebP, BMP or GIF; a landscape picture the size of the screen fits best. With two or more, the list ends with **Shuffle pictures**.
 
-```sh
-sh pin.sh <TV_IP> 123456      # first, a PIN for the web pages (recommended)
-sh files.sh <TV_IP>           # turn the Files page on (sh files.sh <TV_IP> off turns it off)
-```
+**Photo frame:** when Home sits untouched for a while (5 minutes unless you change it on the web page), your pictures go by full screen with a big clock. Any button brings Home back. Set it to **Off** on the web page if you don't want it. If the TV's own screensaver starts first, set it later in the TV's settings.
 
-Or in one go: `PIN=123456 FILES=1 sh setup.sh <TV_IP>`.
-
-- **Browse** the TV's storage (Download, Movies, Music, Pictures…) and any USB drive or memory card that's plugged in. Pictures and videos show a preview.
-- **Upload** with the Upload button or by dragging files onto the page, with a progress bar. Any size, as long as there's room (FAT32 USB drives can't hold files over 4 GB).
-- **Open or download** a file: clicking its name opens it in the browser (photos, videos and music play there), and the arrow downloads it.
-- **Rename, delete and make folders.** Deleting a folder deletes everything in it.
-- **Install an APK**: the TV shows Android's own install prompt, and someone presses **Install** on it with the remote. Android doesn't allow skipping that.
-
-`files.sh` gives the home screen "All files access" over adb (on Android 9 and 10, the storage permissions), and permission to ask to install apps. It can only reach shared storage, not other apps' private data.
+The sample photos in `wallpapers/` are from Unsplash; see [credits](#credits).
 
 </details>
 
@@ -585,11 +120,26 @@ Or in one go: `PIN=123456 FILES=1 sh setup.sh <TV_IP>`.
 <summary><b>Can I put the web pages behind a PIN?</b></summary>
 <br>
 
-Yes: `sh pin.sh <TV_IP> 123456` (4 or more digits or letters; longer is safer). Each browser asks for it once and remembers it. After 5 wrong tries, no more are accepted for a minute. `sh pin.sh <TV_IP> off` takes it away, and setting a new PIN signs every browser out.
+Yes: `sh pin.sh <TV_IP> 123456` (4 or more digits or letters; longer is safer). Each browser asks for it once. After 5 wrong tries, no more are accepted for a minute. `sh pin.sh <TV_IP> off` removes it, and a new PIN signs every browser out. Without a PIN, anyone on your Wi-Fi can open the pages.
 
-Messages (`POST /notify`) never need the PIN, so whatever sends PiPup messages keeps working. Everything else does: scripts and Home Assistant send it as an `X-Pin` header (or `?pin=` on the address), as in the Home Assistant example below.
+Messages (`POST /notify`) never need the PIN, so PiPup senders keep working. Everything else does: scripts and Home Assistant send it as an `X-Pin` header.
 
-Running `pin.sh` brings the TV back to Home for a moment, so pick a time nobody's watching.
+To turn the web page off completely: `sh messages.sh <TV_IP> off`.
+
+</details>
+
+<details>
+<summary><b>How does the file manager work?</b></summary>
+<br>
+
+It's off until you turn it on, because it can see and delete what's on the TV:
+
+```sh
+sh pin.sh <TV_IP> 123456      # a PIN first (recommended)
+sh files.sh <TV_IP>           # turn the Files page on (off: sh files.sh <TV_IP> off)
+```
+
+Then on `http://<TV_IP>:7979/files`: browse the TV's storage and any USB drive or memory card, upload by dragging files onto the page, open or download, rename, delete, make folders, and install an APK (someone still has to press **Install** on the TV; Android requires it). It only reaches shared storage, not other apps' private data.
 
 </details>
 
@@ -597,15 +147,18 @@ Running `pin.sh` brings the TV back to Home for a moment, so pick a time nobody'
 <summary><b>Can I send messages to the TV, like PiPup?</b></summary>
 <br>
 
-Yes. Use the [web page](#web-page), or `sh send.sh <TV_IP> "Title" "Message"`. A message shows in a corner over whatever is playing and goes away by itself (after 30 seconds unless you choose otherwise); the remote keeps working the app underneath. `sh send.sh <TV_IP> --cancel` takes it away early.
+Yes. Use the web page, or `sh send.sh <TV_IP> "Title" "Message"`. A message shows in a corner over whatever is playing and goes away by itself (after 30 seconds unless you choose otherwise).
+
+<img src="docs/web-message.png" alt="The message page on a phone" width="300">
 
 ```sh
 DURATION=10 POSITION=4 sh send.sh <TV_IP> "Dinner" "It's ready"     # centred, for 10 seconds
 SOUND=1 sh send.sh <TV_IP> "Door" "Someone's here"                  # with a chime
 IMAGE=http://camera.local/snap.jpg sh send.sh <TV_IP> "Front door" ""
+sh send.sh <TV_IP> --cancel                                          # take it away early
 ```
 
-It speaks PiPup's API on port 7979 (`POST /notify` with `title`, `message`, `duration`, `position`, colours, sizes and `media.image.uri`, plus `"sound": true` for the chime), so Home Assistant or a script already set up for PiPup works as it is.
+It speaks PiPup's API on port 7979 (`POST /notify` with `title`, `message`, `duration`, `position`, colours, sizes and `media.image.uri`, plus `"sound": true` for the chime), so anything already set up for PiPup works as it is.
 
 </details>
 
@@ -639,61 +192,45 @@ sensor:
     json_attributes: [app, media, volume, screen]
 ```
 
-To see what's playing, the home screen is given media access and usage access over adb when the web page is turned on. It only uses them to tell what's playing and which app is open, and `messages.sh <TV_IP> off` takes them away.
+To see what's playing, the home screen gets media and usage access over adb when the web page is turned on. `sh messages.sh <TV_IP> off` takes them away.
 
 </details>
 
 <details>
-<summary><b>Can I get Wi-Fi and Bluetooth one press away?</b></summary>
+<summary><b>The TV's clock is wrong</b></summary>
 <br>
 
-Yes. A small network icon always sits next to the clock. It shows **Wi-Fi** (with signal bars), **Ethernet** or a crossed-out Wi-Fi when you're offline, and opens your network settings. **Bluetooth**, **Sound** and **Picture** shortcuts can join it. They're off unless you ask for them:
-
-```sh
-sh install.sh <TV_IP> "" "bluetooth,sound,picture"   # pick any of them, in any order
-sh install.sh <TV_IP> "" "none"                                    # take them away
-```
-
-Press **Up** from your apps to reach them. A shortcut your TV has no screen for is left out. On TCL TVs, Sound and Picture open TCL's own panels.
-
-</details>
-
-<a id="undo"></a>
-<details>
-<summary><b>How do I undo it?</b></summary>
-<br>
-
-```sh
-sh undo.sh <TV_IP>
-```
-
-This turns your TV's own home screen back on and removes this one. To undo the cleanup too, ask Claude or Codex to reverse everything on its list.
-
-If you turned debugging off after setup, turn it back on first, then off again when you're done.
+`sh clock.sh <TV_IP>` turns on the TV's network time and sets the time zone to where your internet connection is, or one you name: `sh clock.sh <TV_IP> Europe/London`. `setup.sh` already does this.
 
 </details>
 
 <details>
-<summary><b>My TV is stuck restarting</b></summary>
+<summary><b>Where does the avatar come from?</b></summary>
 <br>
 
-Your laptop can often still connect for a few seconds each time the TV starts. Use that to turn everything back on:
+From the Google account signed in on the TV: `install.sh` reads its address over adb and the home screen shows its first letter. Android doesn't let other apps use the account's photo, so you can upload one on the Wallpapers page instead. Only the letter or photo leaves the TV, never the address. Changed accounts? Run `setup.sh` again.
 
-```sh
-adb connect <TV_IP>
-adb wait-for-device
-adb shell pm list packages -d
-```
+</details>
 
-That lists everything that's turned off. Turn each one back on with `adb shell pm enable <package>`, or all of them at once:
+<details>
+<summary><b>How do I update or undo it?</b></summary>
+<br>
 
-```sh
-for p in $(adb shell pm list packages -d | tr -d '\r' | sed 's/package://'); do adb shell pm enable "$p"; done
-```
+**Update:** turn debugging back on, download the new release, and run `sh setup.sh <TV_IP>` again. Your apps, photos and settings stay.
 
-To undo just the home screen, run `sh undo.sh <TV_IP>`. Then restart the TV. You can redo the cleanup later, one app at a time.
+**Undo:** `sh undo.sh <TV_IP>` turns your TV's own home screen back on and removes Telebisyon.
 
-If the laptop never connects, use the TV's recovery mode or a factory reset. How you get there depends on the brand and model, so check your TV maker's support page.
+</details>
+
+<details>
+<summary><b>Everything else: TV cleanup, TV brands, problems</b></summary>
+<br>
+
+Telebisyon's home screen and install scripts come from TV Detox, so its help applies here too:
+
+- [Turning off bloatware and ads](https://github.com/Ansub/tv-detox#readme), with Claude Code or Codex, or `candidates.sh` and [docs/debloat.md](docs/debloat.md)
+- [Which TVs it works on](https://github.com/Ansub/tv-detox#help), and notes for Chromecast, Sony, Philips, TCL and OnePlus
+- [Home opens the wrong screen, a remote button stopped working, the TV is stuck restarting](https://github.com/Ansub/tv-detox#help)
 
 </details>
 
@@ -701,35 +238,33 @@ If the laptop never connects, use the TV's recovery mode or a factory reset. How
 <summary><b>For developers: build it yourself</b></summary>
 <br>
 
-1. Put your default apps in `apps.txt` (package names, one per line). You can also pass them to `install.sh` instead.
-2. Install Java 17 and the Android SDK. On a Mac:
-   ```sh
-   brew install openjdk@17
-   brew install --cask android-commandlinetools
-   sdkmanager "platforms;android-34" "build-tools;34.0.0"
-   ```
-3. `sh build.sh`, then `sh install.sh <TV_IP>` installs your build.
-4. `sh ci/smoke-test.sh <TV_IP or emulator>` checks it all works.
-5. `CLOCK=24 sh install.sh <TV_IP>` sets a 24-hour clock (or `CLOCK=12` for a 12-hour one, `CLOCK=auto` to follow the TV again). On the TV, holding OK on an HDMI tile renames or removes that input.
-6. Testing the input tiles on an emulator, which has no HDMI ports: `FAKE_INPUT=1 sh install.sh <emulator>`. That builds and installs `ci/fake-input` (a TV input service with no hardware behind it) and tells the home screen to show it. `undo.sh` removes it again. It is for emulators only.
+With Java 17 and the Android SDK installed, `setup.sh` and `install.sh` build the home screen instead of downloading it. On a Mac:
 
-HDMI inputs are found on their own. The labels follow the TV's language, with 16 languages built in. To add yours or fix a translation, edit `src/com/knz/telebisyon/Strings.java`. Keep `key.jks`, which is made on your first build: updates must be signed with the same key.
+```sh
+brew install openjdk@17
+brew install --cask android-commandlinetools
+sdkmanager "platforms;android-34" "build-tools;34.0.0"
+sh build.sh                 # builds out/tvhome.apk
+sh install.sh <TV_IP>       # installs your build
+sh ci/smoke-test.sh <TV_IP> # checks it works
+```
 
-It's one screen of plain Java, no libraries, no Gradle. The background is drawn once, the only animation is the focus lift, and it uses about 30 MB of RAM.
+Default apps go in `apps.txt`. The labels follow the TV's language, with 16 languages built in; translations are in `src/com/knz/telebisyon/Strings.java`. Keep `key.jks`, made on your first build: updates must be signed with the same key. Releases are built and signed by GitHub Actions when a `v*` tag is pushed.
+
+It's plain Java, no libraries, no Gradle, and uses about 30 MB of RAM.
 
 </details>
 
 ## Contributing
 
-Pull requests are welcome for fixes that keep working on every TV. Like TV Detox, this sticks to official apps and Android's own settings, so changes that add ad blockers or unofficial apps won't be merged.
+Pull requests are welcome for fixes that keep working on every TV. Like TV Detox, this sticks to official apps and Android's own settings, so changes that add ad blockers or unofficial apps won't be merged. For the cleanup and TV-specific fixes, contribute to [TV Detox](https://github.com/Ansub/tv-detox).
 
 ## Credits
 
-Telebisyon is built on [**TV Detox**](https://github.com/Ansub/tv-detox) by **Ansub Khan**: the home screen, the TV cleanup, the install and undo scripts, and most of the help above are his work. Thank you.
+Telebisyon is built on [**TV Detox**](https://github.com/Ansub/tv-detox) by **Ansub Khan**: the home screen, the TV cleanup and the install and undo scripts are his work. Thank you.
 
-- Watch TV Detox in action: [**Claude Made My Old Android TV Feel Brand New**](https://www.youtube.com/watch?v=fP2SGGVsaB0), the full setup on a real TV in 4 minutes.
-- Ansub's YouTube channel: [@ansubkhan](https://www.youtube.com/@ansubkhan)
-- TV Detox was covered by The Verge, Android Authority, Mashable, Tom's Guide and others: see [press.md](press.md).
+- Watch TV Detox in action: [**Claude Made My Old Android TV Feel Brand New**](https://www.youtube.com/watch?v=fP2SGGVsaB0).
+- TV Detox in the press: see [press.md](press.md).
 
 The sample wallpapers in `wallpapers/` are from [Unsplash](https://unsplash.com), by [Geranimo](https://unsplash.com/@geraninmo), [Jonatan Pie](https://unsplash.com/@r3dmax) and [Wade Meng](https://unsplash.com/@wademm3). See [wallpapers/CREDITS.md](wallpapers/CREDITS.md) for each photo.
 

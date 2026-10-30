@@ -8,7 +8,7 @@
 #   WEB=0 sh setup.sh <TV_IP>      without the web page (just the home screen)
 #   PIN=123456 FILES=1 sh setup.sh <TV_IP>   a PIN for the web page (pin.sh), and the /files page on (files.sh)
 #
-# Needs adb, and to build: Java 17 and the Android SDK (see build.sh).
+# Needs adb. Java 17 and the Android SDK (see build.sh) only to build it yourself.
 set -e
 cd "$(dirname "$0")"
 
@@ -18,8 +18,12 @@ shift
 IP=${TV%%:*}
 
 echo "== 1/6 Building the home screen"
-# Always fresh, so changes made here are what gets installed.
-sh build.sh
+# Always fresh, so changes made here are what gets installed. Without Java and the Android SDK,
+# install.sh downloads the latest release instead.
+if ! sh build.sh; then
+  echo "Can't build on this computer, so the latest release will be downloaded."
+  rm -f out/tvhome.apk; export BUILD=0
+fi
 
 echo "== 2/6 Installing it on the TV"
 sh install.sh "$TV" "$@"

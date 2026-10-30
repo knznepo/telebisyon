@@ -11,7 +11,8 @@
 # On Google TV (Chromecast with Google TV and others) the TV's own home screen is left on.
 # GOOGLE_TV=1 turns it off anyway; only do that if you can reconnect over USB or port 5555.
 #
-# Uses out/tvhome.apk if you built it, otherwise builds it first (build.sh).
+# Uses out/tvhome.apk if you built it, otherwise builds it first (build.sh), or downloads the
+# latest release if this computer can't build.
 set -e
 cd "$(dirname "$0")"
 
@@ -39,10 +40,16 @@ case "$state" in
 esac
 
 APK=out/tvhome.apk
+RELEASE=https://github.com/knznepo/telebisyon/releases/latest/download/tvhome.apk
 if [ ! -f "$APK" ]; then
-  # TV Detox's own release doesn't have Telebisyon's features, so it's built here.
-  echo "Building the home screen first…"
-  sh build.sh
+  # Built here when Java and the Android SDK are installed, else the latest release is downloaded.
+  # BUILD=0 skips straight to the download.
+  if [ "$BUILD" = 0 ] || ! { echo "Building the home screen first…"; sh build.sh; }; then
+    echo "Downloading the latest Telebisyon release…"
+    mkdir -p out
+    curl -fL --progress-bar -o "$APK" "$RELEASE" || {
+      rm -f "$APK"; echo "Couldn't download $RELEASE. Check the computer is online, or build it yourself (build.sh)." >&2; exit 1; }
+  fi
 fi
 
 echo "Installing… If your TV shows a Google Play Protect message, follow it on the TV to allow the install."

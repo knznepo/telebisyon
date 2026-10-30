@@ -14,7 +14,7 @@ You need a computer on the same Wi-Fi as the TV: a Mac, a Linux PC, or a Windows
 
 ### 2. Get the computer ready
 
-Pick your computer. You only do this once.
+Pick your computer. You only do this once. All you need is **adb**, Android's tool for talking to the TV.
 
 <details open>
 <summary><b>Mac</b></summary>
@@ -22,12 +22,8 @@ Pick your computer. You only do this once.
 Install [Homebrew](https://brew.sh) if you don't have it, then in **Terminal**:
 
 ```sh
-brew install android-platform-tools openjdk@17
-brew install --cask android-commandlinetools
-sdkmanager --licenses
-sdkmanager "platforms;android-34" "build-tools;34.0.0"
+brew install android-platform-tools
 ```
-Press **y** to accept each licence.
 
 </details>
 
@@ -38,21 +34,9 @@ In a terminal:
 
 ```sh
 sudo apt update
-sudo apt install -y adb openjdk-17-jdk zip unzip curl
+sudo apt install -y adb curl unzip
 ```
-(Fedora: `sudo dnf install -y android-tools java-17-openjdk-devel zip unzip curl`.)
-
-Then the Android build tools. Download **"Command line tools only"** for Linux from [developer.android.com/studio](https://developer.android.com/studio#command-tools), and run:
-
-```sh
-mkdir -p ~/Android/Sdk/cmdline-tools
-unzip ~/Downloads/commandlinetools-linux-*_latest.zip -d ~/Android/Sdk/cmdline-tools
-mv ~/Android/Sdk/cmdline-tools/cmdline-tools ~/Android/Sdk/cmdline-tools/latest
-export ANDROID_HOME=~/Android/Sdk
-~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --licenses
-~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"
-```
-Press **y** to accept each licence.
+(Fedora: `sudo dnf install -y android-tools curl unzip`.)
 
 </details>
 
@@ -66,38 +50,33 @@ The scripts are made for Mac and Linux, so on Windows they run in **WSL**: Ubunt
    wsl --install -d Ubuntu
    ```
 2. Restart the PC when it asks. **Ubuntu** then opens by itself. Pick a user name and password.
-3. In that Ubuntu window, first download the Android command line tools:
+3. In that Ubuntu window, follow the **Linux** steps above.
+4. Put the Telebisyon folder somewhere Ubuntu can see it. Your Windows Downloads folder is `/mnt/c/Users/<your Windows name>/Downloads`, so for example:
    ```sh
-   mkdir -p ~/Downloads && cd ~/Downloads
-   curl -LO https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-   ```
-   If that link no longer works, get the newest **Linux** one from [developer.android.com/studio](https://developer.android.com/studio#command-tools).
-   Then follow the **Linux** steps above, skipping their download step.
-4. Put the project folder somewhere Ubuntu can see it. Your Windows Downloads folder is `/mnt/c/Users/<your Windows name>/Downloads`, so for example:
-   ```sh
-   cp -r /mnt/c/Users/<your Windows name>/Downloads/<project folder> ~/
+   cp -r /mnt/c/Users/<your Windows name>/Downloads/telebisyon-* ~/telebisyon
    ```
 
 Run every command from here on in the **Ubuntu** window, not PowerShell. It reaches the TV over Wi-Fi like any other computer.
 
 </details>
 
+**Download Telebisyon:** get **Source code (zip)** from the [latest release](https://github.com/knznepo/telebisyon/releases/latest) and unzip it.
+
 ### 3. Install everything
 
 In Terminal (Mac), a terminal (Linux) or the Ubuntu window (Windows):
 
 ```sh
-cd <project folder>
+cd <Telebisyon folder>
 sh setup.sh 192.168.1.50
 ```
 
-This builds the home screen, installs it, turns on the phone pages, sets the TV's clock, and copies any photos.
+This downloads the home screen, installs it, turns on the phone pages, sets the TV's clock, and copies any photos.
 
 - The first time, the TV asks **"Allow USB debugging?"**. Tick **Always allow**, press **OK**, and run the command again if it stopped.
 - If it asks to turn off the TV's own home screen, answer **y** so the Home button opens the new one. `sh undo.sh 192.168.1.50` puts everything back.
 - **Optional, recommended:** add a PIN for the phone pages and turn on the Files page: `PIN=123456 FILES=1 sh setup.sh 192.168.1.50`.
-- **Optional:** put photos in a folder called `wallpapers` inside the project folder first, and they're copied to the TV. You can also add them later from your phone.
-- If it says **"Android SDK not found"**, tell it where you put the SDK: `ANDROID_HOME=~/Android/Sdk sh setup.sh 192.168.1.50` (Linux and Windows), or `ANDROID_HOME=/opt/homebrew/share/android-commandlinetools sh setup.sh 192.168.1.50` (Mac).
+- **Optional:** put photos in the `wallpapers` folder inside the Telebisyon folder first, and they're copied to the TV. You can also add them later from your phone.
 
 ## Use it
 
