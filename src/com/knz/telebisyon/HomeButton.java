@@ -1,4 +1,4 @@
-package com.ansub.tvhome;
+package com.knz.telebisyon;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.ComponentName;

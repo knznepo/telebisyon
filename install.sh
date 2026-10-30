@@ -11,7 +11,7 @@
 # On Google TV (Chromecast with Google TV and others) the TV's own home screen is left on.
 # GOOGLE_TV=1 turns it off anyway; only do that if you can reconnect over USB or port 5555.
 #
-# Uses out/tvhome.apk if you built it, otherwise downloads the latest release.
+# Uses out/tvhome.apk if you built it, otherwise builds it first (build.sh).
 set -e
 cd "$(dirname "$0")"
 
@@ -40,16 +40,16 @@ esac
 
 APK=out/tvhome.apk
 if [ ! -f "$APK" ]; then
-  APK=$(mktemp -d)/tvhome.apk
-  echo "Downloading the home screen…"
-  curl -fsSL -o "$APK" https://github.com/Ansub/tv-detox/releases/latest/download/tvhome.apk
+  # TV Detox's own release doesn't have Telebisyon's features, so it's built here.
+  echo "Building the home screen first…"
+  sh build.sh
 fi
 
 echo "Installing… If your TV shows a Google Play Protect message, follow it on the TV to allow the install."
 if ! out=$(adb -s "$TV" install -r "$APK" 2>&1); then
   case "$out" in
     *UPDATE_INCOMPATIBLE*) echo "Replacing an older copy signed with a different key…"
-                           adb -s "$TV" uninstall com.ansub.tvhome >/dev/null; adb -s "$TV" install "$APK" ;;
+                           adb -s "$TV" uninstall com.knz.telebisyon >/dev/null; adb -s "$TV" install "$APK" ;;
     *) echo "$out" >&2; exit 1 ;;
   esac
 fi
@@ -63,17 +63,23 @@ if [ "$FAKE_INPUT" = 1 ]; then
   adb -s "$TV" install -r "$FAKE" >/dev/null
 fi
 
-if [ -n "$APPS" ] || [ -n "$QUICK" ] || [ -n "$CLOCK" ] || [ -n "$FAKE_INPUT" ]; then
+# The Google account signed in on the TV, for the avatar by the network icon. Only the home screen
+# gets it; it shows the first letter, or a photo uploaded on the web page.
+ACCOUNT=$(adb -s "$TV" shell dumpsys account 2>/dev/null | tr -d '\r' \
+  | sed -n 's/.*Account {name=\([^,]*\), type=com.google}.*/\1/p' | head -1)
+
+if [ -n "$APPS" ] || [ -n "$QUICK" ] || [ -n "$CLOCK" ] || [ -n "$FAKE_INPUT" ] || [ -n "$ACCOUNT" ]; then
   # The stamp makes the app apply this list once, even if Android later replays this start.
   set -- --es stamp "$(date +%s)"
   [ -n "$APPS" ] && set -- "$@" --es apps "\"$APPS\""
   [ -n "$QUICK" ] && set -- "$@" --es quick "\"$QUICK\""
   [ -n "$CLOCK" ] && set -- "$@" --es clock "\"$CLOCK\""
   [ "$FAKE_INPUT" = 1 ] && set -- "$@" --es fakeinputs 1
-  adb -s "$TV" shell am start -n com.ansub.tvhome/.MainActivity "$@" >/dev/null
+  [ -n "$ACCOUNT" ] && set -- "$@" --es account "$ACCOUNT"
+  adb -s "$TV" shell am start -n com.knz.telebisyon/.MainActivity "$@" >/dev/null
 fi
 
-ME=com.ansub.tvhome/.MainActivity
+ME=com.knz.telebisyon/.MainActivity
 # Keeps adb's exit status, so a failed command on the TV counts as failed here.
 sh_tv() { _rc=0; _out=$(adb -s "$TV" shell "$@") || _rc=$?; [ -z "$_out" ] || printf '%s\n' "$_out" | tr -d '\r'; return $_rc; }
 current_home() { sh_tv cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tail -1; }
@@ -100,7 +106,7 @@ home_opens_me() {
     sleep 1
     front=$(foreground)
     case "$front" in
-      com.ansub.tvhome/*|"") ;;
+      com.knz.telebisyon/*|"") ;;
       */*) away=1; break ;;
     esac
   done
@@ -110,7 +116,7 @@ home_opens_me() {
     sleep 1
     front=$(foreground)
     case "$front" in
-      "$ME"|com.ansub.tvhome/com.ansub.tvhome.MainActivity) return 0 ;;
+      "$ME"|com.knz.telebisyon/com.knz.telebisyon.MainActivity) return 0 ;;
     esac
   done
   return 1
@@ -118,7 +124,7 @@ home_opens_me() {
 
 # Make it the default home: the role (Android 10+) and the classic way.
 if [ "$(sh_tv getprop ro.build.version.sdk)" -ge 29 ]; then
-  sh_tv cmd role add-role-holder --user 0 android.app.role.HOME com.ansub.tvhome >/dev/null 2>&1 || true
+  sh_tv cmd role add-role-holder --user 0 android.app.role.HOME com.knz.telebisyon >/dev/null 2>&1 || true
 fi
 sh_tv cmd package set-home-activity "$ME" >/dev/null 2>&1 || true
 
@@ -130,7 +136,7 @@ LAUNCHERS="com.google.android.tvlauncher com.google.android.apps.tv.launcherx co
 # the TV needs them to start, so they, unknown apps and anything always running stay on.
 is_launcher() {
   case "$1" in
-    com.ansub.tvhome|com.android.settings|com.android.tv.settings|com.android.systemui|com.android.provision) return 1 ;;
+    com.knz.telebisyon|com.android.settings|com.android.tv.settings|com.android.systemui|com.android.provision) return 1 ;;
     org.droidtv.homeintentresolver) return 1 ;;
     *setup*|*wraith*|*provision*|*systemui*|*tvcenter*|*.tv.framework*|*.tvinput*) return 1 ;;
   esac
@@ -190,7 +196,7 @@ if [ -n "$may_turn_off" ] && [ "$(current_home)" != "$ME" ]; then
   others=""
   for p in $(home_apps); do
     if is_launcher "$p"; then others="$others $p"; continue; fi
-    case "$p" in com.ansub.tvhome|com.android.settings|com.android.tv.settings|"$WRAITH") ;; *) echo "Leaving $p on: it may be needed for your TV to start." ;; esac
+    case "$p" in com.knz.telebisyon|com.android.settings|com.android.tv.settings|"$WRAITH") ;; *) echo "Leaving $p on: it may be needed for your TV to start." ;; esac
   done
   others=$(echo $others | tr ' ' '\n')
   if [ -n "$others" ]; then
@@ -322,5 +328,5 @@ elif [ -n "$reverted" ]; then
 elif [ "${winner%%/*}" = org.droidtv.homeintentresolver ]; then
   echo "Home didn't reach the new home screen through Philips' Home router; run undo.sh to turn the TV's own home screen back on."
 else
-  echo "Installed, but your TV still opens its own home screen. If it asks which home screen to use, pick \"Home\" and choose Always."
+  echo "Installed, but your TV still opens its own home screen. If it asks which home screen to use, pick \"Telebisyon\" and choose Always."
 fi

@@ -1,60 +1,50 @@
 <div align="center">
 
-# TV Detox
+# Telebisyon
 
-<a href="https://www.skool.com/staffed-claude-code-ai-5304"><img src="https://img.shields.io/badge/Join_the_community_%E2%86%92-FFD400?style=for-the-badge" alt="Join the community" width="340"></a>
+### A calm, fast home screen for Android TV, that you can run from your phone.
 
-### Make an old, slow Android TV fast again.
+Your apps, your photos and a clock on the TV. Messages, wallpapers and Home Assistant control from any phone on your Wi-Fi.
 
-Claude Code or Codex does the work. You just press OK on the remote.
-
-[![Release](https://img.shields.io/github/v/release/Ansub/tv-detox?color=black)](https://github.com/Ansub/tv-detox/releases/latest)
-[![Tests](https://img.shields.io/github/actions/workflow/status/Ansub/tv-detox/build.yml?branch=main&label=tests)](https://github.com/Ansub/tv-detox/actions)
 [![License](https://img.shields.io/badge/license-MIT-black)](LICENSE)
-[![YouTube](https://img.shields.io/badge/YouTube-@ansubkhan-FF0000?logo=youtube&logoColor=white)](https://www.youtube.com/@ansubkhan)
+[![Forked from TV Detox](https://img.shields.io/badge/forked_from-TV_Detox-555)](https://github.com/Ansub/tv-detox)
 
-**As seen on**
-
-[![The Verge](https://img.shields.io/badge/The_Verge-5200FF?style=for-the-badge)](https://www.theverge.com/tech/1016116/vibe-coding-tv-os)
-[![Android Authority](https://img.shields.io/badge/Android_Authority-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://www.androidauthority.com/android-tv-vibe-hacking-remove-ads-bloatware-3725338/)
-[![Mashable](https://img.shields.io/badge/Mashable-00AEEF?style=for-the-badge)](https://mashable.com/tech/smart-tv-ads-claude-code-ai-cleanup)
-[![t3n](https://img.shields.io/badge/t3n-E6007E?style=for-the-badge)](https://t3n.de/news/claude-alter-fernseher-android-tv-1768831/)
-[![Tom's Guide](https://img.shields.io/badge/Tom's_Guide-E1261C?style=for-the-badge)](https://www.tomsguide.com/ai/people-are-using-ai-to-turn-their-smart-tvs-into-dumb-tvs-and-you-might-want-to-do-the-same)
-[![Yahoo Tech](https://img.shields.io/badge/Yahoo_Tech-6001D2?style=for-the-badge)](https://tech.yahoo.com/ai/article/sick-of-seeing-ads-and-clutter-on-your-smart-tv-the-internet-says-ai-can-fix-that-181417392.html)
-[![GIGA](https://img.shields.io/badge/GIGA-E2001A?style=for-the-badge)](https://www.giga.de/tech/ist-euer-smart-tv-zu-langsam-dieses-ki-tool-kann-helfen--01M5HH1C89TWAQX4FYXJBDBQAF)
-[![Computer Hoy](https://img.shields.io/badge/Computer_Hoy-0A64A0?style=for-the-badge)](https://computerhoy.20minutos.es/dispositivos/tv-detox-app-gratis-elimina-obsolescencia-programada-tu-smart-tv-claude-hace-trabajo-tu-solo-tienes-que-pulsar-ok-mando-distancia_7050469_0.html)
-[![AI Times](https://img.shields.io/badge/AI_Times-111111?style=for-the-badge)](https://www.aitimes.com/news/articleView.html?idxno=216547)
-
-[All press coverage →](press.md)
-
-<img src="docs/home-screen.png" alt="The TV Detox home screen" width="100%">
+<img src="docs/home-screen.png" alt="The Telebisyon home screen" width="100%">
 
 </div>
 
 <table>
 <tr>
-<td width="33%" valign="top"><b>🧹 Removes the junk</b><br>Bloatware, ads and sponsored rows, gone.</td>
-<td width="33%" valign="top"><b>📺 A calm home screen</b><br>Your apps, your HDMI inputs and a clock. Nothing else.</td>
-<td width="33%" valign="top"><b>↩️ Undo anytime</b><br>Apps are turned off, never deleted.</td>
+<td width="33%" valign="top"><b>📺 A calm home screen</b><br>Your apps, HDMI inputs, a clock and your own photos. No ads, no sponsored rows.</td>
+<td width="33%" valign="top"><b>📱 Run it from your phone</b><br>See the TV's screen, open apps, send messages and change wallpapers in a browser.</td>
+<td width="33%" valign="top"><b>🏠 Smart home ready</b><br>PiPup-style messages and Home Assistant control: pause, volume, open apps.</td>
 </tr>
 </table>
 
-## Watch it work
+Telebisyon is a fork of [**TV Detox**](https://github.com/Ansub/tv-detox) by Ansub Khan. It keeps TV Detox's home screen and cleanup, and adds:
 
-<a href="https://www.youtube.com/watch?v=fP2SGGVsaB0"><img src="https://img.youtube.com/vi/fP2SGGVsaB0/maxresdefault.jpg" alt="Watch: Claude Made My Old Android TV Feel Brand New" width="100%"></a>
-
-**[▶ Claude Made My Old Android TV Feel Brand New](https://www.youtube.com/watch?v=fP2SGGVsaB0)** · the full setup on a real TV, in 4 minutes.
+- **Your own photos** as wallpaper, shuffled on a timer, plus a **photo frame** when the TV sits idle.
+- **A web page on the TV** (`http://<TV_IP>:7979`): a live copy of the home screen whose tiles open on the TV, a message sender, a wallpaper manager, and a **file manager** for the TV's storage and USB drives. Made for phones and computers alike, and can sit behind a **PIN**.
+- **Messages** over whatever is playing, compatible with PiPup, with an optional chime.
+- **Home Assistant control**: what's playing, pause and play, volume, open an app.
+- **Banners for phone apps** that don't come with one, so every tile matches.
+- **An account avatar** next to the network icon.
+- **A clock that keeps itself right**: internet time and your time zone.
+- **One-step setup** with `setup.sh`.
 
 ## Get started
 
-**1. Turn on developer mode on the TV.**
-Settings → Device Preferences → About → press **Build** 7 times. Then turn on **USB debugging** in **Developer options**. [Stuck?](#help)
-Read the [notes and warnings](#notes-and-warnings) first.
+The short version, for a computer on the same Wi-Fi as the TV:
 
-**2. Open [Claude Code](https://claude.com/claude-code) or [Codex](https://openai.com/codex) on your laptop.**
-The laptop and TV must be on the same Wi-Fi.
+```sh
+sh setup.sh <TV_IP>
+```
 
-**3. Paste this in.**
+[**GUIDE.md**](GUIDE.md) walks through it step by step for **Mac, Linux and Windows**: getting the TV ready, installing the tools, and using it afterwards. Read the [notes and warnings](#notes-and-warnings) first.
+
+### Cleaning up the TV too
+
+Telebisyon keeps TV Detox's cleanup: turning off bloatware, ads and sponsored rows (apps are turned off, never deleted, and `undo.sh` turns them back on). TV Detox does it with an AI coding assistant such as [Claude Code](https://claude.com/claude-code) or [Codex](https://openai.com/codex), which asks you before every change. Open one in this folder and paste:
 
 ```text
 Help me clean up my Android TV and make it faster.
@@ -82,9 +72,8 @@ My TV is a <brand and model>.
    also never turn off Google TV's home screen
    (com.google.android.apps.tv.launcherx). If you're not
    sure, leave it on.
-6. Install the home screen: download
-   https://github.com/Ansub/tv-detox and run its
-   install.sh with my TV and these apps: <your apps>.
+6. Install the home screen: run this folder's setup.sh with
+   my TV and these apps: <your apps>.
 7. Turn off animations and make the TV sleep after 5
    minutes. Then check the model name and ask me if the TV
    is OLED. Keep the screensaver on unless I say it's not
@@ -100,10 +89,7 @@ My TV is a <brand and model>.
    updates.
 ```
 
-That's it. It asks you before every change.
-
-**4. Turn debugging off when it's done.**
-In **Developer options**, turn off **USB debugging**, plus **Network debugging** or **Wireless debugging** if you turned them on. Or turn off **Developer options** completely.
+**Turn debugging off when it's done.** In **Developer options**, turn off **USB debugging**, plus **Network debugging** or **Wireless debugging** if you turned them on. Or turn off **Developer options** completely. (Run `setup.sh` again later? Turn it back on first.)
 
 ### Notes and warnings
 
@@ -148,7 +134,7 @@ Menus differ a bit by brand. If you're stuck, ask Claude or Codex: *"I have a \<
 <summary><b>Which TVs does it work on?</b></summary>
 <br>
 
-Android TV 9 (a real TV), 11 and 12, and Google TV 14 (also a real TCL TV, see [TCL notes](#tcl-notes)). Every change is tested automatically on Android TV 9 and 11 emulators.
+Android TV 9 (a real TV), 11 and 12, and Google TV 14 (also a real TCL TV, see [TCL notes](#tcl-notes)). Every change is tested automatically on emulators.
 
 </details>
 
@@ -182,19 +168,19 @@ The cleanup works, but **leave Google TV's own home screen on**, which means you
 
 - Connect with Wireless debugging (see "How do I turn on developer mode?" above). The plain `install.sh <TV_IP>` won't reach a Chromecast.
 - The YouTube button on the remote can stop working, and some lose casting. Tell Claude to keep casting on if you use it.
-- To make Home open this home screen anyway, turn on **Settings > Accessibility > Home button**. Google TV's home screen stays on: when it opens, this one opens over it. Hold Back on this home screen to go to Google TV's, which then stays until you open "Home" from its apps row or restart the TV.
+- To make Home open this home screen anyway, turn on **Settings > Accessibility > Home button**. Google TV's home screen stays on: when it opens, this one opens over it. Hold Back on this home screen to go to Google TV's, which then stays until you open "Telebisyon" from its apps row or restart the TV.
 - On Android 13+, a sideloaded app may first need **App info > ⋮ > Allow restricted settings** before the toggle works. Play Protect may warn about the app because it has an accessibility service.
-- If this home screen repeatedly fails to open, redirects stop. Open its "Home" tile to try again. To recover at any time, turn off **Home button** in Accessibility, or uninstall this app.
+- If this home screen repeatedly fails to open, redirects stop. Open its "Telebisyon" tile to try again. To recover at any time, turn off **Home button** in Accessibility, or uninstall this app.
 
 If the Accessibility screen freezes, this adb alternative adds our service while keeping TalkBack and any other enabled services (run from a Mac/Linux terminal):
 
 ```sh
 adb shell '
-service=com.ansub.tvhome/.HomeButton
+service=com.knz.telebisyon/.HomeButton
 services=$(settings get secure enabled_accessibility_services)
 case "$services" in null|"") services="" ;; esac
 case ":$services:" in
-  *":$service:"*|*":com.ansub.tvhome/com.ansub.tvhome.HomeButton:"*) ;;
+  *":$service:"*|*":com.knz.telebisyon/com.knz.telebisyon.HomeButton:"*) ;;
   *) services="${services:+$services:}$service" ;;
 esac
 settings put secure enabled_accessibility_services "$services"
@@ -211,7 +197,7 @@ keep=""
 IFS=:
 for service in $services; do
   case "$service" in
-    ""|null|com.ansub.tvhome/.HomeButton|com.ansub.tvhome/com.ansub.tvhome.HomeButton) ;;
+    ""|null|com.knz.telebisyon/.HomeButton|com.knz.telebisyon/com.knz.telebisyon.HomeButton) ;;
     *) keep="${keep:+$keep:}$service" ;;
   esac
 done
@@ -338,8 +324,8 @@ adb shell ime set <the keyboard you noted>
   adb shell am start -a com.google.android.settings.USAGE_AND_DIAGNOSTICS_SETTING
   # switch it off on the TV, press Back, then:
   adb shell pm disable-user --user 0 com.google.android.tungsten.setupwraith
-  adb shell cmd role add-role-holder --user 0 android.app.role.HOME com.ansub.tvhome
-  adb shell cmd package set-home-activity com.ansub.tvhome/.MainActivity
+  adb shell cmd role add-role-holder --user 0 android.app.role.HOME com.knz.telebisyon
+  adb shell cmd package set-home-activity com.knz.telebisyon/.MainActivity
   ```
 
 - **The app buttons on the remote** (YouTube, Netflix and others) stopped working, even for apps that are still installed. TCL sends these buttons through one of its own apps first. We haven't confirmed which one. If you need them, try turning `com.tcl.partnercustomizer` back on, then `com.tcl.ttvs`, with `adb shell pm enable <package>`.
@@ -419,7 +405,7 @@ That works the same. Your laptop talks to the TV over its IP address on your hom
 <summary><b>Can I just do the cleanup and keep my TV's home screen?</b></summary>
 <br>
 
-Yes. Leave out step 6 of the prompt ("Install the home screen"). Your TV looks the same, just with the junk turned off.
+Yes. Leave out step 5 of the prompt ("Install the home screen"). Your TV looks the same, just with the junk turned off.
 
 </details>
 
@@ -527,6 +513,134 @@ HDMI tiles work the same way. Hold **OK** on one to **Rename** it — TV, PlaySt
 
 Yes. Pick the **Settings** tile, then **Wallpaper**. (**TV settings**, right under it, opens the TV's own settings.) There are fourteen gradients. Dark: Dusk (the default), Midnight, Plum, Forest, Graphite, Ocean and Ember. Bright: Sunset, Lagoon, Aurora, Coral, Iris, Meadow and Gold. The background changes as you move through the list; press **OK** to keep one, or **Back** to leave it as it was. They're colours only, no pictures, so every one is just as fast and uses the same memory.
 
+To use your own pictures, upload them from the [TV's web page](#web-page) (`http://<TV_IP>:7979/wallpapers`), or put them in a `wallpapers` folder next to these scripts and run `sh wallpapers.sh <TV_IP>` (or `sh wallpapers.sh <TV_IP> ~/some/folder`). They show up in the same list, after the colours. JPEG, PNG, WebP, BMP or GIF; a landscape picture the size of the screen fits best. They're darkened a little so the labels stay readable. With two or more pictures, the list ends with **Shuffle pictures**: a different one each time you come back to the home screen, or every few minutes if you set that on the web page, fading from one to the next.
+
+**Photo frame:** when Home sits untouched for a while (5 minutes unless you change it on the web page), the apps fade away and your pictures go by full screen with a big clock. Any button brings Home back, and only that: it doesn't also open an app. Set it to **Off** on the web page if you don't want it. Your TV's own screensaver still applies; if it starts first, set it later in the TV's settings.
+
+</details>
+
+<a id="everything"></a>
+<details>
+<summary><b>Can I set everything up in one go?</b></summary>
+<br>
+
+Yes, with `setup.sh`. It builds the home screen, installs it, turns on the TV's web page, sets the clock to keep itself right and copies any pictures in `./wallpapers`:
+
+```sh
+sh setup.sh <TV_IP>
+sh setup.sh <TV_IP> "com.netflix.ninja,com.google.android.youtube.tv"   # your own app list
+WEB=0 sh setup.sh <TV_IP>                                                 # without the web page
+```
+
+It needs Java 17 and the Android SDK to build (see `build.sh`), since the release download doesn't have the web page features. Run it again after any change; it updates what's there. The steps also work one at a time: `build.sh`, `install.sh`, `messages.sh`, `clock.sh` and `wallpapers.sh`.
+
+**The clock:** `clock.sh` turns on the TV's network time, so it corrects its own clock whenever it's online, and sets the time zone to where your internet connection is (or one you name: `sh clock.sh <TV_IP> Europe/London`). TVs have no mobile network to tell them the time zone, so that part is set once, from the laptop.
+
+</details>
+
+<a id="web-page"></a>
+<details>
+<summary><b>Can I open the TV in a browser?</b></summary>
+<br>
+
+Yes. Turn on the TV's web page once (`setup.sh` does it, or `sh messages.sh <TV_IP>`), then open these on any phone or computer on the same Wi-Fi:
+
+| Page | What it does |
+|---|---|
+| `http://<TV_IP>:7979` | The TV's home screen as it is now: clock, wallpaper and tiles. Tap a tile to open it on the TV. Three extra tiles, **Message**, **Wallpapers** and **Files**, are only here, not on the TV. On a phone the tiles rearrange to fit. |
+| `http://<TV_IP>:7979/message` | Send a message that pops up over whatever is playing. |
+| `http://<TV_IP>:7979/wallpapers` | Upload or delete pictures, pick the wallpaper, shuffle timing and the photo frame. |
+| `http://<TV_IP>:7979/files` | Off until you turn it on (below). The TV's storage and USB drives, like an FTP app: browse, upload (drag files onto the page), download, rename, delete, make folders, and install an APK. |
+
+The round avatar next to the network icon is the Google account signed in on the TV: `install.sh` reads its address over adb, and the home screen shows its first letter. Android doesn't let other apps use the account's own photo, so you can upload one on the Wallpapers page instead. Only the letter or photo leaves the TV, never the address. Selecting the avatar opens the TV's account settings.
+
+Anyone on your Wi-Fi can open these unless you set a PIN. To turn it all off again: `sh messages.sh <TV_IP> off`.
+
+</details>
+
+<details>
+<summary><b>Can I manage the TV's files from a browser?</b></summary>
+<br>
+
+Yes, on `http://<TV_IP>:7979/files`. It's off until you turn it on, because it can see and delete what's on the TV:
+
+```sh
+sh pin.sh <TV_IP> 123456      # first, a PIN for the web pages (recommended)
+sh files.sh <TV_IP>           # turn the Files page on (sh files.sh <TV_IP> off turns it off)
+```
+
+Or in one go: `PIN=123456 FILES=1 sh setup.sh <TV_IP>`.
+
+- **Browse** the TV's storage (Download, Movies, Music, Pictures…) and any USB drive or memory card that's plugged in. Pictures and videos show a preview.
+- **Upload** with the Upload button or by dragging files onto the page, with a progress bar. Any size, as long as there's room (FAT32 USB drives can't hold files over 4 GB).
+- **Open or download** a file: clicking its name opens it in the browser (photos, videos and music play there), and the arrow downloads it.
+- **Rename, delete and make folders.** Deleting a folder deletes everything in it.
+- **Install an APK**: the TV shows Android's own install prompt, and someone presses **Install** on it with the remote. Android doesn't allow skipping that.
+
+`files.sh` gives the home screen "All files access" over adb (on Android 9 and 10, the storage permissions), and permission to ask to install apps. It can only reach shared storage, not other apps' private data.
+
+</details>
+
+<details>
+<summary><b>Can I put the web pages behind a PIN?</b></summary>
+<br>
+
+Yes: `sh pin.sh <TV_IP> 123456` (4 or more digits or letters; longer is safer). Each browser asks for it once and remembers it. After 5 wrong tries, no more are accepted for a minute. `sh pin.sh <TV_IP> off` takes it away, and setting a new PIN signs every browser out.
+
+Messages (`POST /notify`) never need the PIN, so whatever sends PiPup messages keeps working. Everything else does: scripts and Home Assistant send it as an `X-Pin` header (or `?pin=` on the address), as in the Home Assistant example below.
+
+Running `pin.sh` brings the TV back to Home for a moment, so pick a time nobody's watching.
+
+</details>
+
+<details>
+<summary><b>Can I send messages to the TV, like PiPup?</b></summary>
+<br>
+
+Yes. Use the [web page](#web-page), or `sh send.sh <TV_IP> "Title" "Message"`. A message shows in a corner over whatever is playing and goes away by itself (after 30 seconds unless you choose otherwise); the remote keeps working the app underneath. `sh send.sh <TV_IP> --cancel` takes it away early.
+
+```sh
+DURATION=10 POSITION=4 sh send.sh <TV_IP> "Dinner" "It's ready"     # centred, for 10 seconds
+SOUND=1 sh send.sh <TV_IP> "Door" "Someone's here"                  # with a chime
+IMAGE=http://camera.local/snap.jpg sh send.sh <TV_IP> "Front door" ""
+```
+
+It speaks PiPup's API on port 7979 (`POST /notify` with `title`, `message`, `duration`, `position`, colours, sizes and `media.image.uri`, plus `"sound": true` for the chime), so Home Assistant or a script already set up for PiPup works as it is.
+
+</details>
+
+<details>
+<summary><b>Can Home Assistant control the TV?</b></summary>
+<br>
+
+Yes, once the web page is on. `GET http://<TV_IP>:7979/status` says what's open, what's playing and the volume. `POST` to `/open` (`{"app": "netflix"}`), `/home`, `/media` (`{"action": "pause"}`: play, pause, playpause, stop, next, previous) and `/volume` (`{"level": 10}`, `{"change": -2}` or `{"mute": true}`). `GET /apps` lists what can be opened. In Home Assistant:
+
+```yaml
+rest_command:
+  tv_pause:
+    url: http://<TV_IP>:7979/media
+    method: post
+    content_type: application/json
+    headers:
+      X-Pin: "123456"          # only if you set a PIN with pin.sh
+    payload: '{"action": "pause"}'
+  tv_message:
+    url: http://<TV_IP>:7979/notify
+    method: post
+    content_type: application/json
+    payload: '{"title": "{{ title }}", "message": "{{ message }}", "duration": 15, "sound": true}'
+sensor:
+  - platform: rest
+    name: TV
+    resource: http://<TV_IP>:7979/status
+    headers:
+      X-Pin: "123456"          # only if you set a PIN
+    value_template: "{{ value_json.media.state if value_json.media is defined else 'idle' }}"
+    json_attributes: [app, media, volume, screen]
+```
+
+To see what's playing, the home screen is given media access and usage access over adb when the web page is turned on. It only uses them to tell what's playing and which app is open, and `messages.sh <TV_IP> off` takes them away.
+
 </details>
 
 <details>
@@ -594,12 +708,12 @@ If the laptop never connects, use the TV's recovery mode or a factory reset. How
    brew install --cask android-commandlinetools
    sdkmanager "platforms;android-34" "build-tools;34.0.0"
    ```
-3. `sh build.sh`, then `sh install.sh <TV_IP>` installs your build instead of the release.
+3. `sh build.sh`, then `sh install.sh <TV_IP>` installs your build.
 4. `sh ci/smoke-test.sh <TV_IP or emulator>` checks it all works.
 5. `CLOCK=24 sh install.sh <TV_IP>` sets a 24-hour clock (or `CLOCK=12` for a 12-hour one, `CLOCK=auto` to follow the TV again). On the TV, holding OK on an HDMI tile renames or removes that input.
 6. Testing the input tiles on an emulator, which has no HDMI ports: `FAKE_INPUT=1 sh install.sh <emulator>`. That builds and installs `ci/fake-input` (a TV input service with no hardware behind it) and tells the home screen to show it. `undo.sh` removes it again. It is for emulators only.
 
-HDMI inputs are found on their own. The labels follow the TV's language, with 16 languages built in. To add yours or fix a translation, edit `src/com/ansub/tvhome/Strings.java`. Keep `key.jks`, which is made on your first build: updates must be signed with the same key.
+HDMI inputs are found on their own. The labels follow the TV's language, with 16 languages built in. To add yours or fix a translation, edit `src/com/knz/telebisyon/Strings.java`. Keep `key.jks`, which is made on your first build: updates must be signed with the same key.
 
 It's one screen of plain Java, no libraries, no Gradle. The background is drawn once, the only animation is the focus lift, and it uses about 30 MB of RAM.
 
@@ -607,16 +721,24 @@ It's one screen of plain Java, no libraries, no Gradle. The background is drawn 
 
 ## Contributing
 
-Pull requests are welcome for fixes that keep working on every TV. This project sticks to official apps and Android's own settings, so changes that add ad blockers or unofficial apps won't be merged. If you want those, fork it and make it yours.
+Pull requests are welcome for fixes that keep working on every TV. Like TV Detox, this sticks to official apps and Android's own settings, so changes that add ad blockers or unofficial apps won't be merged.
+
+## Credits
+
+Telebisyon is built on [**TV Detox**](https://github.com/Ansub/tv-detox) by **Ansub Khan**: the home screen, the TV cleanup, the install and undo scripts, and most of the help above are his work. Thank you.
+
+- Watch TV Detox in action: [**Claude Made My Old Android TV Feel Brand New**](https://www.youtube.com/watch?v=fP2SGGVsaB0), the full setup on a real TV in 4 minutes.
+- Ansub's YouTube channel: [@ansubkhan](https://www.youtube.com/@ansubkhan)
+- TV Detox was covered by The Verge, Android Authority, Mashable, Tom's Guide and others: see [press.md](press.md).
+
+The sample wallpapers in `wallpapers/` are from [Unsplash](https://unsplash.com), by [Geranimo](https://unsplash.com/@geraninmo), [Jonatan Pie](https://unsplash.com/@r3dmax) and [Wade Meng](https://unsplash.com/@wademm3). See [wallpapers/CREDITS.md](wallpapers/CREDITS.md) for each photo.
 
 ---
 
 <div align="center">
 
-Made by **Ansub Khan**. I build things like this with AI every week.
+**Telebisyon** by **knz**, forked from [TV Detox](https://github.com/Ansub/tv-detox) by Ansub Khan.
 
-[**Watch on YouTube →**](https://www.youtube.com/@ansubkhan)
-
-<sub>MIT License</sub>
+<sub>MIT License · see [LICENSE](LICENSE)</sub>
 
 </div>

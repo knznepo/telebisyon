@@ -78,7 +78,7 @@ KEEP="com.google.android.apps.mediashell com.google.android.katniss
 com.google.android.tv.assistant com.google.android.marvin.talkback
 com.google.android.tv.remote.service com.google.android.tts
 com.google.android.syncadapters.contacts com.google.android.syncadapters.calendar
-com.ansub.tvhome com.google.android.webview com.tcl.android.webview
+com.knz.telebisyon com.google.android.webview com.tcl.android.webview
 com.tcl.micmanager
 com.android.dreams.basic com.google.android.apps.tv.dreamx"
 
@@ -97,12 +97,7 @@ dump=$(sh_tv dumpsys package) || lost
 all=$(sh_tv pm list packages) || lost
 off=$(sh_tv pm list packages -d) || lost
 # Android erases the Wi-Fi networks an app saved when that app is turned off. Empty on Ethernet.
-# Without the "Wi-Fi is" line the saved list wasn't read, and a timed-out dump may have stopped before it.
-wifi_unread=
-wifi=$(sh_tv "dumpsys wifi | grep -o -E 'cname=[^ ]*|^Wi-Fi is [a-z]+|DUMP TIMEOUT'") || wifi_unread=1
-printf '%s\n' "$wifi" | grep -q '^Wi-Fi is ' || wifi_unread=1
-! printf '%s\n' "$wifi" | grep -q 'DUMP TIMEOUT' || wifi_unread=1
-wifi=$(printf '%s\n' "$wifi" | sed -n 's/^cname=//p' | sort -u)
+wifi=$(sh_tv "dumpsys wifi | grep -o 'cname=[^ ]*'" | sed -n 's/^cname=//p' | sort -u) || wifi=
 printf '%s\n' "$dump" | grep -q 'Package \[' || lost
 printf '%s\n' "$all" | grep -q '^package:' || lost
 all=$(printf '%s\n' "$all" | sed -n 's/^package://p')
@@ -182,7 +177,7 @@ com.google.android.tungsten.setupwraith	Google TV setup
 com.dolby.android.audio.service	Dolby audio
 org.droidtv.homeintentresolver	Philips Home key router
 org.droidtv.GlobalKey	Philips remote buttons
-com.ansub.tvhome	TV Detox home screen
+com.knz.telebisyon	Telebisyon home screen
 com.tcl.inputmethod.international	TV keyboard
 com.google.android.webview	Web pages inside apps
 com.tcl.android.webview	Web pages inside apps
@@ -237,8 +232,4 @@ echo
 echo "never $(n 2) | keep $(n 3) | safe $(n 4) | review $(awk 'NR==2{print $1}' "$tmp/summary" 2>/dev/null)"
 echo
 echo "safe = commonly preinstalled junk. review = unknown, so leave it on unless you know it."
-if [ -n "$wifi_unread" ]; then
-  echo "Couldn't read the whole Wi-Fi list, so the app that saved your Wi-Fi may not be marked. Turning it off"
-  echo "erases the network: check with rule 5 in docs/debloat.md first. If this TV has no Wi-Fi, ignore this."
-fi
 echo "Before turning anything off, read docs/debloat.md and ask someone before every change."

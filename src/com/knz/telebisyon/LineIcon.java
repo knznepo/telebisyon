@@ -1,4 +1,4 @@
-package com.ansub.tvhome;
+package com.knz.telebisyon;
 
 import android.graphics.Canvas;
 import android.graphics.ColorFilter;
@@ -30,8 +30,13 @@ final class LineIcon extends Drawable {
             1, 80, 165, 1, 40, 165, 2, 0, 85, 60, 1, 85, 100, 0, 120, 60, 1, 120, 100, 0, 155, 60, 1, 155, 100};
     static final int[] PICTURE ={0, 30, 50, 1, 210, 50, 1, 210, 165, 1, 30, 165, 2, 0, 120, 165, 1, 120, 200,
             0, 80, 200, 1, 160, 200};
+    // Two crossing arrows, for the Shuffle wallpaper.
+    static final int[] SHUFFLE = {0, 30, 70, 1, 90, 70, 1, 150, 170, 1, 210, 170, 0, 30, 170, 1, 90, 170,
+            1, 150, 70, 1, 210, 70, 0, 185, 45, 1, 210, 70, 1, 185, 95, 0, 185, 145, 1, 210, 170, 1, 185, 195};
 
     private final int[] ops;
+
+    int[] ops() { return ops; } // for the copy of the home screen in a browser
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private final RectF arc = new RectF();

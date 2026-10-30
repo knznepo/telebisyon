@@ -9,19 +9,27 @@ cd "$(dirname "$0")"
 [ -n "$JAVA_HOME" ] || for j in /opt/homebrew/opt/openjdk@17 /usr/local/opt/openjdk@17 /usr/lib/jvm/java-17-openjdk-amd64; do [ -d "$j" ] && JAVA_HOME=$j && break; done
 [ -n "$JAVA_HOME" ] && export PATH="$JAVA_HOME/bin:$PATH"
 SDK=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}
-[ -n "$SDK" ] || for d in /opt/homebrew/share/android-commandlinetools "$HOME/Library/Android/sdk" "$HOME/Android/Sdk"; do [ -d "$d" ] && SDK=$d && break; done
+[ -n "$SDK" ] || for d in /opt/homebrew/share/android-commandlinetools /usr/local/share/android-commandlinetools \
+  "$HOME/Library/Android/sdk" "$HOME/Android/Sdk"; do [ -d "$d/platforms" ] && SDK=$d && break; done
+# Else wherever sdkmanager lives: <sdk>/cmdline-tools/<version>/bin/sdkmanager.
+if [ -z "$SDK" ] && command -v sdkmanager >/dev/null 2>&1; then
+  sm=$(command -v sdkmanager)
+  while [ -L "$sm" ]; do l=$(readlink "$sm"); case "$l" in /*) sm=$l ;; *) sm=$(dirname "$sm")/$l ;; esac; done
+  d=$(cd "$(dirname "$sm")/../../.." 2>/dev/null && pwd)
+  [ -d "$d/platforms" ] && SDK=$d
+fi
 BT=$SDK/build-tools/34.0.0; JAR=$SDK/platforms/android-34/android.jar
 [ -f "$JAR" ] && [ -d "$BT" ] || { echo "Android SDK not found. Set ANDROID_HOME, and install platforms;android-34 and build-tools;34.0.0." >&2; exit 1; }
 
-rm -rf out; mkdir -p out/classes out/dex out/gen/com/ansub/tvhome
+rm -rf out; mkdir -p out/classes out/dex out/gen/com/knz/telebisyon
 
 # Turn the app list into Apps.java.
 {
-  echo "package com.ansub.tvhome;"
+  echo "package com.knz.telebisyon;"
   echo "final class Apps { static final String[] LIST = {"
   grep -v '^[[:space:]]*#' "${APPS:-apps.txt}" | tr -d ' \t\r' | grep -v '^$' | sed 's/.*/    "&",/'
   echo "}; }"
-} > out/gen/com/ansub/tvhome/Apps.java
+} > out/gen/com/knz/telebisyon/Apps.java
 
 "$BT/aapt2" compile --dir res -o out/res.zip
 "$BT/aapt2" link -o out/base.apk -I "$JAR" --manifest AndroidManifest.xml --min-sdk-version 21 --target-sdk-version 34 out/res.zip

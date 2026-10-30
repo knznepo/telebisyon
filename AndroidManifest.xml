@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.ansub.tvhome" android:versionCode="20" android:versionName="1.5.7">
+    package="com.knz.telebisyon" android:versionCode="20" android:versionName="1.5.7">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
     <!-- Only for the network tile: Wi-Fi, Ethernet or offline, and the Wi-Fi signal. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -29,11 +29,25 @@
         <!-- Google TV's own home screen, which HomeButton opens when Back is held. -->
         <package android:name="com.google.android.apps.tv.launcherx" />
     </queries>
+    <!-- Only for messages (Messages.java, off until messages.sh turns it on): listening on the network
+         for them, and showing them over other apps. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Only for /status: which app is in front. Given by messages.sh over adb, never asked for. -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
+    <!-- Only for the /files page (Files.java, off until files.sh turns it on): the TV's storage and USB
+         drives, and installing an APK sent from it. files.sh gives these over adb; none are asked for. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Lets "Uninstall" in the app menu open Android's uninstall prompt. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
-    <application android:label="Home" android:allowBackup="false" android:banner="@drawable/banner" android:icon="@drawable/icon"
+    <application android:label="Telebisyon" android:allowBackup="false" android:requestLegacyExternalStorage="true" android:banner="@drawable/banner" android:icon="@drawable/icon"
         android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen">
         <activity android:name=".MainActivity"
             android:exported="true"
@@ -52,6 +66,21 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Opt-in: shows messages sent over the network on top of whatever is on the TV. -->
+        <service android:name=".Messages" android:exported="false" android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Shows messages sent from the local network over other apps" />
+        </service>
+        <!-- Gives Android's installer the one APK picked on the /files page. -->
+        <provider android:name=".ApkProvider" android:authorities="com.knz.telebisyon.apk"
+            android:exported="false" android:grantUriPermissions="true" />
+        <!-- Lets /status and /media see what's playing (messages.sh turns it on). -->
+        <service android:name=".MediaListener" android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
         <!-- Opt-in: makes Home open this home screen where the TV's own has to stay on (Google TV). -->
         <service android:name=".HomeButton" android:label="Home button" android:exported="true"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">

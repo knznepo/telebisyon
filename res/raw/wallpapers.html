@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#161113">
+<title>Wallpapers · Telebisyon</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+  .hero { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); gap: clamp(16px, 2.5vw, 32px); align-items: stretch; }
+  @media (max-width: 900px) { .hero { grid-template-columns: 1fr; } }
+  .now { position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius); overflow: hidden; background: #161113 center / cover;
+    border: 1px solid var(--line); box-shadow: 0 24px 60px rgba(0, 0, 0, .5); }
+  .now .tag { position: absolute; left: 16px; bottom: 14px; right: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .now .tag span { background: rgba(0, 0, 0, .55); border-radius: 999px; padding: 6px 12px; font-size: 14px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .settings { display: flex; flex-direction: column; justify-content: center; }
+  .settings select:disabled { opacity: .45; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(140px, 22vw, 260px), 1fr)); gap: clamp(12px, 1.6vw, 24px); }
+  .grid.small { grid-template-columns: repeat(auto-fill, minmax(clamp(110px, 14vw, 170px), 1fr)); }
+  .item { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .item .cap { color: var(--dim); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
+  .item.on .cap { color: var(--text); font-weight: 500; }
+  .tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tile .check { position: absolute; top: 8px; left: 8px; width: 26px; height: 26px; border-radius: 50%; background: #fff; color: var(--ink);
+    display: none; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; }
+  .item.on .check { display: flex; }
+  .del { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff;
+    font-size: 20px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity var(--lift), background var(--lift); z-index: 2; }
+  .del:hover { background: #d33; }
+  .tile:hover .del, .tile:focus-within .del, .del:focus-visible { opacity: 1; }
+  @media (hover: none) { .del { opacity: 1; } }
+  .add svg { width: clamp(28px, 3vw, 40px); height: clamp(28px, 3vw, 40px); }
+  .add .l { font-size: 15px; }
+  .empty { color: var(--faint); align-self: center; }
+  input[type=file] { display: none; }
+  .profile { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .avatar { width: 72px; height: 72px; border-radius: 50%; flex: none; background: var(--glass) center / cover; border: 2px solid rgba(255,255,255,.25);
+    display: flex; align-items: center; justify-content: center; color: var(--faint); font-size: 28px; }
+  .ptext { flex: 1; min-width: 180px; }
+  .ptext .hint { color: var(--faint); font-size: 14px; margin-top: 2px; }
+  .pbtns { display: flex; gap: 10px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<main class="page">
+  <h1>Wallpapers</h1>
+  <p class="lede">Pick what's behind your apps on the TV. Your own photos, or one of the colours.</p>
+
+  <section class="hero">
+    <div class="now" id="now"><div class="tag"><span id="nowName">…</span></div></div>
+    <div class="panel settings">
+      <div class="row">
+        <div><div class="name">Shuffle my pictures</div><div class="hint" id="shuffleHint">A different one each time</div></div>
+        <label class="switch"><input id="shuffle" type="checkbox" aria-label="Shuffle my pictures"><span></span></label>
+      </div>
+      <div class="row">
+        <div class="name">Change picture</div>
+        <select id="every" aria-label="Change picture">
+          <option value="0">When I come back to Home</option>
+          <option value="1">Every minute</option>
+          <option value="5">Every 5 minutes</option>
+          <option value="15">Every 15 minutes</option>
+          <option value="30">Every 30 minutes</option>
+          <option value="60">Every hour</option>
+        </select>
+      </div>
+      <div class="row">
+        <div><div class="name">Photo frame</div><div class="hint">Apps fade away and photos go by with a big clock</div></div>
+        <select id="frameAfter" aria-label="Photo frame">
+          <option value="0">Off</option>
+          <option value="1">After 1 minute idle</option>
+          <option value="2">After 2 minutes idle</option>
+          <option value="5">After 5 minutes idle</option>
+          <option value="10">After 10 minutes idle</option>
+          <option value="15">After 15 minutes idle</option>
+          <option value="30">After 30 minutes idle</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="name">Photo frame speed</div>
+        <select id="frameEvery" aria-label="Photo frame speed">
+          <option value="15">New photo every 15 s</option>
+          <option value="30">New photo every 30 s</option>
+          <option value="60">New photo every minute</option>
+          <option value="300">New photo every 5 minutes</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <h2>Your pictures <small id="count"></small></h2>
+  <div class="grid" id="pictures"></div>
+  <input id="files" type="file" accept="image/*" multiple>
+
+  <h2>Colours</h2>
+  <div class="grid small" id="gradients"></div>
+
+  <h2>Profile picture <small>next to the Wi-Fi icon on the TV</small></h2>
+  <div class="panel profile">
+    <div class="avatar" id="avatar"></div>
+    <div class="ptext">
+      <div class="name" id="ptitle">Your account</div>
+      <div class="hint" id="phint"></div>
+    </div>
+    <div class="pbtns">
+      <button type="button" class="btn primary" id="pup">Upload a photo</button>
+      <button type="button" class="btn" id="pdel" hidden>Remove photo</button>
+    </div>
+  </div>
+  <input id="pfile" type="file" accept="image/*">
+</main>
+<script src="/common.js"></script>
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var state = { pictures: [], gradients: [], gradientColors: [], current: "", every: 0, frameAfter: 5, frameEvery: 60 };
+
+  function load() {
+    return fetch("/wallpapers/list").then(function (r) { return r.json(); }).then(function (s) { state = s; draw(); })
+      .catch(function () { TV.toast("Couldn't reach the TV"); });
+  }
+
+  function el(tag, cls, parent) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+
+  function item(parent, label, on, onPick) {
+    var it = el("div", "item" + (on ? " on" : ""), parent);
+    var t = el("button", "tile", it);
+    t.type = "button";
+    t.setAttribute("aria-label", "Use " + label);
+    t.setAttribute("aria-pressed", on);
+    el("span", "check", t).textContent = "✓";
+    t.addEventListener("click", onPick);
+    el("div", "cap", it).textContent = label;
+    return t;
+  }
+
+  function draw() {
+    var pics = $("pictures");
+    pics.innerHTML = "";
+    var add = el("button", "tile glass add", el("div", "item", pics));
+    add.type = "button";
+    add.innerHTML = '<svg viewBox="0 0 240 240" fill="none" stroke="white" stroke-width="16" stroke-linecap="round"><path d="M120 50V190M50 120H190"/></svg><span class="l">Add pictures</span>';
+    add.addEventListener("click", function () { $("files").click(); });
+    add.parentNode.appendChild(el("div", "cap")).textContent = "From this device";
+
+    state.pictures.forEach(function (name) {
+      var label = name.replace(/\.[^.]+$/, "");
+      var t = item(pics, label, state.current === "image:" + name, function () { choose({ wallpaper: "image:" + name }); });
+      var img = el("img", "", t);
+      img.loading = "lazy";
+      img.alt = "";
+      img.src = "/wallpapers/thumb?name=" + encodeURIComponent(name);
+      var del = el("button", "del", t);
+      del.type = "button";
+      del.setAttribute("aria-label", "Delete " + label);
+      del.textContent = "×";
+      del.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        if (!confirm("Delete " + label + " from the TV?")) return;
+        fetch("/wallpapers/file?name=" + encodeURIComponent(name), { method: "DELETE" })
+          .then(function () { TV.toast("Deleted"); load(); TV.load(); });
+      });
+    });
+    $("count").textContent = state.pictures.length ? state.pictures.length + (state.pictures.length === 1 ? " picture" : " pictures") : "";
+
+    var grads = $("gradients");
+    grads.innerHTML = "";
+    state.gradients.forEach(function (name, i) {
+      var t = item(grads, name, state.current === name, function () { choose({ wallpaper: name }); });
+      t.style.backgroundImage = TV.gradientCss(state.gradientColors[i], t.clientWidth || 240);
+      t.style.backgroundSize = "cover";
+    });
+
+    var two = state.pictures.length >= 2;
+    $("shuffle").checked = state.current === "shuffle";
+    $("shuffle").disabled = !two;
+    $("shuffleHint").textContent = two ? "A different one each time" : "Add two or more pictures first";
+    $("every").value = String(state.every);
+    $("every").disabled = !two;
+    $("frameAfter").value = String(state.frameAfter);
+    $("frameEvery").value = String(state.frameEvery);
+
+    var av = $("avatar");
+    if (state.avatar || state.account) {
+      av.style.backgroundImage = "url('/tile?key=account&r=" + Date.now() + "')";
+      av.textContent = "";
+    } else {
+      av.style.backgroundImage = "none";
+      av.textContent = "?";
+    }
+    $("pdel").hidden = !state.avatar;
+    $("phint").textContent = state.avatar ? "Your photo shows on the TV."
+      : state.account ? "Showing your Google account's first letter. Google doesn't let other apps use the account's own photo, so upload one here."
+      : "No account found on the TV yet. Upload a photo to show one anyway.";
+
+    var name = state.current === "shuffle" ? "Shuffling your pictures"
+      : state.current.indexOf("image:") === 0 ? state.current.slice(6).replace(/\.[^.]+$/, "") : state.current || "Dusk";
+    $("nowName").textContent = "Now on the TV: " + name;
+  }
+
+  function choose(change, quiet) {
+    return fetch("/wallpapers/choose", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(change) })
+      .then(function (r) { return r.json(); })
+      .then(function (r) { if (!quiet) TV.toast(r.ok ? "Saved on the TV" : r.error); return load(); })
+      .then(function () { setTimeout(TV.load, 600); })
+      .catch(function () { TV.toast("Couldn't reach the TV"); });
+  }
+
+  $("shuffle").addEventListener("change", function () {
+    if (this.checked) choose({ wallpaper: "shuffle" });
+    else if (state.pictures.length) choose({ wallpaper: "image:" + state.pictures[0] });
+  });
+  $("every").addEventListener("change", function () {
+    var c = { every: +this.value };
+    if (state.current !== "shuffle") c.wallpaper = "shuffle";
+    choose(c);
+  });
+  $("frameAfter").addEventListener("change", function () { choose({ frameAfter: +this.value }); });
+  $("frameEvery").addEventListener("change", function () { choose({ frameEvery: +this.value }); });
+
+  // Phone photos become screen-sized JPEGs here first: quicker to send, and any format the browser
+  // can show (HEIC on an iPhone, say) turns into one the TV can read.
+  function shrink(file) {
+    return new Promise(function (done) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var scale = Math.min(1, 3840 / Math.max(img.width, img.height));
+        var c = document.createElement("canvas");
+        c.width = Math.round(img.width * scale);
+        c.height = Math.round(img.height * scale);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob(function (blob) {
+          done(blob ? { blob: blob, name: file.name.replace(/\.[^.]*$/, "") + ".jpg" } : { blob: file, name: file.name });
+        }, "image/jpeg", 0.9);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); done({ blob: file, name: file.name }); };
+      img.src = url;
+    });
+  }
+
+  $("files").addEventListener("change", function () {
+    var files = [].slice.call(this.files), ok = 0, failed = 0;
+    this.value = "";
+    if (!files.length) return;
+    files.reduce(function (p, file, i) {
+      return p.then(function () {
+        TV.toast("Uploading " + (i + 1) + " of " + files.length + "…");
+        return shrink(file).then(function (f) {
+          return fetch("/wallpapers/upload?name=" + encodeURIComponent(f.name), { method: "POST", body: f.blob });
+        }).then(function (r) { if (r.ok) ok++; else failed++; }, function () { failed++; });
+      });
+    }, Promise.resolve()).then(function () {
+      TV.toast("Added " + ok + (ok === 1 ? " picture" : " pictures") + (failed ? ", " + failed + " didn't work" : "") + ". Tap one to use it.");
+      load();
+    });
+  });
+
+  // The profile picture: cut square and small here, then sent; the TV keeps a 256-pixel copy.
+  $("pup").addEventListener("click", function () { $("pfile").click(); });
+  $("pfile").addEventListener("change", function () {
+    var file = this.files[0];
+    this.value = "";
+    if (!file) return;
+    var url = URL.createObjectURL(file), img = new Image();
+    img.onload = function () {
+      var side = Math.min(img.width, img.height), c = document.createElement("canvas");
+      c.width = c.height = Math.min(512, side);
+      c.getContext("2d").drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(function (blob) {
+        TV.toast("Uploading…");
+        fetch("/avatar", { method: "POST", body: blob })
+          .then(function (r) { TV.toast(r.ok ? "Profile picture is on the TV" : "That didn't work"); setTimeout(load, 800); })
+          .catch(function () { TV.toast("Couldn't reach the TV"); });
+      }, "image/jpeg", 0.9);
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); TV.toast("This browser can't open that picture"); };
+    img.src = url;
+  });
+  $("pdel").addEventListener("click", function () {
+    fetch("/avatar", { method: "DELETE" }).then(function () { TV.toast("Photo removed"); setTimeout(load, 800); });
+  });
+
+  TV.start("wallpapers");
+  TV.onHome(function (h) { $("now").style.backgroundImage = TV.wallpaperCss(h, $("now").clientWidth); });
+  load();
+</script>
+</body>
+</html>

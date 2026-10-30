@@ -1,4 +1,4 @@
-package com.ansub.fakeinput;
+package com.knz.fakeinput;
 
 import android.content.Context;
 import android.media.tv.TvInputService;

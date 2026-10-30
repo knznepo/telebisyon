@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#161113">
+<title>Files · Telebisyon</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+  .bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .bar .space { color: var(--faint); font-size: 14px; margin-left: auto; }
+  .tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .tools .btn { padding: 10px 18px; }
+  .crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; flex: 1; min-width: 0; font-size: 15px; }
+  .crumbs button { border: 0; background: none; color: var(--dim); padding: 6px 8px; border-radius: 10px; cursor: pointer; max-width: 40vw;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .crumbs button:hover { background: var(--glass); color: var(--text); }
+  .crumbs button:last-child { color: var(--text); font-weight: 500; }
+  .crumbs .sep { color: var(--faint); }
+
+  .list { padding: 6px; }
+  .rowf { display: grid; grid-template-columns: 44px minmax(0, 1fr) 110px 150px auto; align-items: center; gap: 14px;
+    padding: 8px 10px; border-radius: var(--radius-sm); transition: background var(--lift); }
+  .rowf:hover, .rowf:focus-within { background: var(--glass); }
+  .rowf + .rowf { margin-top: 2px; }
+  .ic { width: 44px; height: 44px; border-radius: 10px; background: rgba(255,255,255,.08) center / cover no-repeat; display: flex;
+    align-items: center; justify-content: center; flex: none; }
+  .ic svg { width: 24px; height: 24px; }
+  .name { min-width: 0; }
+  .name a, .name button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 0; cursor: pointer; color: var(--text);
+    text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+  .name a:hover, .name button:hover { text-decoration: underline; }
+  .name .sub { display: none; color: var(--faint); font-size: 13px; margin-top: 2px; }
+  .size, .when { color: var(--dim); font-size: 14px; white-space: nowrap; }
+  .size { text-align: right; }
+  .acts { display: flex; gap: 4px; justify-content: flex-end; }
+  .acts button, .acts a { width: 38px; height: 38px; border-radius: 50%; border: 0; background: none; color: var(--dim); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; transition: background var(--lift), color var(--lift); }
+  .acts button:hover, .acts a:hover { background: var(--glass-hi); color: var(--text); }
+  .acts .danger:hover { background: #d33; color: #fff; }
+  .acts .install { width: auto; padding: 0 14px; border-radius: 999px; background: #fff; color: var(--ink); font-weight: 500; font-size: 14px; }
+  .acts .install:hover { background: #f1f1f1; color: var(--ink); }
+  .acts svg { width: 20px; height: 20px; }
+  .empty { color: var(--faint); text-align: center; padding: 40px 16px; }
+
+  .uploads { margin-bottom: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .up { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; align-items: center; }
+  .up .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .up .p { color: var(--dim); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .up .track { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); overflow: hidden; }
+  .up .track span { display: block; height: 100%; width: 0; background: #fff; transition: width 200ms; }
+  .up.done .track span { background: #34c759; }
+  .up.failed .track span { background: #ff6b5e; }
+
+  #drop { position: fixed; inset: 0; z-index: 20; background: rgba(11, 9, 9, .7); border: 3px dashed rgba(255,255,255,.6); border-radius: 24px;
+    margin: 12px; display: none; align-items: center; justify-content: center; font-size: 26px; font-weight: 500; pointer-events: none; }
+  body.dragging #drop { display: flex; }
+  input[type=file] { display: none; }
+  .off h2 { margin-top: 0; }
+  .off code { background: rgba(255,255,255,.1); padding: 2px 8px; border-radius: 8px; word-break: break-all; }
+
+  @media (max-width: 760px) {
+    .rowf { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; padding: 8px 6px; }
+    .size, .when { display: none; }
+    .name .sub { display: block; }
+    .acts .opt { display: none; }
+    .bar .space { margin-left: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <h1>Files</h1>
+  <p class="lede">What's on the TV and any USB drive in it. Drop files here to send them to the TV.</p>
+
+  <div class="panel off" id="off" hidden>
+    <h2>Files are off</h2>
+    <p class="lede">So nothing on the network can see or change what's on the TV, this page stays off until you turn it on.
+      On your computer, in the Telebisyon folder, run:</p>
+    <p><code id="cmd">sh files.sh &lt;TV_IP&gt;</code></p>
+    <p class="lede">It's a good idea to set a PIN for these pages too: <code id="pcmd">sh pin.sh &lt;TV_IP&gt; 1234</code></p>
+  </div>
+
+  <div id="on" hidden>
+    <div class="bar">
+      <div class="pills" id="roots" role="group" aria-label="Storage"></div>
+      <span class="space" id="space"></span>
+    </div>
+    <div class="tools">
+      <nav class="crumbs" id="crumbs" aria-label="Folder"></nav>
+      <button type="button" class="btn" id="mk">New folder</button>
+      <button type="button" class="btn primary" id="upb">Upload</button>
+    </div>
+    <div class="panel uploads" id="uploads" hidden></div>
+    <div class="panel list" id="list"></div>
+  </div>
+  <input id="pick" type="file" multiple>
+</main>
+<div id="drop">Drop to send to the TV</div>
+<script src="/common.js"></script>
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var info = null, here = null, canInstall = false;
+
+  var ICON = {
+    folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+    file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+    image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/>',
+    video: '<rect x="3" y="5" width="13" height="14" rx="2"/><path d="M16 10l5-3v10l-5-3"/>',
+    audio: '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
+    apk: '<rect x="5" y="9" width="14" height="10" rx="2"/><path d="M8 9a4 4 0 0 1 8 0M9 5l-1-2M15 5l1-2"/>',
+    download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+    rename: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>',
+    trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>'
+  };
+  function svg(name) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICON[name] + "</svg>";
+  }
+  function el(tag, cls, parent) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function kind(name) {
+    var ext = (name.match(/\.([^.]+)$/) || [])[1];
+    ext = ext ? ext.toLowerCase() : "";
+    if (/^(jpe?g|png|gif|webp|bmp|heic|avif)$/.test(ext)) return "image";
+    if (/^(mp4|mkv|webm|mov|avi|m4v|ts|3gp|wmv|flv)$/.test(ext)) return "video";
+    if (/^(mp3|m4a|aac|flac|wav|ogg|opus|wma)$/.test(ext)) return "audio";
+    if (ext === "apk") return "apk";
+    return "file";
+  }
+  function bytes(n) {
+    if (n < 1024) return n + " B";
+    var u = ["KB", "MB", "GB", "TB"], i = -1;
+    do { n /= 1024; i++; } while (n >= 1024 && i < u.length - 1);
+    return (n < 10 ? n.toFixed(1) : Math.round(n)) + " " + u[i];
+  }
+  function when(t) {
+    var d = new Date(t), now = new Date();
+    return d.toDateString() === now.toDateString()
+      ? d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+      : d.toLocaleDateString([], { day: "numeric", month: "short", year: d.getFullYear() === now.getFullYear() ? undefined : "numeric" });
+  }
+  function url(what, path, extra) { return "/files/" + what + "?path=" + encodeURIComponent(path) + (extra || ""); }
+  function join(dir, name) { return dir.replace(/\/$/, "") + "/" + name; }
+
+  function post(what, body) {
+    return fetch("/files/" + what, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "That didn't work"); return j; }); });
+  }
+
+  function start() {
+    return fetch("/files/roots").then(function (r) { return r.json(); }).then(function (r) {
+      info = r;
+      canInstall = r.install;
+      $("off").hidden = r.on;
+      $("on").hidden = !r.on;
+      if (!r.on) {
+        $("cmd").textContent = "sh files.sh " + location.hostname;
+        $("pcmd").textContent = "sh pin.sh " + location.hostname + " 1234";
+        return;
+      }
+      go(decodeURIComponent(location.hash.slice(1)) || r.roots[0].path, true);
+    }).catch(function () { TV.toast("Couldn't reach the TV"); });
+  }
+
+  function rootFor(path) {
+    var best = null;
+    info.roots.forEach(function (r) {
+      if ((path === r.path || path.indexOf(r.path + "/") === 0) && (!best || r.path.length > best.path.length)) best = r;
+    });
+    return best;
+  }
+
+  function go(path, replace) {
+    var hash = "#" + encodeURIComponent(path);
+    if (location.hash !== hash) {
+      if (replace) history.replaceState(null, "", hash); else history.pushState(null, "", hash);
+    }
+    return fetch(url("list", path)).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error); return j; }); })
+      .then(function (d) { here = d; draw(); })
+      .catch(function (e) {
+        TV.toast(e.message || "Couldn't open that");
+        if (!here && info.roots.length && path !== info.roots[0].path) go(info.roots[0].path, true);
+      });
+  }
+
+  function draw() {
+    var root = rootFor(here.path);
+    var roots = $("roots");
+    roots.innerHTML = "";
+    info.roots.forEach(function (r) {
+      var b = el("button", r === root ? "on" : "", roots);
+      b.type = "button";
+      b.textContent = r.name;
+      b.setAttribute("aria-pressed", r === root);
+      b.addEventListener("click", function () { go(r.path); });
+    });
+    $("space").textContent = root ? bytes(root.free) + " free of " + bytes(root.total) : "";
+
+    // Where we are: the root's name, then each folder below it.
+    var crumbs = $("crumbs");
+    crumbs.innerHTML = "";
+    var parts = root ? here.path.slice(root.path.length).split("/").filter(Boolean) : [];
+    var path = root ? root.path : here.path;
+    [root ? root.name : here.path].concat(parts).forEach(function (name, i) {
+      if (i) { path = join(path, name); el("span", "sep", crumbs).textContent = "›"; }
+      var b = el("button", "", crumbs), to = path;
+      b.type = "button";
+      b.textContent = name;
+      b.addEventListener("click", function () { go(to); });
+    });
+
+    var list = $("list");
+    list.innerHTML = "";
+    if (here.parent) {
+      row(list, { name: "..", dir: true, up: true });
+    }
+    here.items.forEach(function (it) { row(list, it); });
+    if (!here.items.length) el("div", "empty", list).textContent = "Nothing here yet. Drop files to send them to the TV.";
+  }
+
+  function row(list, it) {
+    var r = el("div", "rowf", list), path = it.up ? here.parent : join(here.path, it.name), k = it.dir ? "folder" : kind(it.name);
+    var ic = el("div", "ic", r);
+    ic.innerHTML = svg(k);
+    if (k === "image" || k === "video") {
+      var img = new Image();
+      img.onload = function () { ic.style.backgroundImage = "url('" + img.src + "')"; ic.innerHTML = ""; };
+      img.src = url("thumb", path, "&t=" + it.time);
+    }
+    var nm = el("div", "name", r), link;
+    if (it.dir) {
+      link = el("button", "", nm);
+      link.type = "button";
+      link.addEventListener("click", function () { go(path); });
+    } else {
+      link = el("a", "", nm);
+      link.href = url("get", path);
+      link.target = "_blank";
+      link.rel = "noopener";
+    }
+    link.textContent = it.up ? "Up a folder" : it.name;
+    el("div", "sub", nm).textContent = it.up ? "" : (it.dir ? "Folder" : bytes(it.size)) + " · " + when(it.time);
+    el("div", "size", r).textContent = it.dir ? "" : bytes(it.size);
+    el("div", "when", r).textContent = it.up ? "" : when(it.time);
+    var acts = el("div", "acts", r);
+    if (it.up) return;
+    if (k === "apk") {
+      var ins = el("button", "install", acts);
+      ins.type = "button";
+      ins.textContent = "Install";
+      ins.addEventListener("click", function () {
+        if (!canInstall) { TV.toast("Installing apps isn't allowed yet. Run files.sh again"); return; }
+        post("install", { path: path }).then(function () { TV.toast("Look at the TV: press Install there to finish"); },
+          function (e) { TV.toast(e.message); });
+      });
+    }
+    if (!it.dir) {
+      var dl = el("a", "opt", acts);
+      dl.href = url("get", path, "&dl=1");
+      dl.setAttribute("aria-label", "Download " + it.name);
+      dl.title = "Download";
+      dl.innerHTML = svg("download");
+    }
+    var rn = el("button", "opt", acts);
+    rn.type = "button";
+    rn.title = "Rename";
+    rn.setAttribute("aria-label", "Rename " + it.name);
+    rn.innerHTML = svg("rename");
+    rn.addEventListener("click", function () {
+      var name = prompt("New name", it.name);
+      if (!name || name === it.name) return;
+      post("rename", { path: path, name: name }).then(function () { TV.toast("Renamed"); go(here.path, true); }, function (e) { TV.toast(e.message); });
+    });
+    var del = el("button", "danger", acts);
+    del.type = "button";
+    del.title = "Delete";
+    del.setAttribute("aria-label", "Delete " + it.name);
+    del.innerHTML = svg("trash");
+    del.addEventListener("click", function () {
+      if (!confirm(it.dir ? "Delete the folder " + it.name + " and everything in it from the TV?" : "Delete " + it.name + " from the TV?")) return;
+      post("delete", { path: path }).then(function () { TV.toast("Deleted"); go(here.path, true); }, function (e) { TV.toast(e.message); });
+    });
+  }
+
+  // One at a time, each with its own progress bar.
+  var queue = [], sending = false;
+  function upload(files) {
+    if (!here || !files.length) return;
+    $("uploads").hidden = false;
+    [].forEach.call(files, function (f) {
+      var u = el("div", "up", $("uploads"));
+      el("div", "n", u).textContent = f.name;
+      var p = el("div", "p", u);
+      p.textContent = "Waiting";
+      var bar = el("span", "", el("div", "track", u));
+      queue.push({ file: f, dir: here.path, row: u, p: p, bar: bar });
+    });
+    next();
+  }
+  function next() {
+    if (sending) return;
+    var job = queue.shift();
+    if (!job) {
+      setTimeout(function () { if (!sending && !queue.length) { $("uploads").innerHTML = ""; $("uploads").hidden = true; } }, 4000);
+      return;
+    }
+    sending = true;
+    var x = new XMLHttpRequest();
+    x.open("POST", "/files/upload?dir=" + encodeURIComponent(job.dir) + "&name=" + encodeURIComponent(job.file.name));
+    x.upload.onprogress = function (e) {
+      if (!e.lengthComputable) return;
+      var pc = Math.floor(e.loaded / e.total * 100);
+      job.bar.style.width = pc + "%";
+      job.p.textContent = pc + "% of " + bytes(e.total);
+    };
+    x.onload = function () {
+      var ok = x.status === 200, msg = "";
+      try { msg = JSON.parse(x.responseText).error || ""; } catch (e) {}
+      job.row.classList.add(ok ? "done" : "failed");
+      job.bar.style.width = "100%";
+      job.p.textContent = ok ? "Sent" : msg || "Didn't work";
+      finish(job);
+    };
+    x.onerror = function () { job.row.classList.add("failed"); job.p.textContent = "Couldn't reach the TV"; finish(job); };
+    x.send(job.file);
+  }
+  function finish(job) {
+    sending = false;
+    if (here && here.path === job.dir) go(here.path, true);
+    next();
+  }
+
+  $("upb").addEventListener("click", function () { $("pick").click(); });
+  $("pick").addEventListener("change", function () { upload(this.files); this.value = ""; });
+  $("mk").addEventListener("click", function () {
+    var name = prompt("Folder name");
+    if (!name) return;
+    post("mkdir", { dir: here.path, name: name }).then(function () { go(join(here.path, name)); }, function (e) { TV.toast(e.message); });
+  });
+
+  // Drag files anywhere on the page.
+  var depth = 0;
+  function files(e) { return e.dataTransfer && [].indexOf.call(e.dataTransfer.types || [], "Files") >= 0; }
+  document.addEventListener("dragenter", function (e) { if (!files(e) || !here) return; depth++; document.body.classList.add("dragging"); });
+  document.addEventListener("dragleave", function () { if (--depth <= 0) { depth = 0; document.body.classList.remove("dragging"); } });
+  document.addEventListener("dragover", function (e) { if (files(e)) e.preventDefault(); });
+  document.addEventListener("drop", function (e) {
+    if (!files(e)) return;
+    e.preventDefault();
+    depth = 0;
+    document.body.classList.remove("dragging");
+    upload(e.dataTransfer.files);
+  });
+
+  window.addEventListener("popstate", function () {
+    var p = decodeURIComponent(location.hash.slice(1));
+    if (p && info && info.on) go(p, true);
+  });
+
+  TV.start("files");
+  start();
+</script>
+</body>
+</html>

@@ -62,7 +62,7 @@ fi
 # In the same argument as rm, like the read above: Git Bash on Windows turns an argument that starts with / into a Windows path.
 adb -s "$TV" shell "rm -f $LIST"
 # The throwaway input install.sh can add with FAKE_INPUT=1 (testing on an emulator).
-adb -s "$TV" uninstall com.ansub.fakeinput >/dev/null 2>&1 || true
-adb -s "$TV" uninstall com.ansub.tvhome >/dev/null 2>&1 || true
+adb -s "$TV" uninstall com.knz.fakeinput >/dev/null 2>&1 || true
+adb -s "$TV" uninstall com.knz.telebisyon >/dev/null 2>&1 || true
 adb -s "$TV" shell input keyevent KEYCODE_HOME
 echo "Removed. Your TV is back to its own home screen."

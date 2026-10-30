@@ -12,7 +12,7 @@ fail() {
   exit 1
 }
 # Waits up to 15s for the home screen to be in front.
-wait_home() { for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do focus | grep -q com.ansub.tvhome && return 0; sleep 1; done; return 1; }
+wait_home() { for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do focus | grep -q com.knz.telebisyon && return 0; sleep 1; done; return 1; }
 ui() { adb -s "$TV" shell "uiautomator dump /sdcard/ui.xml" >/dev/null 2>&1; adb -s "$TV" shell "cat /sdcard/ui.xml"; }
 focus() { adb -s "$TV" shell dumpsys window | grep -m1 mCurrentFocus; }
 
@@ -23,7 +23,7 @@ YES=1 sh install.sh "$TV"
 sleep 3
 home=$(adb -s "$TV" shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tail -1 | tr -d '\r')
 case "$home" in
-  com.ansub.tvhome/.MainActivity|org.droidtv.homeintentresolver/*) ;;
+  com.knz.telebisyon/.MainActivity|org.droidtv.homeintentresolver/*) ;;
   *) fail "default home is $home" ;;
 esac
 adb -s "$TV" shell input keyevent KEYCODE_HOME
@@ -38,7 +38,7 @@ echo "   $tiles tiles"
 if [ "$FAKE_INPUT" = 1 ]; then
   echo "== emulator input registered"
   # Its tile may already have a saved name from a previous manual test.
-  adb -s "$TV" shell dumpsys tv_input | grep -q 'com.ansub.fakeinput/.FakeInputService' \
+  adb -s "$TV" shell dumpsys tv_input | grep -q 'com.knz.fakeinput/.FakeInputService' \
     || fail "fake input not registered"
 fi
 
@@ -51,7 +51,7 @@ wait_home || fail "Home didn't come back"
 echo "== custom app list"
 # Use whatever TV app this device has (test images may have none).
 app=$(adb -s "$TV" shell cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.LEANBACK_LAUNCHER \
-  | tr -d '\r' | grep / | sed 's|/.*||; s/^ *//' | grep -vx com.ansub.tvhome | head -1)
+  | tr -d '\r' | grep / | sed 's|/.*||; s/^ *//' | grep -vx com.knz.telebisyon | head -1)
 if [ -n "$app" ]; then
   YES=1 sh install.sh "$TV" "$app"
   adb -s "$TV" shell input keyevent KEYCODE_HOME
@@ -76,12 +76,12 @@ rc=0; sh check.sh "$TV" "$list" >/dev/null 2>&1 || rc=$?
 echo "== undo puts the TV back"
 sh undo.sh "$TV" >/dev/null
 if [ "$FAKE_INPUT" = 1 ]; then
-  if adb -s "$TV" shell pm list packages com.ansub.fakeinput | grep -q 'package:com.ansub.fakeinput'; then
+  if adb -s "$TV" shell pm list packages com.knz.fakeinput | grep -q 'package:com.knz.fakeinput'; then
     fail "undo left the fake input installed"
   fi
 fi
 sleep 3
 home=$(adb -s "$TV" shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tail -1 | tr -d '\r')
-case "$home" in *com.ansub.tvhome*|"") fail "after undo, home is '$home'" ;; esac
+case "$home" in *com.knz.telebisyon*|"") fail "after undo, home is '$home'" ;; esac
 echo "   home is back to $home"
 echo "PASS ($SHOT)"

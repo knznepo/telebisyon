@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0909">
+<title>Telebisyon</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+  body { background: #0b0909; overflow-x: hidden; }
+
+  /* Wide: the TV's own screen, laid out with its numbers and scaled to fit. */
+  #wrap { position: relative; width: 100%; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; }
+  #wall { position: absolute; left: 0; top: 0; background-size: cover; background-position: center; }
+  #shade { position: absolute; inset: 0; }
+  .clock { position: absolute; }
+  .date { display: block; color: rgba(255,255,255,.66); white-space: nowrap; }
+  .time { display: block; font-weight: 500; letter-spacing: -0.028em; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .t { position: absolute; border: 0; padding: 0; margin: 0; cursor: pointer; background: transparent; color: inherit; font: inherit;
+    transition: transform 180ms cubic-bezier(.2,.8,.3,1); -webkit-tap-highlight-color: transparent; text-decoration: none; display: block; }
+  .t .card { position: absolute; inset: 0; overflow: hidden; transition: background-color 180ms; }
+  .t.banner .card { background: #1e1a1c; }
+  .t.banner .card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .t.glass .card { background: rgba(255,255,255,.075); border-style: solid; border-color: rgba(255,255,255,.09);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .t.glass .label { color: rgba(255,255,255,.88); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .t.web .card { border-style: dashed; }
+  .t .caption { position: absolute; left: 0; right: 0; text-align: center; opacity: 0; transition: opacity 180ms; white-space: nowrap; }
+  .t:hover, .t:focus-visible { transform: scale(1.1); z-index: 2; outline: none; }
+  .t.glass:hover .card, .t.glass:focus-visible .card { background: rgba(255,255,255,.22); }
+  .t:hover .caption, .t:focus-visible .caption { opacity: 1; }
+  .t:active { transform: scale(1.04); }
+
+  /* Narrow (a phone): the same tiles, reflowed into a grid that fits. */
+  #flow { display: none; min-height: 100vh; padding: max(28px, env(safe-area-inset-top)) var(--gutter) 40px; }
+  #flowBg { position: fixed; inset: 0; z-index: -2; background-size: cover; background-position: center; }
+  #flowShade { position: fixed; inset: 0; z-index: -1; }
+  #flow .fdate { color: rgba(255,255,255,.7); font-size: 16px; }
+  #flow .ftime { font-size: clamp(72px, 24vw, 132px); font-weight: 500; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; margin: 2px 0 28px; }
+  #flow h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.6); margin: 24px 0 10px; font-weight: 500; }
+  .fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, 42vw), 1fr)); gap: 14px 12px; }
+  .f { display: flex; flex-direction: column; gap: 6px; min-width: 0; text-decoration: none; color: inherit; border: 0; padding: 0; background: none;
+    cursor: pointer; font: inherit; text-align: left; -webkit-tap-highlight-color: transparent; }
+  .f .card { aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: #1e1a1c; transition: transform 180ms cubic-bezier(.2,.8,.3,1); }
+  .f .card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .f.glass .card { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.12); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+  .f.web .card { border-style: dashed; }
+  .f .name { font-size: 14px; color: rgba(255,255,255,.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
+  .f.glass .name { display: none; }
+  .f.glass .gl { font-size: 14px; color: rgba(255,255,255,.9); }
+  .f:active .card { transform: scale(.96); }
+  @media (hover: hover) { .f:hover .card { transform: scale(1.05); } }
+
+  body.narrow #wrap { display: none; }
+  body.narrow #flow { display: block; }
+
+  .t.round { border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: transform 180ms, background-color 180ms; }
+  .t.round:hover, .t.round:focus-visible { background: rgba(255,255,255,.22); }
+  .ri { display: flex; align-items: center; justify-content: center; }
+  .ri img { border-radius: 50%; display: block; }
+  .fhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .ficons { display: flex; gap: 4px; }
+  .fr { width: 44px; height: 44px; border-radius: 50%; border: 0; background: transparent; padding: 0; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+  .fr:active { background: rgba(255,255,255,.2); }
+
+  #offline { text-align: center; color: rgba(255,255,255,.6); padding: 48px 16px; display: none; }
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage"><div id="wall"><div id="shade"></div></div></div></div>
+<div id="flow">
+  <div id="flowBg"></div><div id="flowShade"></div>
+  <div class="fhead"><div class="fdate" id="fdate"></div><div class="ficons" id="ficons"></div></div>
+  <div class="ftime" id="ftime"></div>
+  <h2>Apps</h2>
+  <div class="fgrid" id="fapps"></div>
+  <h2>More</h2>
+  <div class="fgrid" id="fmore"></div>
+</div>
+<div id="offline">Can't reach the TV right now.</div>
+<script src="/common.js"></script>
+<script>
+  // Tiles only this page has (not the TV): the other pages.
+  var WEB = [
+    { key: "web:message", label: "Message", href: "/message",
+      ops: [0, 40, 55, 1, 200, 55, 1, 200, 160, 1, 115, 160, 1, 70, 200, 1, 70, 160, 1, 40, 160, 2] },
+    { key: "web:wallpapers", label: "Wallpapers", href: "/wallpapers",
+      ops: [0, 30, 50, 1, 210, 50, 1, 210, 190, 1, 30, 190, 2, 0, 30, 170, 1, 95, 110, 1, 145, 155, 1, 170, 132, 1, 210, 168, 3, 160, 92, 16] },
+    { key: "web:files", label: "Files", href: "/files",
+      ops: [0, 30, 60, 1, 95, 60, 1, 117, 85, 1, 210, 85, 1, 210, 185, 1, 30, 185, 2] }
+  ];
+  var home = null, drawn = "";
+  var stage = document.getElementById("stage"), wrap = document.getElementById("wrap");
+
+  // LineIcon's drawing steps, on its 240-unit grid, as an SVG path.
+  function iconPath(ops) {
+    var d = "", i = 0;
+    while (i < ops.length) {
+      var op = ops[i];
+      if (op === 0) { d += "M" + ops[i + 1] + " " + ops[i + 2]; i += 3; }
+      else if (op === 1) { d += "L" + ops[i + 1] + " " + ops[i + 2]; i += 3; }
+      else if (op === 2) { d += "Z"; i += 1; }
+      else if (op === 3) {
+        var cx = ops[i + 1], cy = ops[i + 2], r = ops[i + 3];
+        d += "M" + (cx - r) + " " + cy + "a" + r + " " + r + " 0 1 0 " + 2 * r + " 0a" + r + " " + r + " 0 1 0 " + -2 * r + " 0";
+        i += 4;
+      } else {
+        var x = ops[i + 1], y = ops[i + 2], rr = ops[i + 3], a0 = ops[i + 4] * Math.PI / 180, sw = ops[i + 5];
+        var a1 = a0 + sw * Math.PI / 180;
+        d += "M" + (x + rr * Math.cos(a0)) + " " + (y + rr * Math.sin(a0)) + "A" + rr + " " + rr + " 0 " +
+          (Math.abs(sw) > 180 ? 1 : 0) + " " + (sw > 0 ? 1 : 0) + " " + (x + rr * Math.cos(a1)) + " " + (y + rr * Math.sin(a1));
+        i += 6;
+      }
+    }
+    return d;
+  }
+  function icon(ops, size, dimOps) {
+    return '<svg viewBox="0 0 240 240" width="' + size + '" height="' + size + '" fill="none" stroke="rgba(255,255,255,.92)" ' +
+      'stroke-width="16" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      (dimOps ? '<path opacity=".28" d="' + iconPath(dimOps) + '"/>' : "") + '<path d="' + iconPath(ops) + '"/></svg>';
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function tileSrc(t) { return "/tile?key=" + encodeURIComponent(t.key) + "&v=" + encodeURIComponent(t.label); }
+
+  // The TV's tiles plus the web ones, which go after the last one in the bottom row (onto a new row
+  // if that's full), laid out the way MainActivity does.
+  function withWeb(h) {
+    var k = h.width / 1920, tiles = h.tiles.slice(), bottom = 0, last = null;
+    tiles.forEach(function (t) { if (!t.round && t.y >= bottom) bottom = t.y; });
+    tiles.forEach(function (t) { if (!t.round && t.y === bottom && (!last || t.x > last.x)) last = t; });
+    var w = last ? last.w : 258 * k, hh = last ? last.h : 145 * k, x = last ? last.x + w + 36 * k : 96 * k, y = bottom, extra = 0;
+    WEB.forEach(function (web) {
+      if (x + w > h.width - 96 * k + 1) { x = 96 * k; y += 224 * k; extra = y - bottom; }
+      tiles.push({ key: web.key, label: web.label, href: web.href, ops: web.ops, x: x, y: y, w: w, h: hh, banner: false, web: true });
+      x += w + 36 * k;
+    });
+    return { tiles: tiles, pageHeight: Math.max(h.pageHeight, h.pageHeight + extra) };
+  }
+
+  function drawStage(h) {
+    var k = h.width / 1920, px = function (n) { return n * k + "px"; }, laid = withWeb(h);
+    [].slice.call(stage.querySelectorAll(".t, .clock")).forEach(function (n) { n.remove(); });
+    stage.style.width = h.width + "px";
+    stage.style.height = laid.pageHeight + "px";
+    var wall = document.getElementById("wall"), shade = document.getElementById("shade");
+    wall.style.width = h.width + "px";
+    wall.style.height = h.height + "px";
+    wall.style.backgroundImage = TV.wallpaperCss(h, h.width);
+    shade.style.background = h.picture ? "linear-gradient(rgba(0,0,0,.4), rgba(0,0,0,.25), rgba(0,0,0,.6))" : "none";
+    // Below the screen (a long app list), the TV keeps its last colour.
+    stage.style.background = h.picture ? "#000" : TV.rgba(h.gradient[2]);
+
+    var clock = document.createElement("div");
+    clock.className = "clock";
+    clock.style.left = px(96);
+    clock.style.top = px(92);
+    clock.innerHTML = '<span class="date" style="font-size:' + px(30) + '"></span><span class="time" style="font-size:' + px(176) + ';margin-top:' + px(-12) + '"></span>';
+    stage.appendChild(clock);
+
+    laid.tiles.forEach(function (t) {
+      if (t.round) {
+        var r = document.createElement("button");
+        r.type = "button";
+        r.className = "t round";
+        r.style.cssText = "left:" + t.x + "px;top:" + t.y + "px;width:" + t.w + "px;height:" + t.h + "px";
+        r.title = t.label + " (opens on the TV)";
+        r.innerHTML = roundInner(t, 40 * k);
+        r.addEventListener("click", function () { tap(t); });
+        stage.appendChild(r);
+        return;
+      }
+      var b = document.createElement(t.href ? "a" : "button");
+      b.className = "t " + (t.banner ? "banner" : "glass") + (t.web ? " web" : "");
+      if (t.href) b.href = t.href; else b.type = "button";
+      b.style.cssText = "left:" + t.x + "px;top:" + t.y + "px;width:" + t.w + "px;height:" + t.h + "px";
+      b.title = t.web ? t.label + " (on this device)" : "Open " + t.label + " on the TV";
+      var inner = '<div class="card" style="border-radius:' + px(26) + (t.banner ? "" : ";border-width:" + Math.max(1, 2 * k) + "px") + '">';
+      if (t.banner) inner += t.image ? '<img alt="' + esc(t.label) + '" src="' + tileSrc(t) + '">' : "";
+      else {
+        if (t.ops) inner += icon(t.ops, 44 * k);
+        else if (t.image) inner += '<img alt="" src="' + tileSrc(t) + '" style="width:' + px(64) + ';height:' + px(64) + '">';
+        inner += '<span class="label" style="font-size:' + px(24) + ";margin-top:" + px(12) + ";padding:0 " + px(16) + '">' + esc(t.label) + "</span>";
+      }
+      inner += "</div>";
+      if (t.banner) inner += '<span class="caption" style="top:' + (t.h + 22 * k) + "px;font-size:" + px(24) + '">' + esc(t.label) + "</span>";
+      b.innerHTML = inner;
+      if (!t.href) b.addEventListener("click", function () { tap(t); });
+      stage.appendChild(b);
+    });
+    fit(laid.pageHeight);
+  }
+
+  // The small round icons at the top right: the network's line icon, or the account's avatar.
+  function roundInner(t, size) {
+    return '<span class="ri">' + (t.image ? '<img alt="" src="' + tileSrc(t) + '&r=' + home.avatarStamp + '" style="width:' + size + "px;height:" + size + 'px">'
+      : t.ops ? icon(t.ops, size, t.dimOps) : "") + "</span>";
+  }
+
+  function drawFlow(h) {
+    document.getElementById("flowBg").style.backgroundImage = TV.wallpaperCss(h, window.innerWidth);
+    document.getElementById("flowShade").style.background = h.picture
+      ? "linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.35) 40%, rgba(0,0,0,.7))" : "none";
+    var apps = document.getElementById("fapps"), more = document.getElementById("fmore");
+    apps.innerHTML = more.innerHTML = "";
+    var top = document.getElementById("ficons");
+    top.innerHTML = "";
+    withWeb(h).tiles.forEach(function (t) {
+      if (t.round) {
+        var r = document.createElement("button");
+        r.type = "button";
+        r.className = "fr";
+        r.setAttribute("aria-label", t.label + " (opens on the TV)");
+        r.innerHTML = roundInner(t, 30);
+        r.addEventListener("click", function () { tap(t); });
+        top.appendChild(r);
+        return;
+      }
+      var b = document.createElement(t.href ? "a" : "button");
+      b.className = "f " + (t.banner ? "banner" : "glass") + (t.web ? " web" : "");
+      if (t.href) b.href = t.href; else b.type = "button";
+      var card = '<div class="card">';
+      if (t.banner) card += t.image ? '<img alt="" src="' + tileSrc(t) + '">' : "";
+      else {
+        if (t.ops) card += icon(t.ops, 30);
+        else if (t.image) card += '<img alt="" src="' + tileSrc(t) + '" style="width:40px;height:40px">';
+        card += '<span class="gl">' + esc(t.label) + "</span>";
+      }
+      b.innerHTML = card + '</div><span class="name">' + esc(t.label) + "</span>";
+      b.setAttribute("aria-label", t.web ? t.label : "Open " + t.label + " on the TV");
+      if (!t.href) b.addEventListener("click", function () { tap(t); });
+      (t.banner ? apps : more).appendChild(b);
+    });
+  }
+
+  // A phone held upright, or any window too narrow for the TV's layout to stay tappable.
+  function narrow() { return window.innerWidth < 760 || window.innerWidth < window.innerHeight; }
+
+  function fit(pageHeight) {
+    var s = wrap.clientWidth / home.width;
+    stage.style.transform = "scale(" + s + ")";
+    wrap.style.height = (pageHeight || withWeb(home).pageHeight) * s + "px";
+  }
+
+  function draw() {
+    document.body.classList.toggle("narrow", narrow());
+    if (narrow()) drawFlow(home); else drawStage(home);
+    tick();
+  }
+
+  function tick() {
+    var t = TV.now();
+    if (!t) return;
+    var tt = TV.timeText(t), dd = TV.dateText(t);
+    var a = stage.querySelector(".time"), b = stage.querySelector(".date");
+    if (a) { a.textContent = tt; b.textContent = dd; }
+    document.getElementById("ftime").textContent = tt;
+    document.getElementById("fdate").textContent = dd;
+  }
+
+  function tap(t) {
+    fetch("/tap", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: t.key }) })
+      .then(function (r) { TV.toast(r.ok ? "Opening " + t.label + " on the TV" : "The TV couldn't open that"); })
+      .catch(function () { TV.toast("Couldn't reach the TV"); });
+  }
+
+  // Follows the TV: new apps, a moved tile, the next shuffled picture.
+  function refresh() {
+    TV.load().then(function (h) {
+      var off = !h;
+      document.getElementById("offline").style.display = off ? "block" : "none";
+      wrap.style.visibility = off ? "hidden" : "";
+      if (off) return;
+      home = h;
+      var key = JSON.stringify([h.tiles, h.picture, h.gradient, h.width, h.pageHeight, h.avatarStamp, narrow()]);
+      if (key !== drawn) { drawn = key; draw(); }
+    });
+  }
+
+  document.body.insertAdjacentHTML("beforeend", '<div id="toast" role="status" aria-live="polite"></div>');
+  window.addEventListener("resize", function () {
+    if (!home) return;
+    if (narrow() !== document.body.classList.contains("narrow")) { drawn = ""; refresh(); }
+    else if (!narrow()) fit();
+  });
+  setInterval(tick, 1000);
+  setInterval(refresh, 5000);
+  refresh();
+</script>
+</body>
+</html>

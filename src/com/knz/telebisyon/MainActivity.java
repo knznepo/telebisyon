@@ -1,4 +1,4 @@
-package com.ansub.tvhome;
+package com.knz.telebisyon;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -74,7 +74,7 @@ import java.util.WeakHashMap;
 public class MainActivity extends Activity {
 
     // Top-row apps, in this order of preference:
-    //  1. a list saved at install time:  am start -n com.ansub.tvhome/.MainActivity --es apps "pkg1,pkg2"
+    //  1. a list saved at install time:  am start -n com.knz.telebisyon/.MainActivity --es apps "pkg1,pkg2"
     //     (--es apps auto  goes back to 2; add --es stamp <unique> so it's applied only once, see saveConfig)
     //  2. apps.txt (built in as Apps.LIST), topped up with other TV apps installed on this TV.
     // Missing apps are skipped. Topping up stops at six apps, but a chosen list can be any length:
@@ -84,7 +84,7 @@ public class MainActivity extends Activity {
     // it there, off until picked the same way:
     //   --es quick "bluetooth,sound,picture"
     // (--es quick none  takes them away again; "wifi" and "ethernet" are the network tile now).
-    private static final String PREFS = "config";
+    static final String PREFS = "config";
     private static final List<String> NOT_APPS = Arrays.asList("com.android.vending", "com.android.tv.settings",
             "com.android.tv", "com.google.android.tvlauncher", "com.google.android.apps.tv.launcherx",
             "com.google.android.leanbacklauncher");
@@ -109,7 +109,7 @@ public class MainActivity extends Activity {
     private static final String PREF_CLOCK = "clock", PREF_FAKE_INPUTS = "fakeinputs";
     // The throwaway input install.sh adds with FAKE_INPUT=1. It has no HDMI port behind it; it is
     // there so an emulator, which has no inputs of its own, still has a tile to test with.
-    private static final String FAKE_INPUT_PKG = "com.ansub.fakeinput";
+    private static final String FAKE_INPUT_PKG = "com.knz.fakeinput";
     // Names an input can be given with the remote alone: no keyboard, no typing.
     private static final String[] INPUT_PRESETS = {"TV", "PlayStation", "Xbox", "Switch", "Laptop", "PC", "Blu-ray", "Soundbar"};
     // TCL keeps its own Picture and Sound panels in a service; Android's Sound page is missing there.
@@ -132,11 +132,11 @@ public class MainActivity extends Activity {
             "com.android.tv.settings.device.displaysound.DisplaySoundActivity"};
     // Wallpapers, saved by name: a gradient top to bottom, then a glow from the top left and one from
     // the bottom right. Dark ones first, then bright ones that get darker towards the bottom, so the
-    // white labels stay easy to read. Only colours, no images, so every one costs the same as Dusk,
-    // the default.
-    private static final String[] WALLPAPER_NAMES = {"Dusk", "Midnight", "Plum", "Forest", "Graphite", "Ocean", "Ember",
+    // white labels stay easy to read. Only colours, so every one costs the same as Dusk, the default.
+    // Pictures of your own can follow them: see imageWallpapers.
+    static final String[] WALLPAPER_NAMES = {"Dusk", "Midnight", "Plum", "Forest", "Graphite", "Ocean", "Ember",
             "Sunset", "Lagoon", "Aurora", "Coral", "Iris", "Meadow", "Gold"};
-    private static final int[][] WALLPAPERS = {
+    static final int[][] WALLPAPERS = {
         {0xFF15100F, 0xFF0A0809, 0xFF050405, 0x36FF8048, 0x2EAA3C8C},
         {0xFF0E1220, 0xFF080A13, 0xFF040509, 0x384A6CFF, 0x2E5A3CC8},
         {0xFF170E19, 0xFF0C070D, 0xFF050306, 0x38C050B4, 0x2E6440D2},
@@ -198,9 +198,13 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         saveConfig(getIntent());
+        takeOpen(getIntent());
+        Messages.start(this); // only if messages.sh turned them on
         loadFonts();
         scale = getResources().getDisplayMetrics().widthPixels / 1920f;
-        showWallpaper(wallpaper());
+        List<File> images = imageWallpapers(this);
+        showWallpaper(images, wallpaper(images));
+        getSharedPreferences(PREFS, 0).registerOnSharedPreferenceChangeListener(wallpaperChanged);
 
         ScrollView scroller = new ScrollView(this);
         scroller.setFillViewport(true);
@@ -237,6 +241,8 @@ public class MainActivity extends Activity {
         root.addView(moveHint, at(px(MARGIN), px(ROW1_TOP - 64), -2, -2));
 
         setContentView(scroller);
+        page = scroller;
+        buildFrame();
 
         IntentFilter f = new IntentFilter();
         f.addAction(Intent.ACTION_PACKAGE_ADDED);
@@ -256,6 +262,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         unregisterReceiver(packagesChanged);
+        getSharedPreferences(PREFS, 0).unregisterOnSharedPreferenceChangeListener(wallpaperChanged);
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         if (cm != null) try { cm.unregisterNetworkCallback(networkChanged); } catch (Exception ignored) {}
         super.onDestroy();
@@ -265,12 +272,27 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        takeOpen(intent);
         // A clock change needs the whole page rebuilt; a new app list only needs the tiles.
         boolean clock = intent != null && intent.hasExtra("clock");
         if (saveConfig(intent)) {
             if (clock) recreate();
             else buildTiles();
         }
+    }
+
+    // A tile clicked on the copy of the home screen in a browser (Messages' /tap): Home comes to the
+    // front, then the tile opens as if OK was pressed on it. Settings and + open their menus here.
+    // Only a fresh request counts: Android can start Home again later with the same old intent.
+    static final String EXTRA_OPEN = "open", EXTRA_OPEN_AT = "openat";
+    private String pendingOpen;
+
+    private void takeOpen(Intent intent) {
+        if (intent == null || !intent.hasExtra(EXTRA_OPEN)) return;
+        long at = intent.getLongExtra(EXTRA_OPEN_AT, 0);
+        String key = intent.getStringExtra(EXTRA_OPEN);
+        intent.removeExtra(EXTRA_OPEN);
+        if (Math.abs(System.currentTimeMillis() - at) < 10000) pendingOpen = key;
     }
 
     // Saves an app list passed with --es apps "...", shortcuts passed with --es quick "...", and a
@@ -282,7 +304,10 @@ public class MainActivity extends Activity {
         String quick = intent == null ? null : intent.getStringExtra("quick");
         String clock = intent == null ? null : intent.getStringExtra("clock");
         String fake = intent == null ? null : intent.getStringExtra("fakeinputs");
-        if (apps == null && quick == null && clock == null && fake == null) return false;
+        String account = intent == null ? null : intent.getStringExtra("account");
+        String pin = intent == null ? null : intent.getStringExtra("pin");
+        String files = intent == null ? null : intent.getStringExtra("files");
+        if (apps == null && quick == null && clock == null && fake == null && account == null && pin == null && files == null) return false;
         SharedPreferences prefs = getSharedPreferences(PREFS, 0);
         String stamp = intent.getStringExtra("stamp");
         if (stamp != null && stamp.equals(prefs.getString("stamp", null))) return false;
@@ -303,6 +328,14 @@ public class MainActivity extends Activity {
             if (clock.isEmpty() || clock.equalsIgnoreCase("auto")) e.remove(PREF_CLOCK);
             else e.putString(PREF_CLOCK, clock);
         }
+        if (account != null) {
+            account = account.trim();
+            if (account.isEmpty() || account.equalsIgnoreCase("none")) e.remove(PREF_ACCOUNT);
+            else e.putString(PREF_ACCOUNT, account);
+        }
+        // From pin.sh and files.sh: the web page's PIN, and the /files page on or off.
+        if (pin != null) Messages.savePin(e, pin);
+        if (files != null) Files.save(e, files);
         // Set only by install.sh's FAKE_INPUT=1, which also installs the throwaway input itself.
         // It is for an emulator, which has no HDMI ports, and never for a real TV.
         if (fake != null) {
@@ -352,6 +385,17 @@ public class MainActivity extends Activity {
             buildTiles();
         }
         refreshNetwork();
+        resumed = true;
+        if (pendingOpen != null) {
+            final String key = pendingOpen;
+            pendingOpen = null;
+            // Once the tiles are laid out, so a menu has its tile to sit under.
+            getWindow().getDecorView().postDelayed(() -> { if (tile(key) != null || !isMenuTile(key)) open(key); }, 150);
+        }
+        scheduleShuffle();
+        lastInput = android.os.SystemClock.uptimeMillis();
+        getWindow().getDecorView().removeCallbacks(frameCheck);
+        getWindow().getDecorView().postDelayed(frameCheck, FRAME_CHECK_MS);
         View f = getCurrentFocus();
         if (f == null && !tiles.isEmpty()) tiles.get(0).requestFocus();
         HomeButton.onHomeResumed(this); // back on this home screen: Home comes here again
@@ -367,6 +411,10 @@ public class MainActivity extends Activity {
         super.onPause();
         // Left normally (an app or Settings opened), so it didn't crash.
         getWindow().getDecorView().removeCallbacks(homeOk);
+        resumed = false;
+        getWindow().getDecorView().removeCallbacks(shuffleTick);
+        getWindow().getDecorView().removeCallbacks(frameCheck);
+        if (framing) exitFrame();
         HomeButton.onHomeOk(this);
     }
 
@@ -449,21 +497,331 @@ public class MainActivity extends Activity {
         }
     }
 
-    // The saved wallpaper, as an index into WALLPAPERS (Dusk if none is saved).
-    private int wallpaper() {
-        String saved = getSharedPreferences(PREFS, 0).getString("wallpaper", null);
+    // Pictures can be wallpapers too: any image in the wallpapers folder on the TV,
+    //   /sdcard/Android/data/com.knz.telebisyon/files/wallpapers/
+    // (wallpapers.sh, or the /wallpapers page Messages serves, puts them there). They come after the
+    // gradients, by file name, and are saved as IMAGE + file name. No permission is needed: the folder
+    // belongs to this app. With two or more, the list ends with Shuffle: a different picture each time
+    // Home comes back, and every PREF_SHUFFLE_EVERY minutes while it's on screen, if that's set.
+    static final String IMAGE = "image:", SHUFFLE = "shuffle", PREF_WALLPAPER = "wallpaper",
+            PREF_SHUFFLE_EVERY = "shuffleevery";
+    private String shownPicture; // the picture's file name, while one is the wallpaper
+    private boolean resumed; // Home is in front, so the shuffle timer may run
+    private int shuffles; // counts shuffles started, so only the latest one is shown
+
+    // The /wallpapers page changes these from another thread; the home screen follows. Changes made
+    // here on the TV come through the same way.
+    private final SharedPreferences.OnSharedPreferenceChangeListener wallpaperChanged = (prefs, key) -> {
+        if (PREF_WALLPAPER.equals(key)) {
+            List<File> images = imageWallpapers(this);
+            showWallpaper(images, wallpaper(images));
+            scheduleShuffle();
+        } else if (PREF_SHUFFLE_EVERY.equals(key)) scheduleShuffle();
+        else if (PREF_AVATAR_STAMP.equals(key) || PREF_ACCOUNT.equals(key)) buildTiles();
+    };
+
+    static File wallpaperDir(Context c) {
+        File base = c.getExternalFilesDir(null);
+        if (base == null) return null; // no shared storage right now
+        File dir = new File(base, "wallpapers");
+        dir.mkdirs(); // so there's a folder to copy into
+        return dir;
+    }
+
+    static List<File> imageWallpapers(Context c) {
+        List<File> out = new ArrayList<>();
+        File dir = wallpaperDir(c);
+        if (dir == null) return out;
+        File[] files = dir.listFiles();
+        if (files == null) return out;
+        for (File f : files) {
+            String n = f.getName().toLowerCase(java.util.Locale.ROOT);
+            if (f.isFile() && !n.startsWith(".") && n.matches(".*\\.(jpe?g|png|webp|bmp|gif)")) out.add(f);
+        }
+        Collections.sort(out);
+        return out;
+    }
+
+    // The gradients' names, then the pictures' file names without the extension.
+    private List<String> wallpaperNames(List<File> images) {
+        List<String> names = new ArrayList<>(Arrays.asList(WALLPAPER_NAMES));
+        for (File f : images) names.add(f.getName().replaceFirst("\\.[^.]+$", ""));
+        if (images.size() >= 2) names.add(Strings.t("Shuffle pictures"));
+        return names;
+    }
+
+    // The saved wallpaper, as an index into the gradients then the pictures (Dusk if none is saved,
+    // or the saved picture is gone).
+    private int wallpaper(List<File> images) {
+        String saved = getSharedPreferences(PREFS, 0).getString(PREF_WALLPAPER, null);
+        // Shuffle sits after the pictures; with only one picture left, that one.
+        if (SHUFFLE.equals(saved)) return images.isEmpty() ? 0
+                : WALLPAPERS.length + (images.size() >= 2 ? images.size() : 0);
+        if (saved != null && saved.startsWith(IMAGE)) {
+            String name = saved.substring(IMAGE.length());
+            for (int i = 0; i < images.size(); i++)
+                if (images.get(i).getName().equals(name)) return WALLPAPERS.length + i;
+            return 0;
+        }
         return Math.max(0, Arrays.asList(WALLPAPER_NAMES).indexOf(saved));
     }
 
-    private void showWallpaper(int i) {
-        getWindow().setBackgroundDrawable(background(WALLPAPERS[i]));
+    private void showWallpaper(List<File> images, int i) {
+        Drawable bg = null;
+        shownPicture = null;
+        if (i >= WALLPAPERS.length) {
+            File f = i - WALLPAPERS.length < images.size() ? images.get(i - WALLPAPERS.length) : randomPicture(images);
+            bg = picture(f);
+            if (bg != null) shownPicture = f.getName();
+        }
+        getWindow().setBackgroundDrawable(bg != null ? bg : background(WALLPAPERS[i < WALLPAPERS.length ? i : 0]));
+        shownPictureNow = shownPicture;
+        shownGradient = i < WALLPAPERS.length ? i : 0;
     }
 
-    // The wallpapers, each with a small dot of its colours. Moving through the list shows each one
-    // behind the panel; OK keeps it, Back goes back to the one before.
+    // Any picture but the one on screen now.
+    private File randomPicture(List<File> images) {
+        List<File> pick = new ArrayList<>(images);
+        if (pick.size() > 1) for (int i = 0; i < pick.size(); i++)
+            if (pick.get(i).getName().equals(shownPicture)) pick.remove(i);
+        return pick.get(new java.util.Random().nextInt(pick.size()));
+    }
+
+    // With Shuffle on, the next picture is read as soon as Home is left (an app opened, the TV off),
+    // away from the main thread, so it's already there when Home comes back and costs no wait.
+    @Override
+    protected void onStop() {
+        super.onStop();
+        shuffle(false);
+    }
+
+    // On a timer too, while Home is on screen: the next picture fades in over the old one.
+    private final Runnable shuffleTick = () -> {
+        if (hasWindowFocus()) shuffle(true); // not under a menu, or the wallpaper list's preview
+        scheduleShuffle();
+    };
+
+    private void scheduleShuffle() {
+        View v = getWindow().getDecorView();
+        v.removeCallbacks(shuffleTick);
+        SharedPreferences prefs = getSharedPreferences(PREFS, 0);
+        int every = prefs.getInt(PREF_SHUFFLE_EVERY, 0);
+        if (every > 0 && resumed && SHUFFLE.equals(prefs.getString(PREF_WALLPAPER, null)))
+            v.postDelayed(shuffleTick, every * 60000L);
+    }
+
+    private void shuffle(boolean fade) {
+        shuffle(fade, false);
+    }
+
+    // inFrame: for the photo frame, which goes through the pictures whatever the wallpaper is, and
+    // shades them less since only the clock sits on top.
+    private void shuffle(final boolean fade, final boolean inFrame) {
+        if (!inFrame && !SHUFFLE.equals(getSharedPreferences(PREFS, 0).getString(PREF_WALLPAPER, null))) return;
+        List<File> images = imageWallpapers(this);
+        if (images.size() < (inFrame ? 1 : 2)) return;
+        final File next = randomPicture(images);
+        final int mine = ++shuffles;
+        new Thread(() -> {
+            final Drawable bg = picture(next, inFrame);
+            if (bg != null) runOnUiThread(() -> {
+                // Skipped if the wallpaper was changed, or another shuffle started, in the meantime.
+                if (mine != shuffles || isDestroyed() || inFrame != framing || (!inFrame
+                        && !SHUFFLE.equals(getSharedPreferences(PREFS, 0).getString(PREF_WALLPAPER, null)))) return;
+                Drawable old = getWindow().getDecorView().getBackground();
+                if (fade && old != null) {
+                    android.graphics.drawable.TransitionDrawable t =
+                            new android.graphics.drawable.TransitionDrawable(new Drawable[] {old, bg});
+                    t.setCrossFadeEnabled(true);
+                    getWindow().setBackgroundDrawable(t);
+                    t.startTransition(1200);
+                    // Then just the new one, so the old picture's memory goes.
+                    getWindow().getDecorView().postDelayed(() -> {
+                        if (mine == shuffles) getWindow().setBackgroundDrawable(bg);
+                    }, 1400);
+                } else getWindow().setBackgroundDrawable(bg);
+                shownPicture = next.getName();
+                shownPictureNow = shownPicture;
+            });
+        }).start();
+    }
+
+    // Photo frame: after PREF_FRAME_AFTER idle minutes on Home (5 unless set; 0 is off), the tiles fade
+    // away and the pictures go by full screen with a big clock, a new one every PREF_FRAME_EVERY
+    // seconds. Any key brings Home back, and only that: the key doesn't also open an app. Needs at
+    // least one picture. The TV's own screensaver and sleep timer still apply as before.
+    static final String PREF_FRAME_AFTER = "frameafter", PREF_FRAME_EVERY = "frameevery";
+    private static final long FRAME_CHECK_MS = 15000;
+    private View page; // everything but the photo frame
+    private FrameLayout frame;
+    private boolean framing;
+    private long lastInput;
+    private int swallowKey = -1; // the key that ended the photo frame, until it's let go
+
+    private void buildFrame() {
+        frame = new FrameLayout(this);
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        String clockPref = prefs().getString(PREF_CLOCK, null);
+        TextClock time = clock("24".equals(clockPref) ? "H:mm" : "h:mm", "12".equals(clockPref) ? "h:mm" : "H:mm",
+                px(200), Color.WHITE, semibold);
+        time.setLetterSpacing(-0.028f);
+        time.setFontFeatureSettings("tnum");
+        time.setIncludeFontPadding(false);
+        time.setShadowLayer(px(24), 0, 0, 0x66000000);
+        String day = Strings.datePattern();
+        TextClock date = clock(day, day, px(36), 0xE6FFFFFF, regular);
+        date.setShadowLayer(px(16), 0, 0, 0x66000000);
+        col.addView(time, new LinearLayout.LayoutParams(-2, -2));
+        LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(-2, -2);
+        dp.topMargin = px(4);
+        col.addView(date, dp);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.START);
+        lp.leftMargin = px(MARGIN);
+        lp.bottomMargin = px(84);
+        frame.addView(col, lp);
+        frame.setVisibility(View.GONE);
+        addContentView(frame, new ViewGroup.LayoutParams(-1, -1));
+    }
+
+    private final Runnable frameCheck = new Runnable() {
+        @Override public void run() {
+            SharedPreferences prefs = getSharedPreferences(PREFS, 0);
+            int after = prefs.getInt(PREF_FRAME_AFTER, 5);
+            // Only from Home itself: not with a menu open or an app being moved.
+            if (!framing && resumed && after > 0 && hasWindowFocus() && movingKey == null
+                    && android.os.SystemClock.uptimeMillis() - lastInput >= after * 60000L
+                    && !imageWallpapers(MainActivity.this).isEmpty()) enterFrame();
+            if (resumed) getWindow().getDecorView().postDelayed(this, FRAME_CHECK_MS);
+        }
+    };
+
+    private final Runnable frameTick = new Runnable() {
+        @Override public void run() {
+            if (!framing) return;
+            shuffle(true, true);
+            int every = Math.max(10, getSharedPreferences(PREFS, 0).getInt(PREF_FRAME_EVERY, 60));
+            getWindow().getDecorView().postDelayed(this, every * 1000L);
+        }
+    };
+
+    private void enterFrame() {
+        framing = true;
+        page.animate().cancel();
+        page.animate().alpha(0f).setDuration(800).start();
+        frame.animate().cancel();
+        frame.setAlpha(0f);
+        frame.setVisibility(View.VISIBLE);
+        frame.animate().alpha(1f).setDuration(800).start();
+        frameTick.run();
+    }
+
+    private void exitFrame() {
+        framing = false;
+        getWindow().getDecorView().removeCallbacks(frameTick);
+        page.animate().cancel();
+        page.animate().alpha(1f).setDuration(250).start();
+        frame.animate().cancel();
+        frame.animate().alpha(0f).setDuration(250).withEndAction(() -> frame.setVisibility(View.GONE)).start();
+        // Back to the wallpaper picked, shaded for the tiles again.
+        shuffles++;
+        List<File> images = imageWallpapers(this);
+        showWallpaper(images, wallpaper(images));
+        lastInput = android.os.SystemClock.uptimeMillis();
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent ev) {
+        lastInput = android.os.SystemClock.uptimeMillis();
+        if (framing) {
+            if (ev.getAction() == KeyEvent.ACTION_DOWN) {
+                exitFrame();
+                swallowKey = ev.getKeyCode();
+            }
+            return true;
+        }
+        if (ev.getKeyCode() == swallowKey) {
+            if (ev.getAction() == KeyEvent.ACTION_UP) swallowKey = -1;
+            return true;
+        }
+        return super.dispatchKeyEvent(ev);
+    }
+
+    // A picture filling the screen (cropped, not stretched), darkened a little and more towards the
+    // bottom so the white labels stay easy to read. Read at no more than the screen's size and painted
+    // once, like the gradients, so a big photo costs no more than they do. Null if it can't be read.
+    private Drawable picture(File f) {
+        return picture(f, false);
+    }
+
+    private Drawable picture(File f, boolean inFrame) {
+        int w = getResources().getDisplayMetrics().widthPixels, h = getResources().getDisplayMetrics().heightPixels;
+        Bitmap src = null;
+        try {
+            src = decode(f, w, h);
+            if (src == null) return null;
+            Bitmap bm = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            Canvas c = new Canvas(bm);
+            float s = Math.max((float) w / src.getWidth(), (float) h / src.getHeight());
+            float dw = src.getWidth() * s, dh = src.getHeight() * s;
+            android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG);
+            c.drawBitmap(src, null, new android.graphics.RectF((w - dw) / 2, (h - dh) / 2, (w + dw) / 2, (h + dh) / 2), paint);
+            GradientDrawable shade = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                    inFrame ? new int[] {0x1A000000, 0x00000000, 0x80000000} : new int[] {0x66000000, 0x40000000, 0x99000000});
+            shade.setBounds(0, 0, w, h);
+            shade.draw(c);
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                Bitmap hw = bm.copy(Bitmap.Config.HARDWARE, false);
+                if (hw != null) {
+                    bm.recycle();
+                    bm = hw;
+                }
+            }
+            return new BitmapDrawable(getResources(), bm);
+        } catch (Throwable t) {
+            return null;
+        } finally {
+            if (src != null) src.recycle();
+        }
+    }
+
+    // Reads a picture at the smallest size that still covers w x h, to save memory.
+    static Bitmap decode(File f, int w, int h) {
+        android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+        o.inJustDecodeBounds = true;
+        android.graphics.BitmapFactory.decodeFile(f.getPath(), o);
+        if (o.outWidth <= 0 || o.outHeight <= 0) return null;
+        int sample = 1;
+        while (o.outWidth / (sample * 2) >= w && o.outHeight / (sample * 2) >= h) sample *= 2;
+        o = new android.graphics.BitmapFactory.Options();
+        o.inSampleSize = sample;
+        return android.graphics.BitmapFactory.decodeFile(f.getPath(), o);
+    }
+
+    // The wallpapers, each with a small dot of its colours (or of the picture). Moving through the
+    // list shows each one behind the panel; OK keeps it, Back goes back to the one before.
     private void showWallpapers() {
         final int size = px(40);
-        panel(Strings.t("Wallpaper"), Arrays.asList(WALLPAPER_NAMES), pos -> {
+        final List<File> images = imageWallpapers(this);
+        panel(Strings.t("Wallpaper"), wallpaperNames(images), pos -> {
+            if (pos == WALLPAPERS.length + images.size()) return new LineIcon(LineIcon.SHUFFLE);
+            if (pos >= WALLPAPERS.length) {
+                Bitmap thumb = decode(images.get(pos - WALLPAPERS.length), size, size);
+                if (thumb == null) throw new Exception("unreadable");
+                Bitmap round = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+                Canvas c = new Canvas(round);
+                android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                android.graphics.BitmapShader shader = new android.graphics.BitmapShader(thumb,
+                        android.graphics.Shader.TileMode.CLAMP, android.graphics.Shader.TileMode.CLAMP);
+                float s = (float) size / Math.min(thumb.getWidth(), thumb.getHeight());
+                android.graphics.Matrix m = new android.graphics.Matrix();
+                m.setScale(s, s);
+                m.postTranslate((size - thumb.getWidth() * s) / 2, (size - thumb.getHeight() * s) / 2);
+                shader.setLocalMatrix(m);
+                paint.setShader(shader);
+                c.drawCircle(size / 2f, size / 2f, size / 2f, paint);
+                return new BitmapDrawable(getResources(), round);
+            }
             int[] c = WALLPAPERS[pos];
             GradientDrawable dot = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
                     new int[] {glow(c[3], c[0]), c[1], glow(c[4], c[0])});
@@ -471,9 +829,12 @@ public class MainActivity extends Activity {
             dot.setStroke(Math.max(1, px(2)), 0x26FFFFFF);
             dot.setSize(size, size);
             return dot;
-        }, size, wallpaper(), this::showWallpaper, which -> {
-            getSharedPreferences(PREFS, 0).edit().putString("wallpaper", WALLPAPER_NAMES[which]).apply();
-            showWallpaper(which);
+        }, size, wallpaper(images), which -> showWallpaper(images, which), which -> {
+            String name = which < WALLPAPERS.length ? WALLPAPER_NAMES[which]
+                    : which == WALLPAPERS.length + images.size() ? SHUFFLE
+                    : IMAGE + images.get(which - WALLPAPERS.length).getName();
+            // wallpaperChanged shows it; one picked again is already showing from the preview.
+            getSharedPreferences(PREFS, 0).edit().putString(PREF_WALLPAPER, name).apply();
         });
     }
 
@@ -506,6 +867,7 @@ public class MainActivity extends Activity {
             ((ViewGroup) wrap.getParent()).removeView(wrap);
         }
         tiles.clear();
+        building = new ArrayList<>();
         rowApps.clear();
         movingKey = null;
         moveHint.setVisibility(View.GONE);
@@ -538,9 +900,14 @@ public class MainActivity extends Activity {
             } catch (Exception ignored) {}
             String label = pkg;
             try { label = pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString(); } catch (Exception ignored) {}
-            // Apps without a TV banner get a plain tile with their normal icon.
+            // Apps without a TV banner (phone apps) get one made from their icon, so the row stays
+            // even; if that fails, a plain tile with the icon.
             Drawable icon = null;
             if (banner == null) try { icon = pm.getApplicationIcon(pkg); } catch (Exception ignored) {}
+            if (banner == null && icon != null) {
+                banner = madeBanner(icon, label, w, h);
+                if (banner != null) icon = null;
+            }
             int i = rowApps.size();
             rowApps.add(pkg);
             addTile(root, pkg, label, banner, null, icon, gridX(i), gridY(i), w, h);
@@ -564,8 +931,10 @@ public class MainActivity extends Activity {
         List<Integer> quick = quickList();
         int ib = px(ICON_BUTTON), ig = px(ICON_GAP);
         // The last icon's right edge lines up with the apps' (its focus circle sticks out past them).
+        Drawable avatar = avatar();
+        int icons = quick.size() + 1 + (avatar != null ? 1 : 0);
         int qx = getResources().getDisplayMetrics().widthPixels - m + (ib - px(ICON_SIZE)) / 2
-                - (quick.size() + 1) * ib - quick.size() * ig;
+                - icons * ib - (icons - 1) * ig;
         for (int q : quick) {
             addIcon(QUICK + QUICK_NAMES[q], Strings.t(QUICK_LABELS[q]), new LineIcon(QUICK_ICONS[q]), qx);
             qx += ib + ig;
@@ -573,7 +942,10 @@ public class MainActivity extends Activity {
         netIcon = addIcon(NETWORK, Strings.t("Network"), null, qx);
         netState = -1;
         refreshNetwork();
+        if (avatar != null) addIcon(ACCOUNT, Strings.t("Account"), avatar, qx + ib + ig);
 
+        shown = building;
+        shownHeight = bottomTop + h + px(MARGIN);
         root.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
         // An app that was uninstalled hands focus to the one now in its place, as Remove does.
         if (wantAt >= 0 && !rowApps.contains(want))
@@ -693,6 +1065,46 @@ public class MainActivity extends Activity {
         }
         parent.addView(wrap, at(x, y, w, -2));
         tiles.add(card);
+        Shown t = new Shown();
+        t.key = key;
+        t.label = label;
+        t.x = x;
+        t.y = y;
+        t.w = w;
+        t.h = h;
+        t.ops = lineIcon;
+        Drawable art = banner != null ? ((ImageView) card.getChildAt(0)).getDrawable() : null;
+        if (art instanceof BitmapDrawable) t.image = ((BitmapDrawable) art).getBitmap();
+        else if (appIcon != null) t.image = bitmapOf(appIcon, px(64));
+        t.banner = banner != null;
+        building.add(t);
+    }
+
+    // What the home screen shows, for the copy of it at http://<TV_IP>:7979/ (Messages). Set each
+    // time the tiles are built; the pictures are the tiles' own, so this costs no extra memory.
+    static final class Shown {
+        String key, label;
+        int x, y, w, h; // in screen pixels
+        int[] ops; // a LineIcon, for the tiles that have one
+        Bitmap image; // the banner, or the icon on a plain tile, or the avatar
+        boolean banner;
+        ImageView icon; // set for the small round icons at the top right
+    }
+    static volatile List<Shown> shown = new ArrayList<>();
+    static volatile int shownHeight; // the page's height, which grows past the screen with many apps
+    static volatile String shownPictureNow; // the picture on screen, or null for a gradient
+    static volatile int shownGradient;
+    private List<Shown> building = new ArrayList<>();
+
+    private Bitmap bitmapOf(Drawable d, int size) {
+        try {
+            Bitmap b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+            d.setBounds(0, 0, size, size);
+            d.draw(new Canvas(b));
+            return b;
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     // The focus lift: the view grows and rises while its background fades and rounds off. A new
@@ -766,8 +1178,69 @@ public class MainActivity extends Activity {
         wrap.addView(card, new FrameLayout.LayoutParams(b, b));
         root.addView(wrap, at(x, px(ICON_TOP), b, b));
         tiles.add(card);
+        Shown t = new Shown();
+        t.key = key;
+        t.label = label;
+        t.x = x;
+        t.y = px(ICON_TOP);
+        t.w = t.h = b;
+        t.icon = iv; // read when asked: the network icon changes with the connection
+        if (!(icon instanceof LineIcon) && icon != null) t.image = bitmapOf(icon, size);
+        building.add(t);
         return iv;
     }
+
+    // The Google account's avatar, by the network icon: the photo uploaded on the /wallpapers page,
+    // else the account's first letter on a colour of its own. Android doesn't give other apps the
+    // account's own photo, and the address comes from install.sh (it reads it over adb). Null with
+    // neither, so no avatar shows.
+    static final String ACCOUNT = "account", PREF_ACCOUNT = "account", PREF_AVATAR_STAMP = "avatarstamp";
+
+    static File avatarFile(Context c) { return new File(c.getFilesDir(), "avatar.jpg"); }
+
+    private Drawable avatar() {
+        int size = px(ICON_SIZE) * 2; // drawn at twice the size, for a sharp circle
+        File f = avatarFile(this);
+        Bitmap photo = f.exists() ? decode(f, size, size) : null;
+        String account = prefs().getString(PREF_ACCOUNT, null);
+        if (photo == null && (account == null || account.isEmpty())) return null;
+        Bitmap b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(b);
+        android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        if (photo != null) {
+            android.graphics.BitmapShader sh = new android.graphics.BitmapShader(photo,
+                    android.graphics.Shader.TileMode.CLAMP, android.graphics.Shader.TileMode.CLAMP);
+            float s = (float) size / Math.min(photo.getWidth(), photo.getHeight());
+            android.graphics.Matrix mx = new android.graphics.Matrix();
+            mx.setScale(s, s);
+            mx.postTranslate((size - photo.getWidth() * s) / 2, (size - photo.getHeight() * s) / 2);
+            sh.setLocalMatrix(mx);
+            p.setShader(sh);
+            c.drawCircle(size / 2f, size / 2f, size / 2f, p);
+        } else {
+            // Google's own avatar colours, picked by the address so it's always the same one.
+            int[] colours = {0xFF1A73E8, 0xFFD93025, 0xFF188038, 0xFFE37400, 0xFF9334E6, 0xFF007B83, 0xFFC5221F, 0xFF5F6368};
+            p.setColor(colours[(account.hashCode() & 0x7FFFFFFF) % colours.length]);
+            c.drawCircle(size / 2f, size / 2f, size / 2f, p);
+            p.setColor(Color.WHITE);
+            p.setTypeface(semibold);
+            p.setTextSize(size * 0.5f);
+            p.setTextAlign(android.graphics.Paint.Align.CENTER);
+            String letter = account.substring(0, 1).toUpperCase(java.util.Locale.getDefault());
+            android.graphics.Paint.FontMetrics fm = p.getFontMetrics();
+            c.drawText(letter, size / 2f, size / 2f - (fm.ascent + fm.descent) / 2, p);
+        }
+        // A thin ring, so a dark photo still reads against a dark wallpaper.
+        p.setShader(null);
+        p.setStyle(android.graphics.Paint.Style.STROKE);
+        p.setStrokeWidth(size / 24f);
+        p.setColor(0x40FFFFFF);
+        c.drawCircle(size / 2f, size / 2f, size / 2f - size / 48f, p);
+        if (photo != null) photo.recycle();
+        return new BitmapDrawable(getResources(), b);
+    }
+
+    private static boolean isMenuTile(String key) { return ADD.equals(key) || SETTINGS.equals(key); }
 
     private void open(String key) {
         Intent i;
@@ -788,6 +1261,15 @@ public class MainActivity extends Activity {
             return;
         } else if (isInput(key)) {
             openInput(key);
+            return;
+        } else if (ACCOUNT.equals(key)) {
+            // The TV's accounts page; TVs name it differently, so the general sync page, else Settings.
+            for (String a : new String[] {Settings.ACTION_SYNC_SETTINGS, Settings.ACTION_SETTINGS}) {
+                try {
+                    startActivity(new Intent(a).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                    return;
+                } catch (Exception ignored) {}
+            }
             return;
         } else if (NETWORK.equals(key)) {
             openNetworkSettings();
@@ -1511,6 +1993,82 @@ public class MainActivity extends Activity {
 
     // Draws a banner once into a tile-sized bitmap (center-cropped). Some apps ship huge banners
     // that Android 9 refuses to draw ("Canvas: trying to draw too large bitmap"); this also saves RAM.
+    // A TV banner for an app that has none: its icon and name side by side, on the icon's own
+    // background layer where it has one (Android 8+ icons do), else on a colour taken from the icon.
+    // Painted once into a picture the tile's size, like a real banner.
+    private Drawable madeBanner(Drawable icon, String label, int w, int h) {
+        try {
+            Bitmap bm = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            Canvas c = new Canvas(bm);
+            int size = Math.round(h * 0.46f); // the icon as it shows
+            int base;
+            Drawable front = icon;
+            if (android.os.Build.VERSION.SDK_INT >= 26 && icon instanceof android.graphics.drawable.AdaptiveIconDrawable
+                    && ((android.graphics.drawable.AdaptiveIconDrawable) icon).getBackground() != null) {
+                android.graphics.drawable.AdaptiveIconDrawable a = (android.graphics.drawable.AdaptiveIconDrawable) icon;
+                // The background layer is made to be cropped, so it can fill the whole tile.
+                Drawable back = a.getBackground();
+                int side = Math.max(w, h);
+                back.setBounds((w - side) / 2, (h - side) / 2, (w + side) / 2, (h + side) / 2);
+                back.draw(c);
+                base = bm.getPixel(w / 2, h / 2);
+                front = a.getForeground();
+            } else {
+                base = iconColour(icon);
+                GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                        new int[] {base, blend(base, Color.BLACK, 0.45f)});
+                g.setBounds(0, 0, w, h);
+                g.draw(c);
+            }
+
+            boolean light = Color.red(base) * 0.299 + Color.green(base) * 0.587 + Color.blue(base) * 0.114 > 170;
+            android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            paint.setTypeface(semibold);
+            paint.setColor(light ? 0xFF161113 : Color.WHITE);
+            float textSize = h * 0.2f, gap = h * 0.08f, room = w - h * 0.24f;
+            paint.setTextSize(textSize);
+            // Long names get smaller, then cut short.
+            while (size + gap + paint.measureText(label) > room && textSize > h * 0.13f) paint.setTextSize(textSize -= 1);
+            String text = label;
+            if (size + gap + paint.measureText(text) > room)
+                text = android.text.TextUtils.ellipsize(label, new android.text.TextPaint(paint), room - size - gap,
+                        android.text.TextUtils.TruncateAt.END).toString();
+            float total = size + gap + paint.measureText(text);
+            int x = Math.round((w - total) / 2), y = (h - size) / 2;
+
+            // An adaptive foreground has room around it (its art sits in the middle 72 of 108), so it's
+            // drawn larger to show at the same size as an ordinary icon.
+            int pad = front != icon ? Math.round(size * 18f / 72f) : 0;
+            front.setBounds(x - pad, y - pad, x + size + pad, y + size + pad);
+            front.draw(c);
+            android.graphics.Paint.FontMetrics fm = paint.getFontMetrics();
+            c.drawText(text, x + size + gap, h / 2f - (fm.ascent + fm.descent) / 2, paint);
+            return new BitmapDrawable(getResources(), bm);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    // The average colour of an icon's solid pixels, a little darker so white text reads on it.
+    private static int iconColour(Drawable icon) {
+        Bitmap b = Bitmap.createBitmap(24, 24, Bitmap.Config.ARGB_8888);
+        icon.setBounds(0, 0, 24, 24);
+        icon.draw(new Canvas(b));
+        long r = 0, g = 0, bl = 0, n = 0;
+        for (int y = 0; y < 24; y++)
+            for (int x = 0; x < 24; x++) {
+                int p = b.getPixel(x, y);
+                if (Color.alpha(p) < 200) continue;
+                r += Color.red(p);
+                g += Color.green(p);
+                bl += Color.blue(p);
+                n++;
+            }
+        b.recycle();
+        if (n == 0) return 0xFF2A2427;
+        return blend(Color.rgb((int) (r / n), (int) (g / n), (int) (bl / n)), Color.BLACK, 0.25f);
+    }
+
     private Drawable fit(Drawable d, int w, int h) {
         try {
             Bitmap b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);

@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#161113">
+<title>Message · Telebisyon</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+  .layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); gap: clamp(16px, 2.5vw, 32px); align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+  /* The TV, small: its wallpaper and the message where it will show. Tap a spot to put it there. */
+  .screen-wrap { position: sticky; top: 16px; }
+  @media (max-width: 900px) { .screen-wrap { position: static; } }
+  .screen { position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius); overflow: hidden; background: #161113 center / cover;
+    border: 1px solid var(--line); box-shadow: 0 24px 60px rgba(0, 0, 0, .5); }
+  .screen::before { content: ""; position: absolute; inset: 0; background: linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.1), rgba(0,0,0,.35)); }
+  .zone { position: absolute; width: 33.34%; height: 33.34%; border: 0; background: transparent; cursor: pointer; padding: 0; z-index: 1; }
+  .zone:hover::after, .zone:focus-visible::after { content: ""; position: absolute; inset: 8%; border: 2px dashed rgba(255,255,255,.5); border-radius: 12px; }
+  .zone:focus-visible { outline: none; }
+  .card { position: absolute; z-index: 2; pointer-events: none; border-style: solid; overflow-wrap: anywhere; }
+  .card .ct { font-weight: 500; line-height: 1.2; }
+  .card .cm { line-height: 1.3; white-space: pre-wrap; }
+  .card img { display: block; width: 100%; margin-top: 4%; border-radius: 4px; }
+  .screen-note { color: var(--faint); font-size: 14px; margin-top: 10px; text-align: center; }
+
+  .actions { display: flex; gap: 12px; margin-top: 24px; }
+  .actions .btn { flex: 1; }
+  .colors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .swatch { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--dim); }
+  .swatch input { width: 100%; height: 44px; padding: 3px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255,255,255,.06); cursor: pointer; }
+  details { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+  summary { cursor: pointer; color: var(--dim); list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-size: 22px; line-height: 1; transition: transform var(--lift); }
+  details[open] summary::after { transform: rotate(45deg); }
+  .chime { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; }
+</style>
+</head>
+<body>
+<main class="page">
+  <h1>Message the TV</h1>
+  <p class="lede">It pops up over whatever is on, then goes away by itself. The remote keeps working underneath.</p>
+
+  <div class="layout">
+    <div class="screen-wrap">
+      <div class="screen" id="screen">
+        <button type="button" class="zone" data-p="1" style="left:0;top:0" aria-label="Top left"></button>
+        <button type="button" class="zone" data-p="0" style="right:0;top:0" aria-label="Top right"></button>
+        <button type="button" class="zone" data-p="4" style="left:33.33%;top:33.33%" aria-label="Centre"></button>
+        <button type="button" class="zone" data-p="3" style="left:0;bottom:0" aria-label="Bottom left"></button>
+        <button type="button" class="zone" data-p="2" style="right:0;bottom:0" aria-label="Bottom right"></button>
+        <div class="card" id="card"><div class="ct" id="ct"></div><div class="cm" id="cm"></div><img id="ci" alt="" hidden></div>
+      </div>
+      <div class="screen-note">Tap a corner or the middle to move it.</div>
+    </div>
+
+    <form class="panel" id="f">
+      <label class="field" for="title">Title</label>
+      <input id="title" type="text" maxlength="200" placeholder="Dinner" autocomplete="off">
+      <label class="field" for="message">Message</label>
+      <textarea id="message" maxlength="2000" placeholder="It's ready"></textarea>
+
+      <label class="field">Show for</label>
+      <div class="pills" id="duration" role="radiogroup">
+        <button type="button" data-v="5">5 s</button>
+        <button type="button" data-v="10">10 s</button>
+        <button type="button" data-v="30" class="on">30 s</button>
+        <button type="button" data-v="60">1 min</button>
+        <button type="button" data-v="300">5 min</button>
+      </div>
+
+      <label class="field">Text size</label>
+      <div class="pills" id="size" role="radiogroup">
+        <button type="button" data-v="0.8">Small</button>
+        <button type="button" data-v="1" class="on">Normal</button>
+        <button type="button" data-v="1.4">Large</button>
+        <button type="button" data-v="2">Huge</button>
+      </div>
+
+      <div class="chime">
+        <span>Play a chime</span>
+        <label class="switch"><input id="sound" type="checkbox" aria-label="Play a chime"><span></span></label>
+      </div>
+
+      <details>
+        <summary>Colours and a picture</summary>
+        <div class="colors" style="margin-top:14px">
+          <label class="swatch">Background<input id="cbg" type="color" value="#231d1f"></label>
+          <label class="swatch">Title<input id="tc" type="color" value="#ffffff"></label>
+          <label class="swatch">Message<input id="mc" type="color" value="#d9d9d9"></label>
+        </div>
+        <label class="field" for="image">Picture from a link</label>
+        <input id="image" type="url" placeholder="https://example.com/camera.jpg" autocomplete="off">
+      </details>
+
+      <div class="actions">
+        <button type="submit" class="btn primary">Send to TV</button>
+        <button type="button" class="btn" id="clear">Clear</button>
+      </div>
+    </form>
+  </div>
+</main>
+<script src="/common.js"></script>
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var position = 0;
+
+  function pick(group, onChange) {
+    group.addEventListener("click", function (e) {
+      var b = e.target.closest("button");
+      if (!b) return;
+      [].forEach.call(group.children, function (c) { c.classList.toggle("on", c === b); c.setAttribute("aria-checked", c === b); });
+      if (onChange) onChange();
+    });
+  }
+  function value(group) { return +group.querySelector(".on").dataset.v; }
+
+  // The card as the TV draws it (Messages.display), scaled to the preview's width.
+  function preview() {
+    var screen = $("screen"), card = $("card"), k = screen.clientWidth / 1920, size = value($("size"));
+    var title = $("title").value.trim(), message = $("message").value.trim(), image = $("image").value.trim();
+    $("ct").textContent = title || (message || image ? "" : "Dinner");
+    $("cm").textContent = message || (title || image ? "" : "It's ready");
+    $("ct").style.fontSize = 20 * size * 1.6 * k + "px";
+    $("cm").style.fontSize = 14 * size * 1.8 * k + "px";
+    $("cm").style.paddingTop = $("ct").textContent ? 8 * k + "px" : "0";
+    $("ct").style.color = $("tc").value;
+    $("cm").style.color = $("mc").value;
+    var ci = $("ci");
+    if (image) { if (ci.getAttribute("src") !== image) ci.src = image; ci.hidden = false; } else ci.hidden = true;
+    card.style.background = $("cbg").value + "f2";
+    card.style.borderRadius = 26 * k + "px";
+    card.style.borderWidth = Math.max(1, 2 * k) + "px";
+    card.style.borderColor = "rgba(255,255,255,.09)";
+    card.style.padding = 28 * k + "px " + 36 * k + "px " + 30 * k + "px";
+    card.style.width = (image ? 720 : 560) * k + "px";
+    var m = 64 * k;
+    card.style.left = card.style.right = card.style.top = card.style.bottom = "auto";
+    card.style.transform = "none";
+    if (position === 4) { card.style.left = "50%"; card.style.top = "50%"; card.style.transform = "translate(-50%,-50%)"; }
+    else {
+      card.style[position === 1 || position === 3 ? "left" : "right"] = m + "px";
+      card.style[position === 2 || position === 3 ? "bottom" : "top"] = m + "px";
+    }
+  }
+
+  pick($("duration"));
+  pick($("size"), preview);
+  $("screen").addEventListener("click", function (e) {
+    var z = e.target.closest(".zone");
+    if (!z) return;
+    position = +z.dataset.p;
+    preview();
+  });
+  ["title", "message", "image", "cbg", "tc", "mc"].forEach(function (id) { $(id).addEventListener("input", preview); });
+  window.addEventListener("resize", preview);
+
+  $("f").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var title = $("title").value.trim(), message = $("message").value.trim(), image = $("image").value.trim();
+    if (!title && !message && !image) { TV.toast("Write a title or a message first"); $("title").focus(); return; }
+    var size = value($("size"));
+    var body = { title: title, message: message, duration: value($("duration")), position: position,
+      titleSize: 20 * size, messageSize: 14 * size, sound: $("sound").checked,
+      backgroundColor: $("cbg").value, titleColor: $("tc").value, messageColor: $("mc").value };
+    if (image) body.media = { image: { uri: image, width: 480 } };
+    TV.toast("Sending…");
+    fetch("/notify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { TV.toast(r.ok ? "On the TV now" : "The TV said no (" + r.status + ")"); })
+      .catch(function () { TV.toast("Couldn't reach the TV"); });
+  });
+  $("clear").addEventListener("click", function () {
+    fetch("/cancel", { method: "DELETE" })
+      .then(function () { TV.toast("Cleared from the TV"); })
+      .catch(function () { TV.toast("Couldn't reach the TV"); });
+  });
+
+  TV.start("message");
+  TV.onHome(function (h) { $("screen").style.backgroundImage = TV.wallpaperCss(h, $("screen").clientWidth); });
+  preview();
+</script>
+</body>
+</html>

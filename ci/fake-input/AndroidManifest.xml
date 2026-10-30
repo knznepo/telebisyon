@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.ansub.fakeinput" android:versionCode="1" android:versionName="1.0">
+    package="com.knz.fakeinput" android:versionCode="1" android:versionName="1.0">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
 
     <!-- For testing only: a TV input service, so an emulator with no HDMI inputs still has one

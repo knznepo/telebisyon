@@ -1,6 +1,6 @@
 # Press
 
-Coverage of [TV Detox](https://github.com/Ansub/tv-detox) and Ansub Khan. Newest first within each language. Major outlets only.
+Coverage of [TV Detox](https://github.com/Ansub/tv-detox) and Ansub Khan, the project Telebisyon is forked from. (It's about TV Detox, not Telebisyon.) Newest first within each language. Major outlets only.
 
 ## English
 

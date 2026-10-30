@@ -1,0 +1,124 @@
+/* Shared look for the TV's web pages: the home screen's glass, focus lift and type, on its wallpaper. */
+:root {
+  --text: #fff;
+  --dim: rgba(255, 255, 255, .66);
+  --faint: rgba(255, 255, 255, .42);
+  --glass: rgba(255, 255, 255, .075);
+  --glass-hi: rgba(255, 255, 255, .22);
+  --line: rgba(255, 255, 255, .09);
+  --line-hi: rgba(255, 255, 255, .5);
+  --panel: rgba(22, 17, 19, .62);
+  --ink: #161113;
+  --radius: 22px;
+  --radius-sm: 14px;
+  --gutter: clamp(16px, 5vw, 96px);
+  --lift: 180ms cubic-bezier(.2, .8, .3, 1);
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; min-height: 100vh; color: var(--text); background: #0b0909;
+  font: 16px/1.45 Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+a { color: inherit; }
+[hidden] { display: none !important; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+/* The TV's wallpaper, behind everything, softened so text stays easy to read. */
+#bg { position: fixed; inset: -40px; z-index: -2; background: #161113 center / cover no-repeat; filter: blur(28px) saturate(1.15); transform: scale(1.04); }
+#bg-shade { position: fixed; inset: 0; z-index: -1; background: linear-gradient(rgba(11, 9, 9, .55), rgba(11, 9, 9, .72) 50%, rgba(11, 9, 9, .88)); }
+
+/* Top bar: the TV's clock, and the pages as tabs. */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: clamp(16px, 3vw, 36px) var(--gutter) 8px; }
+.top .clock { display: flex; align-items: baseline; gap: 12px; white-space: nowrap; }
+.top .clock .t { font-size: clamp(28px, 4vw, 40px); font-weight: 500; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.top .clock .d { color: var(--dim); font-size: 15px; }
+.tabs { display: flex; gap: 6px; padding: 5px; background: var(--glass); border: 1px solid var(--line); border-radius: 999px;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+.tabs a { text-decoration: none; padding: 8px 16px; border-radius: 999px; color: var(--dim); transition: background var(--lift), color var(--lift); white-space: nowrap; }
+.tabs a:hover { color: var(--text); background: var(--glass); }
+.tabs a.on { background: #fff; color: var(--ink); font-weight: 500; }
+
+main.page { padding: 8px var(--gutter) 64px; max-width: 1600px; margin: 0 auto; }
+h1 { font-size: clamp(30px, 4.4vw, 52px); font-weight: 500; letter-spacing: -.02em; line-height: 1.1; margin: clamp(16px, 3vw, 32px) 0 6px; }
+.lede { color: var(--dim); margin: 0 0 clamp(20px, 3vw, 32px); max-width: 60ch; }
+h2 { font-size: 20px; font-weight: 500; margin: 36px 0 14px; display: flex; align-items: baseline; gap: 10px; }
+h2 small { color: var(--faint); font-size: 14px; font-weight: 400; }
+
+/* Glass panel, like the home screen's tiles and menus. */
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: clamp(18px, 2.4vw, 28px);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+
+/* Tiles: 16:9, rounded, and they lift when hovered or focused, as on the TV. */
+.tile { position: relative; display: block; aspect-ratio: 16 / 9; border-radius: var(--radius-sm); overflow: hidden; padding: 0; cursor: pointer;
+  border: 1px solid var(--line); background: var(--glass); color: var(--text); transition: transform var(--lift), box-shadow var(--lift), background var(--lift);
+  -webkit-tap-highlight-color: transparent; }
+.tile:hover, .tile:focus-visible { transform: scale(1.06); box-shadow: 0 14px 36px rgba(0, 0, 0, .45); outline: none; z-index: 1; }
+.tile:active { transform: scale(1.02); }
+.tile.glass { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+.tile.glass:hover, .tile.glass:focus-visible { background: var(--glass-hi); }
+.tile.on { box-shadow: 0 0 0 3px #fff, 0 14px 36px rgba(0, 0, 0, .45); }
+
+/* Fields */
+label.field { display: block; color: var(--dim); font-size: 14px; margin: 18px 0 8px; }
+label.field:first-child { margin-top: 0; }
+input[type=text], input[type=url], input[type=password], textarea, select {
+  width: 100%; background: rgba(255, 255, 255, .06); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 13px 15px; transition: border-color var(--lift), background var(--lift); }
+textarea { min-height: 110px; resize: vertical; }
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--line-hi); background: rgba(255, 255, 255, .1); }
+select { appearance: none; -webkit-appearance: none; padding-right: 40px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 15px center; }
+select option { background: #231d1f; color: #fff; }
+
+/* Pills: a row of choices, the picked one white like a focused tile. */
+.pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.pills button { border: 1px solid var(--line); background: var(--glass); border-radius: 999px; padding: 9px 16px; cursor: pointer;
+  transition: background var(--lift), color var(--lift), transform var(--lift); }
+.pills button:hover { background: var(--glass-hi); }
+.pills button.on { background: #fff; color: var(--ink); border-color: #fff; font-weight: 500; }
+
+/* A settings row, like the TV's own settings: a name on the left, its value on the right. */
+.row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; padding-top: 0; }
+.row:last-child { padding-bottom: 0; }
+.row .name { font-weight: 500; }
+.row .hint { color: var(--faint); font-size: 14px; }
+.row select { width: auto; min-width: 200px; }
+
+/* Switch */
+.switch { position: relative; width: 52px; height: 30px; flex: none; }
+.switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 1; }
+.switch span { position: absolute; inset: 0; background: rgba(255, 255, 255, .18); border-radius: 999px; transition: background var(--lift); }
+.switch span::after { content: ""; position: absolute; left: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform var(--lift); }
+.switch input:checked + span { background: #34c759; }
+.switch input:checked + span::after { transform: translateX(22px); }
+.switch input:focus-visible + span { box-shadow: 0 0 0 3px var(--line-hi); }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--line); background: var(--glass);
+  border-radius: 999px; padding: 13px 22px; cursor: pointer; font-weight: 500; transition: transform var(--lift), background var(--lift); }
+.btn:hover { background: var(--glass-hi); transform: scale(1.03); }
+.btn:active { transform: scale(.98); }
+.btn.primary { background: #fff; color: var(--ink); border-color: #fff; }
+.btn.primary:hover { background: #f1f1f1; }
+.btn:disabled { opacity: .45; cursor: default; transform: none; }
+
+#toast { position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); transform: translate(-50%, 20px); opacity: 0;
+  background: rgba(35, 29, 31, .95); border: 1px solid var(--line); border-radius: 999px; padding: 12px 20px; pointer-events: none; z-index: 10;
+  transition: opacity 200ms, transform 200ms; max-width: calc(100% - 32px); text-align: center; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+#toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 640px) {
+  .top { justify-content: center; }
+  .top .clock { display: none; }
+  .tabs { width: 100%; justify-content: space-between; }
+  .tabs a { flex: 1; text-align: center; padding: 9px 4px; font-size: 14px; }
+  .row { flex-wrap: wrap; }
+  .row select { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+}
