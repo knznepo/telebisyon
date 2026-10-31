@@ -22,7 +22,9 @@
   .card { position: absolute; z-index: 2; pointer-events: none; border-style: solid; overflow-wrap: anywhere; }
   .card .ct { font-weight: 500; line-height: 1.2; }
   .card .cm { line-height: 1.3; white-space: pre-wrap; }
-  .card img { display: block; width: 100%; margin-top: 4%; border-radius: 4px; }
+  .card img { display: block; width: 100%; margin-top: 4%; border-radius: 4px; object-fit: contain; }
+  .card.bare { background: none !important; border-color: transparent !important; text-shadow: 0 1px 4px rgba(0,0,0,.9); }
+  .card.bare img { border-radius: 0; }
   .screen-note { color: var(--faint); font-size: 14px; margin-top: 10px; text-align: center; }
 
   .actions { display: flex; gap: 12px; margin-top: 24px; }
@@ -93,6 +95,17 @@
         </div>
         <label class="field" for="image">Picture from a link</label>
         <input id="image" type="url" placeholder="https://example.com/camera.jpg" autocomplete="off">
+        <label class="field">Picture size</label>
+        <div class="pills" id="isize" role="radiogroup">
+          <button type="button" data-v="20">Small</button>
+          <button type="button" data-v="35" class="on">Medium</button>
+          <button type="button" data-v="50">Large</button>
+          <button type="button" data-v="100">Full screen</button>
+        </div>
+        <div class="chime">
+          <span>Box behind it <small style="display:block;color:var(--faint)">Off: a transparent PNG floats on the picture</small></span>
+          <label class="switch"><input id="box" type="checkbox" checked aria-label="Box behind it"><span></span></label>
+        </div>
       </details>
 
       <div class="actions">
@@ -119,7 +132,7 @@
 
   // The card as the TV draws it (Messages.display), scaled to the preview's width.
   function preview() {
-    var screen = $("screen"), card = $("card"), k = screen.clientWidth / 1920, size = value($("size"));
+    var screen = $("screen"), card = $("card"), k = screen.clientWidth / 1920, size = value($("size")), box = $("box").checked;
     var title = $("title").value.trim(), message = $("message").value.trim(), image = $("image").value.trim();
     $("ct").textContent = title || (message || image ? "" : "Dinner");
     $("cm").textContent = message || (title || image ? "" : "It's ready");
@@ -130,31 +143,35 @@
     $("cm").style.color = $("mc").value;
     var ci = $("ci");
     if (image) { if (ci.getAttribute("src") !== image) ci.src = image; ci.hidden = false; } else ci.hidden = true;
+    card.classList.toggle("bare", !box);
     card.style.background = $("cbg").value + "f2";
     card.style.borderRadius = 26 * k + "px";
     card.style.borderWidth = Math.max(1, 2 * k) + "px";
     card.style.borderColor = "rgba(255,255,255,.09)";
-    card.style.padding = 28 * k + "px " + 36 * k + "px " + 30 * k + "px";
-    card.style.width = (image ? 720 : 560) * k + "px";
-    var m = 64 * k;
+    card.style.padding = box ? 28 * k + "px " + 36 * k + "px " + 30 * k + "px" : "0";
+    var pad = box ? 36 * k : 0, w = image ? Math.min(1920 * k, 1920 * k * value($("isize")) / 100 + 2 * pad) : 560 * k;
+    card.style.width = w + "px";
+    ci.style.maxHeight = (1080 - 128) * k + "px";
+    var m = w > (1920 - 128) * k ? 0 : 64 * k;
     card.style.left = card.style.right = card.style.top = card.style.bottom = "auto";
     card.style.transform = "none";
     if (position === 4) { card.style.left = "50%"; card.style.top = "50%"; card.style.transform = "translate(-50%,-50%)"; }
     else {
       card.style[position === 1 || position === 3 ? "left" : "right"] = m + "px";
-      card.style[position === 2 || position === 3 ? "bottom" : "top"] = m + "px";
+      card.style[position === 2 || position === 3 ? "bottom" : "top"] = 64 * k + "px";
     }
   }
 
   pick($("duration"));
   pick($("size"), preview);
+  pick($("isize"), preview);
   $("screen").addEventListener("click", function (e) {
     var z = e.target.closest(".zone");
     if (!z) return;
     position = +z.dataset.p;
     preview();
   });
-  ["title", "message", "image", "cbg", "tc", "mc"].forEach(function (id) { $(id).addEventListener("input", preview); });
+  ["title", "message", "image", "cbg", "tc", "mc", "box"].forEach(function (id) { $(id).addEventListener("input", preview); });
   window.addEventListener("resize", preview);
 
   $("f").addEventListener("submit", function (e) {
@@ -165,7 +182,8 @@
     var body = { title: title, message: message, duration: value($("duration")), position: position,
       titleSize: 20 * size, messageSize: 14 * size, sound: $("sound").checked,
       backgroundColor: $("cbg").value, titleColor: $("tc").value, messageColor: $("mc").value };
-    if (image) body.media = { image: { uri: image, width: 480 } };
+    if (!$("box").checked) body.box = false;
+    if (image) { body.media = { image: { uri: image, width: 480 } }; body.imageSize = value($("isize")); }
     TV.toast("Sending…");
     fetch("/notify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       .then(function (r) { TV.toast(r.ok ? "On the TV now" : "The TV said no (" + r.status + ")"); })

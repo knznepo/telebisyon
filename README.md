@@ -169,10 +169,13 @@ Yes. Use the web page, or `sh send.sh <TV_IP> "Title" "Message"`. A message show
 DURATION=10 POSITION=4 sh send.sh <TV_IP> "Dinner" "It's ready"     # centred, for 10 seconds
 SOUND=1 sh send.sh <TV_IP> "Door" "Someone's here"                  # with a chime
 IMAGE=http://camera.local/snap.jpg sh send.sh <TV_IP> "Front door" ""
+BOX=0 IMAGE_SIZE=50 IMAGE=https://example.com/logo.png sh send.sh <TV_IP> "" ""   # floating, half the screen wide
 sh send.sh <TV_IP> --cancel                                          # take it away early
 ```
 
-It speaks PiPup's API on port 7979 (`POST /notify` with `title`, `message`, `duration`, `position`, colours, sizes and `media.image.uri`, plus `"sound": true` for the chime), so anything already set up for PiPup works as it is.
+**Floating pictures:** turn off **Box behind it** on the web page (or `BOX=0`) and a transparent PNG floats on the screen with no card around it; text gets a shadow instead. **Picture size** (or `IMAGE_SIZE`, in percent of the screen's width) goes from small up to full screen.
+
+It speaks PiPup's API on port 7979 (`POST /notify` with `title`, `message`, `duration`, `position`, colours, sizes and `media.image.uri`, plus `"sound": true` for the chime, `"box": false` and `"imageSize": 50`), so anything already set up for PiPup works as it is.
 
 </details>
 

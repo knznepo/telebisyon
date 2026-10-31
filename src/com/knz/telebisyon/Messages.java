@@ -49,7 +49,9 @@ import java.nio.charset.StandardCharsets;
 // 1 top left, 2 bottom right, 3 bottom left, 4 centre), titleColor, titleSize, messageColor,
 // messageSize, backgroundColor, and media.image.uri / media.image.width for a picture from a URL.
 // A form post (title=...&message=...) works too. DELETE /cancel takes the message away early.
-// "sound": true plays a short chime with it (not part of PiPup).
+// Not part of PiPup: "sound": true plays a short chime with it, "box": false leaves out the card
+// behind it (a transparent PNG floats on the picture), and "imageSize" sets the picture's width
+// in percent of the screen (5 to 100).
 // In a browser (a phone, say): http://<TV_IP>:7979/ is a copy of the home screen whose tiles open on the
 // TV (res/raw/home.html), /message a form that sends a message (res/raw/form.html), and /wallpapers
 // a page that manages the wallpaper pictures (res/raw/wallpapers.html), and /files the TV's storage
@@ -908,7 +910,7 @@ public class Messages extends Service {
             o.inJustDecodeBounds = true;
             BitmapFactory.decodeByteArray(data, 0, data.length, o);
             int sample = 1;
-            while (o.outWidth / (sample * 2) >= 960) sample *= 2;
+            while (o.outWidth / (sample * 2) >= 1920) sample *= 2; // up to full screen, with imageSize
             o = new BitmapFactory.Options();
             o.inSampleSize = sample;
             return BitmapFactory.decodeByteArray(data, 0, data.length, o);
@@ -923,37 +925,50 @@ public class Messages extends Service {
     // keeps working the app underneath. A new message replaces the one shown.
     private void display(JSONObject j, Bitmap picture) {
         hide();
-        float scale = getResources().getDisplayMetrics().widthPixels / 1920f;
-        int pad = Math.round(36 * scale);
+        int screenW = getResources().getDisplayMetrics().widthPixels, screenH = getResources().getDisplayMetrics().heightPixels;
+        float scale = screenW / 1920f;
+        int margin = Math.round(64 * scale);
+        // Without the box there's no card: no background, border or padding, and the text gets a shadow.
+        boolean box = j.optBoolean("box", true);
+        int pad = box ? Math.round(36 * scale) : 0;
 
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(pad, Math.round(28 * scale), pad, Math.round(30 * scale));
-        GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(26 * scale);
-        bg.setColor(color(j.optString("backgroundColor"), 0xF2231D1F));
-        bg.setStroke(Math.max(1, Math.round(2 * scale)), 0x17FFFFFF);
-        card.setBackground(bg);
+        card.setPadding(pad, box ? Math.round(28 * scale) : 0, pad, box ? Math.round(30 * scale) : 0);
+        if (box) {
+            GradientDrawable bg = new GradientDrawable();
+            bg.setCornerRadius(26 * scale);
+            bg.setColor(color(j.optString("backgroundColor"), 0xF2231D1F));
+            bg.setStroke(Math.max(1, Math.round(2 * scale)), 0x17FFFFFF);
+            card.setBackground(bg);
+        }
 
         String title = j.optString("title"), message = j.optString("message");
         if (!title.isEmpty())
             card.addView(text(title, color(j.optString("titleColor"), Color.WHITE),
-                    j.optDouble("titleSize", 20) * 1.6 * scale, Typeface.create("sans-serif-medium", Typeface.NORMAL)));
+                    j.optDouble("titleSize", 20) * 1.6 * scale, Typeface.create("sans-serif-medium", Typeface.NORMAL), box, scale));
         if (!message.isEmpty()) {
             TextView m = text(message, color(j.optString("messageColor"), 0xD9FFFFFF),
-                    j.optDouble("messageSize", 14) * 1.8 * scale, Typeface.create("sans-serif", Typeface.NORMAL));
+                    j.optDouble("messageSize", 14) * 1.8 * scale, Typeface.create("sans-serif", Typeface.NORMAL), box, scale);
             if (!title.isEmpty()) m.setPadding(0, Math.round(8 * scale), 0, 0);
             card.addView(m);
         }
         int width = Math.round(560 * scale);
         if (picture != null) {
             JSONObject img = j.optJSONObject("media").optJSONObject("image");
-            width = Math.max(width, Math.round(img.optInt("width", 480) * scale * 1.5f));
-            width = Math.min(width, getResources().getDisplayMetrics().widthPixels / 2);
+            int percent = j.optInt("imageSize", 0);
+            if (percent > 0) {
+                width = Math.min(screenW, screenW * Math.max(5, Math.min(100, percent)) / 100 + 2 * pad);
+            } else {
+                width = Math.max(width, Math.round(img.optInt("width", 480) * scale * 1.5f));
+                width = Math.min(width, screenW / 2);
+            }
             ImageView iv = new ImageView(this);
             iv.setImageBitmap(picture);
             iv.setAdjustViewBounds(true);
             iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            // A tall picture shrinks to fit the screen's height, keeping its shape.
+            iv.setMaxHeight(screenH - 2 * margin);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
             if (!title.isEmpty() || !message.isEmpty()) lp.topMargin = Math.round(20 * scale);
             card.addView(iv, lp);
@@ -970,7 +985,8 @@ public class Messages extends Service {
                 Gravity.BOTTOM | Gravity.START, Gravity.CENTER};
         int pos = j.optInt("position", 0);
         p.gravity = gravity[pos >= 0 && pos < gravity.length ? pos : 0];
-        p.x = p.y = pos == 4 ? 0 : Math.round(64 * scale);
+        p.x = pos == 4 || width > screenW - 2 * margin ? 0 : margin;
+        p.y = pos == 4 ? 0 : margin;
         p.windowAnimations = android.R.style.Animation_Toast;
         try {
             ((WindowManager) getSystemService(WINDOW_SERVICE)).addView(card, p);
@@ -1014,12 +1030,13 @@ public class Messages extends Service {
         }
     }
 
-    private TextView text(String s, int color, double size, Typeface face) {
+    private TextView text(String s, int color, double size, Typeface face, boolean box, float scale) {
         TextView t = new TextView(this);
         t.setText(s);
         t.setTextColor(color);
         t.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) size);
         t.setTypeface(face);
+        if (!box) t.setShadowLayer(10 * scale, 0, 2 * scale, 0xE6000000); // readable on any picture
         return t;
     }
 
