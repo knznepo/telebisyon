@@ -39,7 +39,11 @@ echo "== 4/6 Clock: network time and time zone"
 sh clock.sh "$TV" || echo "Couldn't set the clock; run sh clock.sh $IP later."
 
 echo "== 5/6 Wallpaper pictures"
-if [ -d wallpapers ] && ls wallpapers | grep -qiE '\.(jpe?g|png|webp|bmp|gif)$'; then
+pictures=
+for f in wallpapers/*; do
+  case "$(printf '%s' "$f" | tr 'A-Z' 'a-z')" in *.jpg|*.jpeg|*.png|*.webp|*.bmp|*.gif) pictures=1; break ;; esac
+done
+if [ -n "$pictures" ]; then
   sh wallpapers.sh "$TV"
 else
   echo "None in ./wallpapers. You can add some later from the web page, or put them there and run this again."
