@@ -51,7 +51,7 @@ import javax.net.ssl.SSLContext;
 
 // Calls from a phone's browser: its camera and microphone show on the TV straight away, over whatever
 // is on, with nothing to answer. One way only: the TV has no camera to send back. With the camera off
-// it's audio only, and the TV shows a small "Phone" badge while someone talks, instead of the video.
+// it's audio only: just the sound, with nothing on screen.
 //
 // Browsers only give a page the camera on https, so the TV also listens on SECURE_PORT with its own
 // certificate, made here the first time (the browser warns about it once). The phone's page
@@ -196,8 +196,8 @@ final class Call {
         w.loadUrl("http://127.0.0.1:" + Messages.PORT + "/call/tv?t=" + t);
     }
 
-    // Full screen, or the bottom right corner at the video's shape (a third of the screen at most), or
-    // just the badge there for audio only.
+    // Full screen, or the bottom right corner at the video's shape (a third of the screen at most). For
+    // audio only, the window is a single see-through pixel: it only has to be there to play the sound.
     private void place() {
         if (view == null) return;
         int sw = context.getResources().getDisplayMetrics().widthPixels, sh = context.getResources().getDisplayMetrics().heightPixels;
@@ -206,10 +206,9 @@ final class Call {
         synchronized (this) { f = full; v = video; vw = videoW; vh = videoH; }
         String mode = !v ? "audio" : f ? "full" : "corner";
         if (!v) {
-            params.width = Math.round(440 * sw / 1920f);
-            params.height = Math.round(104 * sw / 1920f);
+            params.width = params.height = 1;
             params.gravity = Gravity.BOTTOM | Gravity.END;
-            params.x = params.y = Math.round(48 * sw / 1920f);
+            params.x = params.y = 0;
         } else if (f) {
             params.width = params.height = -1;
             params.x = params.y = 0;

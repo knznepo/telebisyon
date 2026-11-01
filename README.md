@@ -23,6 +23,7 @@ Looking for the **TV cleanup** (turning off bloatware, ads and sponsored rows) o
 - **Your own photos** as wallpaper, shuffled on a timer, plus a **photo frame** when the TV sits idle.
 - **A web page on the TV** (`http://<TV_IP>:7979`) for any phone or computer on your Wi-Fi: a live copy of the home screen whose tiles open on the TV, a message sender, a wallpaper manager and a **file manager** for the TV's storage and USB drives. It can sit behind a **PIN**.
 - **Messages** over whatever is playing, compatible with PiPup, with an optional chime.
+- **A remote on your phone or computer:** arrows, OK, Back, Home, volume, play/pause and power.
 - **Call the TV** from a phone's browser, with video or audio only. It plays on the TV straight away, over whatever is on: the show keeps playing, turned down while you talk. Nobody has to answer. Audio only works like an intercom, with hold to talk.
 - **Home Assistant control**: what's playing, pause and play, volume, open an app.
 - **Banners for phone apps** that don't come with one, so every tile matches.
@@ -68,7 +69,7 @@ sh setup.sh 192.168.1.50
 This downloads the home screen, installs it, turns on the phone pages, sets the TV's clock and copies any photos in the `wallpapers` folder.
 
 - The first time, the TV asks **"Allow USB debugging?"**. Tick **Always allow**, press **OK**, and run the command again if it stopped.
-- **Recommended:** add a PIN for the phone pages, and turn on the Files page: `PIN=123456 FILES=1 sh setup.sh 192.168.1.50`.
+- **Recommended:** add a PIN for the phone pages, and turn on the Files page and the remote: `PIN=123456 FILES=1 REMOTE=1 sh setup.sh 192.168.1.50`.
 
 **5. Make it open with the Home button.** This depends on your TV:
 
@@ -114,6 +115,7 @@ This downloads the home screen, installs it, turns on the phone pages, sets the 
 | `http://<TV_IP>:7979/message` | Send a message that pops up over whatever is playing |
 | `http://<TV_IP>:7979/wallpapers` | Upload photos, pick the wallpaper, shuffle them, set up the photo frame and your profile picture |
 | `http://<TV_IP>:7979/files` | Browse the TV and USB drives, upload, download, rename, delete and install APKs. Off until you run `sh files.sh <TV_IP>` |
+| `http://<TV_IP>:7979/remote` | The TV's remote: arrows, OK, Back, Home, volume, play/pause and power. Arrows need `sh remote.sh <TV_IP>` once |
 | `http://<TV_IP>:7979/call` | Call the TV with video or audio only. It plays on the TV straight away |
 
 Tip: add these to your phone's home screen (in the browser's Share menu, choose **Add to Home Screen**).
@@ -182,6 +184,35 @@ It speaks PiPup's API on port 7979 (`POST /notify` with `title`, `message`, `dur
 </details>
 
 <details>
+<summary><b>Can I use my phone as the remote?</b></summary>
+<br>
+
+Yes: the **Remote** tab on the TV's web page (`http://<TV_IP>:7979/remote`), on a phone or a computer.
+
+| Button | What it does |
+|---|---|
+| **Arrows** and **OK** | Like the remote's. Hold an arrow to keep going. |
+| **Back**, **Home** | Home opens Telebisyon. |
+| **Volume −**, **Volume +**, **Mute**, **Play/Pause** | For whatever is playing. |
+| **Power** | Opens the TV's power menu: pick **Turn off** with the arrows. Turning the TV back on needs its own remote: a sleeping TV doesn't answer the web page. |
+
+On a computer, the keyboard works as the remote too: the arrow keys, **Enter** for OK, **Backspace** for Back, **+** and **−** for volume.
+
+**Turn it on once:** volume and play/pause work straight away. Everything else needs the remote's accessibility service, which only adb (or the TV's Accessibility settings) can turn on:
+
+```sh
+sh remote.sh <TV_IP>          # on (or REMOTE=1 with setup.sh)
+sh remote.sh <TV_IP> off      # off
+```
+
+- **Set a PIN** (`sh pin.sh <TV_IP> 123456`): without one, anyone on your Wi-Fi can press buttons on the TV.
+- On **Android 13 and newer** (like recent Sony and Google TV), the arrows press the real keys and work everywhere. On older TVs, like a Mi Box on Android 9, Android doesn't let an app press keys, so the remote moves the highlight itself: that works in most apps, but some that draw their own screens (YouTube, say) may not follow.
+- **Why no trackpad or mouse pointer:** TVs ignore pretend taps (they have no touchscreen), and TV apps are made to be moved around with the highlight, so a pointer couldn't click in most of them.
+- The remote's accessibility service only acts when the page asks. It reads the screen only on TVs before Android 13, to move the highlight.
+
+</details>
+
+<details>
 <summary><b>Can I call the TV from my phone?</b></summary>
 <br>
 
@@ -190,7 +221,7 @@ Yes, one way. Open **Call** on the TV's web page (or the **Call** tile), pick **
 | Call with | On the TV |
 |---|---|
 | **Video** | Your camera and your voice, full screen or in a corner |
-| **Audio only** | Your voice, over whatever is on. A small **Phone** badge shows in the corner only while you're talking. Your camera stays off. |
+| **Audio only** | Just your voice, over whatever is on. Nothing shows on the screen. Your camera stays off. |
 
 During the call you can switch between **Video** and **Audio only**, the **Front** or **Back** camera, and **Full screen** or **Corner**. While the call is on, the phone shows **On the TV · it hears you** when your voice is reaching the TV.
 

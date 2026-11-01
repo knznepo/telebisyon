@@ -7,6 +7,7 @@
 #   sh setup.sh <TV_IP> "com.netflix.ninja,com.google.android.youtube.tv"   your own app list
 #   WEB=0 sh setup.sh <TV_IP>      without the web page (just the home screen)
 #   PIN=123456 FILES=1 sh setup.sh <TV_IP>   a PIN for the web page (pin.sh), and the /files page on (files.sh)
+#   REMOTE=1 sh setup.sh <TV_IP>   the /remote page's arrows on (remote.sh)
 #
 # Needs adb. Java 17 and the Android SDK (see build.sh) only to build it yourself.
 set -e
@@ -50,11 +51,12 @@ else
 fi
 
 if [ "$WEB" = 0 ]; then
-  echo "== 6/6 PIN and files: skipped (WEB=0)"
+  echo "== 6/6 PIN, files and remote: skipped (WEB=0)"
 else
-  echo "== 6/6 PIN and files"
+  echo "== 6/6 PIN, files and remote"
   if [ -n "$PIN" ]; then sh pin.sh "$TV" "$PIN"; else echo "No PIN (set one with PIN=123456, or later: sh pin.sh $IP 123456)."; fi
   if [ "$FILES" = 1 ]; then sh files.sh "$TV" on; else echo "Files page off (turn it on with FILES=1, or later: sh files.sh $IP)."; fi
+  if [ "$REMOTE" = 1 ]; then sh remote.sh "$TV" on; else echo "Remote's arrows off (turn them on with REMOTE=1, or later: sh remote.sh $IP)."; fi
 fi
 
 echo
@@ -65,4 +67,6 @@ if [ "$WEB" != 0 ]; then
   echo "  http://$IP:7979/message     send a message to the TV"
   echo "  http://$IP:7979/wallpapers  pictures, shuffle and the photo frame"
   if [ "$FILES" = 1 ]; then echo "  http://$IP:7979/files       the TV's files and USB drives"; fi
+  echo "  http://$IP:7979/remote      the TV's remote"
+  echo "  http://$IP:7979/call        call the TV"
 fi

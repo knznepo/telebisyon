@@ -10,21 +10,13 @@
   body.full { background: #000; }
   video { width: 100%; height: 100%; display: block; object-fit: contain; }
   body.corner video { object-fit: cover; border-radius: 24px; }
-  /* Audio only: no video, and a badge only while the phone is talking. */
-  .badge { display: none; }
+  /* Audio only: nothing on screen at all, just the sound. */
   body.audio video { display: none; }
-  body.audio .badge { display: flex; align-items: center; justify-content: center; gap: 0.6em; box-sizing: border-box; height: 100%;
-    border-radius: 999px; background: rgba(35, 29, 31, .95); border: 2px solid rgba(255, 255, 255, .09);
-    color: #fff; font: 500 30vh/1 sans-serif; opacity: 0; transition: opacity .3s; }
-  body.audio.talking .badge { opacity: 1; }
-  .dot { width: 0.6em; height: 0.6em; border-radius: 50%; background: #d93025; animation: pulse 1.4s ease-in-out infinite; }
-  @keyframes pulse { 50% { opacity: .35; } }
 </style>
 </head>
 <body>
 <video id="v" autoplay playsinline muted></video>
 <audio id="a" autoplay muted></audio>
-<div class="badge"><span class="dot"></span>Phone</div>
 <script>
   var q = "?t=" + new URLSearchParams(location.search).get("t"), v = document.getElementById("v");
   function post(path, body) {
@@ -74,8 +66,8 @@
   };
   setTimeout(function () { if (!connected) post("end"); }, 30000);
 
-  // Is someone talking? The badge shows while they are, and goes after a moment of quiet. The phone
-  // hears about it too, so it can say the TV is getting its sound.
+  // Is someone talking? The TV turns down what's playing while they are, and the phone hears about
+  // it too, so it can say the TV is getting its sound.
   var samples = new Float32Array(level.fftSize), lastTalk = 0, told = 0, logged = 0, wasTalking = false;
   setInterval(function () {
     level.getFloatTimeDomainData(samples);
@@ -84,7 +76,6 @@
     var now = Date.now(), loud = Math.sqrt(sum / samples.length) > 0.015;
     if (loud) lastTalk = now;
     var talking = now - lastTalk < 1500;
-    document.body.classList.toggle("talking", talking);
     // While someone talks, the TV turns down what's playing (Call.duck), and back up after.
     if (talking !== wasTalking) {
       wasTalking = talking;

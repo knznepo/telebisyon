@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#161113">
+<title>Remote · Telebisyon</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+  .layout { max-width: 440px; }
+  .remote { display: flex; flex-direction: column; gap: 18px; align-items: center; }
+  .row { display: flex; gap: 14px; justify-content: center; width: 100%; }
+  .key { flex: 1; max-width: 120px; min-height: 58px; border-radius: 18px; border: 1px solid var(--line); background: var(--glass);
+    color: var(--text); font: inherit; font-size: 15px; cursor: pointer; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 4px; user-select: none; -webkit-user-select: none; touch-action: manipulation; -webkit-touch-callout: none; }
+  .key:hover { background: var(--glass-hi); }
+  .key:active, .key.pressed { background: #fff; color: var(--ink); }
+  .key svg { width: 24px; height: 24px; }
+  .key.power { color: #ff6b5e; }
+  /* The arrow pad: a ring with OK in the middle. */
+  .dpad { position: relative; width: min(78vw, 280px); aspect-ratio: 1; border-radius: 50%; background: var(--glass);
+    border: 1px solid var(--line); }
+  .dpad button { position: absolute; border: 0; background: transparent; color: var(--text); cursor: pointer; display: grid;
+    place-items: center; user-select: none; -webkit-user-select: none; touch-action: manipulation; -webkit-touch-callout: none; }
+  .dpad button svg { width: 30px; height: 30px; }
+  .dpad .up, .dpad .down { left: 30%; width: 40%; height: 30%; }
+  .dpad .up { top: 0; border-radius: 50% 50% 0 0; }
+  .dpad .down { bottom: 0; border-radius: 0 0 50% 50%; }
+  .dpad .left, .dpad .right { top: 30%; width: 30%; height: 40%; }
+  .dpad .left { left: 0; border-radius: 50% 0 0 50%; }
+  .dpad .right { right: 0; border-radius: 0 50% 50% 0; }
+  .dpad .ok { left: 30%; top: 30%; width: 40%; height: 40%; border-radius: 50%; background: rgba(255, 255, 255, .14);
+    border: 1px solid var(--line); font-size: 18px; font-weight: 500; }
+  .dpad button:active, .dpad button.pressed { background: rgba(255, 255, 255, .28); }
+  .hint { color: var(--faint); font-size: 14px; margin: 0; text-align: center; }
+  .off { margin-bottom: 20px; }
+  .off code { font-size: 14px; }
+</style>
+</head>
+<body>
+<main class="page">
+  <h1>Remote</h1>
+  <p class="lede">The TV's remote, on this phone or computer.</p>
+
+  <div class="panel off" id="off" hidden>
+    <b>Turn on the remote first.</b> Volume and play/pause already work. For the rest (arrows, OK, Back, Home and Power),
+    run this once on your computer, with debugging on: <code>sh remote.sh &lt;TV_IP&gt;</code>
+  </div>
+
+  <div class="layout">
+    <div class="panel remote">
+      <div class="row">
+        <button type="button" class="key power" data-key="power" aria-label="Power"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v8M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>Power</button>
+        <button type="button" class="key" data-key="home" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>Home</button>
+      </div>
+
+      <div class="dpad" id="dpad">
+        <button type="button" class="up" data-key="up" data-repeat aria-label="Up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
+        <button type="button" class="left" data-key="left" data-repeat aria-label="Left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <button type="button" class="ok" data-key="ok">OK</button>
+        <button type="button" class="right" data-key="right" data-repeat aria-label="Right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="down" data-key="down" data-repeat aria-label="Down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+      </div>
+
+      <div class="row">
+        <button type="button" class="key" data-key="back" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Back</button>
+        <button type="button" class="key" data-media="playpause" aria-label="Play or pause"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 4l9 8-9 8zM16 5h2.5v14H16zM20.5 5H23v14h-2.5z" transform="translate(-1.5 0)"/></svg>Play/Pause</button>
+        <button type="button" class="key" data-volume="mute" aria-label="Mute"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>Mute</button>
+      </div>
+      <div class="row">
+        <button type="button" class="key" data-volume="-1" data-repeat aria-label="Volume down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M4 9h4l5-4v14l-5-4H4zM17 12h5"/></svg>Volume −</button>
+        <button type="button" class="key" data-volume="1" data-repeat aria-label="Volume up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M4 9h4l5-4v14l-5-4H4zM17 12h5M19.5 9.5v5"/></svg>Volume +</button>
+      </div>
+
+      <p class="hint" id="keyshint" hidden>On a computer: arrow keys, Enter for OK, Backspace for Back, + and − for volume.</p>
+    </div>
+
+  </div>
+</main>
+<script src="/common.js"></script>
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var touch = window.matchMedia("(pointer: coarse)").matches;
+
+  function post(path, body) {
+    return fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); });
+  }
+  function fail(e) {
+    if (e && e.off) $("off").hidden = false;
+    TV.toast(e && e.error ? e.error : "Couldn't reach the TV");
+  }
+  function send(b) {
+    if (b.dataset.key) return post("/remote/key", { key: b.dataset.key }).catch(fail);
+    if (b.dataset.media) return post("/media", { action: b.dataset.media }).catch(fail);
+    var v = b.dataset.volume;
+    if (v) return post("/volume", v === "mute" ? { mute: "toggle" } : { change: +v }).catch(fail);
+  }
+
+  // Every button: once on a press, and again and again while held for the ones that repeat.
+  var held = null, again = null;
+  function stop() {
+    clearTimeout(again);
+    if (held) held.classList.remove("pressed");
+    held = null;
+  }
+  document.querySelectorAll("[data-key], [data-media], [data-volume]").forEach(function (b) {
+    b.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      stop();
+      held = b;
+      b.classList.add("pressed");
+      if (navigator.vibrate && touch) navigator.vibrate(8);
+      send(b);
+      if (b.hasAttribute("data-repeat")) {
+        var tick = function () { if (held === b) { send(b); again = setTimeout(tick, 150); } };
+        again = setTimeout(tick, 450);
+      }
+    });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) { b.addEventListener(ev, stop); });
+    b.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  });
+
+  // On a computer, the keyboard is the remote too.
+  var KEYS = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", Enter: "ok", Backspace: "back", Escape: "back" };
+  document.addEventListener("keydown", function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (KEYS[e.key]) { e.preventDefault(); post("/remote/key", { key: KEYS[e.key] }).catch(fail); }
+    else if (e.key === "+" || e.key === "=") post("/volume", { change: 1 }).catch(fail);
+    else if (e.key === "-") post("/volume", { change: -1 }).catch(fail);
+  });
+
+  // Whether the remote is on.
+  fetch("/remote/state").then(function (r) { return r.json(); }).then(function (st) { $("off").hidden = st.on; }).catch(function () {});
+  $("keyshint").hidden = touch;
+
+  TV.start("remote");
+</script>
+</body>
+</html>

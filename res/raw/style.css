@@ -114,8 +114,10 @@ select option { background: #231d1f; color: #fff; }
 @media (max-width: 640px) {
   .top { justify-content: center; }
   .top .clock { display: none; }
-  .tabs { width: 100%; justify-content: space-between; }
-  .tabs a { flex: 1; text-align: center; padding: 9px 4px; font-size: 14px; }
+  /* Six tabs don't fit a phone: they scroll sideways, and the page's own one is scrolled into view. */
+  .tabs { width: 100%; justify-content: space-between; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs a { flex: 1 0 auto; text-align: center; padding: 9px 10px; font-size: 14px; }
   .row { flex-wrap: wrap; }
   .row select { width: 100%; }
 }

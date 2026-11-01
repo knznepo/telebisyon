@@ -76,7 +76,7 @@ This downloads the home screen, installs it, turns on the phone pages, sets the 
 - The first time, the TV asks **"Allow USB debugging?"**. Tick **Always allow**, press **OK**, and run the command again if it stopped.
 - If it asks to turn off the TV's own home screen, answer **y** so the Home button opens the new one. `sh undo.sh 192.168.1.50` puts everything back.
 - **TVs with Google TV** (Sony BRAVIA from 2021, TCL, Hisense and others with the "For you" screen): Home keeps opening Google TV. If you're connected over USB or Network debugging (port 5555), run `GOOGLE_TV=1 YES_SETUP=1 sh setup.sh 192.168.1.50` to turn Google TV's home off, then restart the TV once. On a **Chromecast with Google TV** don't: open Telebisyon from the apps row instead. See [step 5 in the README](README.md#download-and-install) for the details.
-- **Optional, recommended:** add a PIN for the phone pages and turn on the Files page: `PIN=123456 FILES=1 sh setup.sh 192.168.1.50`.
+- **Optional, recommended:** add a PIN for the phone pages, and turn on the Files page and the remote: `PIN=123456 FILES=1 REMOTE=1 sh setup.sh 192.168.1.50`.
 - **Optional:** put photos in the `wallpapers` folder inside the Telebisyon folder first, and they're copied to the TV. You can also add them later from your phone.
 
 ## Use it
@@ -99,6 +99,7 @@ This downloads the home screen, installs it, turns on the phone pages, sets the 
 | `http://192.168.1.50:7979` | See the TV's home screen and tap an app to open it on the TV. The **Message**, **Wallpapers** and **Files** tiles there open the other pages |
 | `http://192.168.1.50:7979/message` | Send a message to the TV screen, with an optional chime |
 | `http://192.168.1.50:7979/wallpapers` | Upload photos, pick the wallpaper, shuffle them, set up the photo frame, and set your profile picture |
+| `http://192.168.1.50:7979/remote` | The TV's remote: arrows, OK, Back, Home, volume, play/pause and power. Arrows need `sh remote.sh 192.168.1.50` once (volume works without) |
 | `http://192.168.1.50:7979/call` | Call the TV with video or audio only. It plays on the TV straight away, over whatever is on, with nothing to answer. Audio only has **Hold to talk**, like an intercom. The first time, your browser warns that the connection isn't private: tap **Advanced**, then **Proceed** |
 | `http://192.168.1.50:7979/files` | Browse the TV and USB drives, upload (drag files onto the page), download, rename, delete, and install APKs. Off until you run `sh files.sh 192.168.1.50` |
 
@@ -115,6 +116,7 @@ See **"Can Home Assistant control the TV?"** in [README.md](README.md#web-page) 
 | Problem | Fix |
 |---|---|
 | The pages don't open | The TV must be on and on the same Wi-Fi. Run `sh messages.sh 192.168.1.50` again. |
+| The remote says it's off | Run `sh remote.sh 192.168.1.50` (with debugging on). Updates can turn it off; running `setup.sh` with `REMOTE=1` turns it back on. |
 | The TV's clock is wrong | `sh clock.sh 192.168.1.50` turns on internet time and sets your time zone. |
 | The TV's IP address changed | Use the new one. Setting a fixed IP for the TV in your router stops this from happening. |
 | Home opens the TV's old home screen | Run `sh setup.sh 192.168.1.50` again and answer **y** when asked. On Google TV, use `GOOGLE_TV=1 YES_SETUP=1` (see above). |

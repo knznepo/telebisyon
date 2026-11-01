@@ -127,7 +127,7 @@
     $("me").srcObject = tracks.video ? new MediaStream([tracks.video]) : null;
     $("me").classList.toggle("mirror", value($("facing")) === "user");
     $("empty").hidden = !!tracks.video;
-    $("empty").textContent = cam ? "Your camera shows here." : "Audio only: the TV plays your voice over what's on, with a small badge while you talk.";
+    $("empty").textContent = cam ? "Your camera shows here." : "Audio only: the TV plays your voice over what's on, with nothing on screen.";
   }
 
   // Turns one on (asking the browser for just that) or off (and its light goes off), and sends the

@@ -69,8 +69,11 @@ var TV = (function () {
       '<a href="/message"' + (page === "message" ? ' class="on" aria-current="page"' : "") + '>Message</a>' +
       '<a href="/wallpapers"' + (page === "wallpapers" ? ' class="on" aria-current="page"' : "") + '>Wallpapers</a>' +
       '<a href="/files"' + (page === "files" ? ' class="on" aria-current="page"' : "") + '>Files</a>' +
+      '<a href="/remote"' + (page === "remote" ? ' class="on" aria-current="page"' : "") + '>Remote</a>' +
       '<a href="/call"' + (page === "call" ? ' class="on" aria-current="page"' : "") + '>Call</a>' +
       '</nav></header>');
+    var on = document.querySelector(".tabs a.on");
+    if (on && on.scrollIntoView) on.scrollIntoView({ block: "nearest", inline: "center" });
     document.body.insertAdjacentHTML("beforeend", '<div id="toast" role="status" aria-live="polite"></div>');
     setInterval(tick, 1000);
     setInterval(load, 10000);

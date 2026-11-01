@@ -261,6 +261,8 @@ public class Messages extends Service {
                 JSONObject j = params(query, text);
                 if (range != null) j.put("range", range);
                 files.handle(s, method, path, j);
+            } else if (path.equals("/remote") || path.startsWith("/remote/")) {
+                remote(s, method, path, params(query, text));
             } else if (path.equals("/call/tv") || path.startsWith("/call/tv/")) {
                 callTv(s, method, path, tv, form(query).optString("t"), text);
             } else if (method.equals("GET") && path.equals("/call")) {
@@ -285,6 +287,24 @@ public class Messages extends Service {
         } finally {
             try { s.close(); } catch (Exception ignored) {}
         }
+    }
+
+    // The /remote page (remote.html). Volume and play/pause go to /volume and /media; the rest needs the
+    // Remote accessibility service, which remote.sh turns on.
+    private void remote(Socket s, String method, String path, JSONObject j) throws Exception {
+        Remote r = Remote.self;
+        if (method.equals("GET") && path.equals("/remote")) {
+            reply(s, 200, "text/html; charset=utf-8", page("remote"));
+        } else if (method.equals("GET") && path.equals("/remote/state")) {
+            reply(s, 200, new JSONObject().put("on", r != null).put("keys", Build.VERSION.SDK_INT >= 33).toString());
+        } else if (!method.equals("POST")) {
+            reply(s, 405, "{\"error\":\"use POST\"}");
+        } else if (r == null) {
+            reply(s, 409, "{\"error\":\"The remote is off. Turn it on with: sh remote.sh <TV_IP>\",\"off\":true}");
+        } else if (path.equals("/remote/key")) {
+            if (r.key(j.optString("key"))) reply(s, 200, "{\"ok\":true}");
+            else reply(s, 400, "{\"error\":\"That didn't work on this TV\"}");
+        } else reply(s, 404, "{\"error\":\"no such page\"}");
     }
 
     // The page the TV shows during a call (calltv.html), and what it asks for: the phone's offer, its
@@ -499,7 +519,8 @@ public class Messages extends Service {
             case "/volume": {
                 int stream = android.media.AudioManager.STREAM_MUSIC, flags = android.media.AudioManager.FLAG_SHOW_UI;
                 if (j.has("mute") && Build.VERSION.SDK_INT >= 23)
-                    audio.adjustStreamVolume(stream, j.getBoolean("mute") ? android.media.AudioManager.ADJUST_MUTE
+                    audio.adjustStreamVolume(stream, "toggle".equals(j.optString("mute")) ? android.media.AudioManager.ADJUST_TOGGLE_MUTE
+                            : j.getBoolean("mute") ? android.media.AudioManager.ADJUST_MUTE
                             : android.media.AudioManager.ADJUST_UNMUTE, flags);
                 if (j.has("level"))
                     audio.setStreamVolume(stream, Math.max(0, Math.min(audio.getStreamMaxVolume(stream), j.getInt("level"))), flags);
@@ -801,7 +822,7 @@ public class Messages extends Service {
     // (POST /notify, /cancel) never need it, so what speaks PiPup keeps working.
     static final String PREF_PIN_HASH = "pinhash", PREF_PIN_SALT = "pinsalt", PREF_PIN_TOKEN = "pintoken";
     private static final String COOKIE = "telebisyon";
-    private static final java.util.List<String> PAGES = java.util.Arrays.asList("/", "/message", "/notify", "/wallpapers", "/files", "/call");
+    private static final java.util.List<String> PAGES = java.util.Arrays.asList("/", "/message", "/notify", "/wallpapers", "/files", "/call", "/remote");
     private static int failures;
     private static long lockedUntil;
 
