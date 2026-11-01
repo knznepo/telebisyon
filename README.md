@@ -23,7 +23,7 @@ Looking for the **TV cleanup** (turning off bloatware, ads and sponsored rows) o
 - **Your own photos** as wallpaper, shuffled on a timer, plus a **photo frame** when the TV sits idle.
 - **A web page on the TV** (`http://<TV_IP>:7979`) for any phone or computer on your Wi-Fi: a live copy of the home screen whose tiles open on the TV, a message sender, a wallpaper manager and a **file manager** for the TV's storage and USB drives. It can sit behind a **PIN**.
 - **Messages** over whatever is playing, compatible with PiPup, with an optional chime.
-- **Call the TV** from a phone's browser, with video or audio only. It plays on the TV straight away, over whatever is on, without pausing it. Nobody has to answer. Audio only works like an intercom, with hold to talk.
+- **Call the TV** from a phone's browser, with video or audio only. It plays on the TV straight away, over whatever is on: the show keeps playing, turned down while you talk. Nobody has to answer. Audio only works like an intercom, with hold to talk.
 - **Home Assistant control**: what's playing, pause and play, volume, open an app.
 - **Banners for phone apps** that don't come with one, so every tile matches.
 - **An account avatar** next to the network icon.
@@ -208,7 +208,7 @@ It only warns again if the TV's IP address changes, or once a year. Set a fixed 
 - **The TV can't see or hear you back.** TVs have no camera, and apps can't use the remote's microphone.
 - **One call at a time.** A new call replaces the one on the TV.
 - The video goes straight from the phone to the TV over your Wi-Fi, never through the internet. Calls need the PIN if you set one.
-- **It doesn't interrupt what's on.** Your voice plays over the show, at the TV's volume, and the show keeps playing.
+- **It doesn't interrupt what's on, but you're louder.** The show keeps playing. While you talk, the TV turns it down, the way map directions dip music, and brings it back up a moment after you stop. Your voice is also boosted. On Android 8 and newer this works with almost every app (YouTube, Netflix, Stremio…). On Android 6 and 7, each app decides: most turn down, a few pause.
 - The call stays open while the call page is open. Android phones keep it going with the screen off; iPhones usually drop it when locked.
 
 **Which TVs:** calls need **Android 6 or newer** and Android's **WebView** turned on (keep `com.google.android.webview` on in the cleanup). Tested on a Sony BRAVIA with Google TV. Most Android TVs and boxes made since about 2017 should work: Sony, Philips, TCL, Chromecast with Google TV, Nvidia Shield, Xiaomi Mi Box S and Mi Box 4. On cheaper boxes like the Mi Box or Mi TV Stick, video can be less smooth (audio only is always easy). Boxes on Android 5, like the Mi Box 3, can't take calls. Fire TV is untested.

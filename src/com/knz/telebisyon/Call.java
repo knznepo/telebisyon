@@ -4,12 +4,16 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.media.AudioAttributes;
+import android.media.AudioFocusRequest;
+import android.media.AudioManager;
 import android.os.Build;
 import android.os.Handler;
 import android.util.Base64;
 import android.view.Gravity;
 import android.view.WindowManager;
 import android.webkit.ConsoleMessage;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -61,6 +65,7 @@ final class Call {
     private final Handler main;
     private WebView view;
     private WindowManager.LayoutParams params;
+    private Object ducking; // the audio focus held while someone talks: an AudioFocusRequest, or the listener before Android 8
     // The call now: its token, the phone's offer, the TV's answer, and whether it's over.
     private String token, offer, answer;
     private boolean full = true, video = true, ended = true;
@@ -165,6 +170,11 @@ final class Call {
         s.setJavaScriptEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false); // the sound plays without anyone pressing play
         // The page's console.log goes to the TV's log (adb logcat -s TelebisyonCall), for when a call goes wrong.
+        // The page says when someone starts and stops talking, so what's playing is turned down meanwhile.
+        w.addJavascriptInterface(new Object() {
+            @JavascriptInterface
+            public void talking(boolean on) { main.post(() -> duck(on)); }
+        }, "Telebisyon");
         w.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onConsoleMessage(ConsoleMessage m) {
@@ -220,7 +230,37 @@ final class Call {
         view.evaluateJavascript("document.body.className='" + mode + "'", null);
     }
 
+    // While someone talks, what's playing (YouTube, Netflix…) is turned down, the way map directions
+    // dip music: a short "may duck" focus request for speech. Android 8+ turns the other app down by
+    // itself; before that, apps choose (most turn down, a few pause). It comes back when they stop.
+    private void duck(boolean on) {
+        AudioManager am = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        if (on == (ducking != null) || am == null) return;
+        if (Build.VERSION.SDK_INT >= 26) {
+            if (on) {
+                AudioFocusRequest r = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                        .setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                        .setOnAudioFocusChangeListener(change -> {}).build();
+                if (am.requestAudioFocus(r) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) ducking = r;
+            } else {
+                am.abandonAudioFocusRequest((AudioFocusRequest) ducking);
+                ducking = null;
+            }
+        } else {
+            if (on) {
+                AudioManager.OnAudioFocusChangeListener l = change -> {};
+                if (am.requestAudioFocus(l, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                        == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) ducking = l;
+            } else {
+                am.abandonAudioFocus((AudioManager.OnAudioFocusChangeListener) ducking);
+                ducking = null;
+            }
+        }
+    }
+
     private void hide() {
+        duck(false);
         if (view == null) return;
         WebView w = view;
         view = null;

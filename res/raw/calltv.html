@@ -41,7 +41,17 @@
     document.getElementById("a").srcObject = s;
     var src = ctx.createMediaStreamSource(s);
     src.connect(level);
-    src.connect(ctx.destination);
+    // Louder than what's on: doubled, through a limiter so a loud voice doesn't crackle.
+    var boost = ctx.createGain(), limit = ctx.createDynamicsCompressor();
+    boost.gain.value = 2.5;
+    limit.threshold.value = -12;
+    limit.knee.value = 6;
+    limit.ratio.value = 12;
+    limit.attack.value = 0.003;
+    limit.release.value = 0.25;
+    src.connect(boost);
+    boost.connect(limit);
+    limit.connect(ctx.destination);
     ctx.resume().then(function () { console.log("call: sound playing, " + ctx.state); });
   }
 
@@ -66,14 +76,20 @@
 
   // Is someone talking? The badge shows while they are, and goes after a moment of quiet. The phone
   // hears about it too, so it can say the TV is getting its sound.
-  var samples = new Float32Array(level.fftSize), lastTalk = 0, told = 0, logged = 0;
+  var samples = new Float32Array(level.fftSize), lastTalk = 0, told = 0, logged = 0, wasTalking = false;
   setInterval(function () {
     level.getFloatTimeDomainData(samples);
     var sum = 0;
     for (var i = 0; i < samples.length; i++) sum += samples[i] * samples[i];
     var now = Date.now(), loud = Math.sqrt(sum / samples.length) > 0.015;
     if (loud) lastTalk = now;
-    document.body.classList.toggle("talking", now - lastTalk < 1500);
+    var talking = now - lastTalk < 1500;
+    document.body.classList.toggle("talking", talking);
+    // While someone talks, the TV turns down what's playing (Call.duck), and back up after.
+    if (talking !== wasTalking) {
+      wasTalking = talking;
+      if (window.Telebisyon) Telebisyon.talking(talking);
+    }
     if (now - told > 2000) { told = now; post("heard", { sound: now - lastTalk < 4000, playing: ctx.state === "running" }); }
     if (now - logged > 5000) {
       logged = now;
