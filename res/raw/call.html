@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#161113">
+<title>Call · Telebisyon</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+  .layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); gap: clamp(16px, 2.5vw, 32px); align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  .me { position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius); overflow: hidden; background: #000;
+    border: 1px solid var(--line); box-shadow: 0 24px 60px rgba(0, 0, 0, .5); }
+  .me video { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .me video.mirror { transform: scaleX(-1); }
+  .me .live { position: absolute; left: 14px; top: 14px; padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 500;
+    background: rgba(0, 0, 0, .55); color: var(--dim); }
+  .me .live.on { background: #d93025; color: #fff; }
+  .me .empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--faint); text-align: center; padding: 20px; }
+  .actions { display: flex; gap: 12px; margin-top: 24px; }
+  .actions .btn { flex: 1; }
+  .btn.end { background: #d93025; border-color: #d93025; color: #fff; }
+  .ptt { display: flex; width: 100%; min-height: 120px; margin-top: 24px; font-size: 20px; user-select: none; -webkit-user-select: none;
+    touch-action: none; -webkit-touch-callout: none; }
+  .ptt.down { background: #d93025; border-color: #d93025; color: #fff; transform: scale(.98); }
+  .secure ol { margin: 12px 0 20px; padding-left: 22px; color: var(--dim); line-height: 1.6; }
+</style>
+</head>
+<body>
+<main class="page">
+  <h1>Call the TV</h1>
+  <p class="lede">Your camera and microphone show on the TV straight away, over whatever is on. Nobody has to answer. The TV can't see or hear you back.</p>
+
+  <!-- On the plain http page: browsers only give a page the camera on https. -->
+  <div class="panel secure" id="secure" hidden>
+    <h2 style="margin-top:0">One more step</h2>
+    <p>Browsers only let a page use your camera over a secure connection, so calls open on the TV's secure address. The first time, your browser warns that the connection isn't private, because the TV made its own certificate.</p>
+    <ol>
+      <li>Tap <b>Continue</b> below.</li>
+      <li>On the warning, tap <b>Advanced</b> (or <b>Show details</b>), then <b>Proceed</b> (or <b>visit this website</b>).</li>
+      <li>Allow the camera and microphone when asked.</li>
+    </ol>
+    <a class="btn primary" id="go" href="#">Continue</a>
+  </div>
+
+  <div class="layout" id="call" hidden>
+    <div class="me">
+      <video id="me" autoplay playsinline muted></video>
+      <div class="empty" id="empty">Your camera shows here.</div>
+      <div class="live" id="live">Not on the TV</div>
+    </div>
+
+    <div class="panel">
+      <label class="field">Call with</label>
+      <div class="pills" id="send" role="radiogroup">
+        <button type="button" data-v="video" class="on">Video</button>
+        <button type="button" data-v="audio">Audio only</button>
+      </div>
+
+      <div id="camera">
+        <label class="field">Camera</label>
+        <div class="pills" id="facing" role="radiogroup">
+          <button type="button" data-v="user" class="on">Front</button>
+          <button type="button" data-v="environment">Back</button>
+        </div>
+      </div>
+
+      <div id="where">
+        <label class="field">On the TV</label>
+        <div class="pills" id="size" role="radiogroup">
+          <button type="button" data-v="full" class="on">Full screen</button>
+          <button type="button" data-v="corner">Corner</button>
+        </div>
+      </div>
+
+      <div id="talkmode">
+        <label class="field">Talk</label>
+        <div class="pills" id="talk" role="radiogroup">
+          <button type="button" data-v="hold" class="on">Hold to talk</button>
+          <button type="button" data-v="open">Always on</button>
+        </div>
+      </div>
+
+      <button type="button" class="btn ptt" id="ptt" hidden>Hold to talk</button>
+      <div class="actions">
+        <button type="button" class="btn primary" id="start">Start call</button>
+        <button type="button" class="btn end" id="end" hidden>End call</button>
+      </div>
+    </div>
+  </div>
+</main>
+<script src="/common.js"></script>
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  // The camera and the microphone are separate, so either can be on alone and change during a call.
+  // "Call with" picks which: video (with sound), or audio only.
+  var tracks = { video: null, audio: null }, senders = {}, pc = null, id = null, wake = null, pressing = false;
+
+  function pick(group, onChange) {
+    group.addEventListener("click", function (e) {
+      var b = e.target.closest("button");
+      if (!b || b.classList.contains("on")) return;
+      [].forEach.call(group.children, function (c) { c.classList.toggle("on", c === b); c.setAttribute("aria-checked", c === b); });
+      if (onChange) onChange();
+    });
+  }
+  function value(group) { return group.querySelector(".on").dataset.v; }
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function post(path, body) {
+    return fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "The TV said no"); return j; }); });
+  }
+  function wants(kind) { return kind === "audio" || value($("send")) === "video"; }
+  // Audio only can be like an intercom: the call stays open, and the TV only hears you while you hold.
+  function holding() { return !wants("video") && value($("talk")) === "hold"; }
+  function mic() { if (tracks.audio) tracks.audio.enabled = !holding() || pressing; }
+  function live(text, on) { $("live").textContent = text; $("live").classList.toggle("on", !!on); }
+
+  // What the preview shows, and which options matter: Front/Back and Full screen/Corner need the camera.
+  function show() {
+    var cam = wants("video");
+    $("camera").hidden = !cam;
+    $("where").hidden = !cam;
+    $("talkmode").hidden = cam;
+    $("ptt").hidden = !id || !holding();
+    mic();
+    $("me").srcObject = tracks.video ? new MediaStream([tracks.video]) : null;
+    $("me").classList.toggle("mirror", value($("facing")) === "user");
+    $("empty").hidden = !!tracks.video;
+    $("empty").textContent = cam ? "Your camera shows here." : "Audio only: the TV plays your voice over what's on, with a small badge while you talk.";
+  }
+
+  // Turns one on (asking the browser for just that) or off (and its light goes off), and sends the
+  // change to the TV during a call.
+  function want(kind) {
+    return kind === "video" ? { facingMode: value($("facing")), width: { ideal: 1280 }, height: { ideal: 720 } }
+      : { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+  }
+  function set(kind, on) {
+    var old = tracks[kind], ask = {};
+    ask[kind] = want(kind);
+    var next = !on ? Promise.resolve(null) : navigator.mediaDevices.getUserMedia(ask).then(function (s) { return s.getTracks()[0]; });
+    return next.then(function (t) {
+      tracks[kind] = t;
+      if (senders[kind]) senders[kind].replaceTrack(t);
+      if (old) old.stop();
+      show();
+      if (kind === "video" && id) layout();
+    });
+  }
+  function layout() { return post("/call/layout", { id: id, size: value($("size")), video: !!tracks.video }).catch(function () {}); }
+
+  // Waits until the connection's addresses are all in the offer, so it can go in one request.
+  function gathered() {
+    return new Promise(function (done) {
+      if (pc.iceGatheringState === "complete") return done();
+      var t = setTimeout(done, 3000);
+      pc.addEventListener("icegatheringstatechange", function () {
+        if (pc.iceGatheringState === "complete") { clearTimeout(t); done(); }
+      });
+    });
+  }
+
+  // The TV answers in a moment: ask until it has.
+  function answer(tries) {
+    return fetch("/call/answer?id=" + id).then(function (r) { return r.json(); }).then(function (j) {
+      if (j.sdp) return pc.setRemoteDescription({ type: "answer", sdp: j.sdp });
+      if (j.ended) throw new Error("The TV ended the call");
+      if (tries > 50) throw new Error("The TV didn't answer");
+      return wait(300).then(function () { return answer(tries + 1); });
+    });
+  }
+
+  function start() {
+    $("start").disabled = true;
+    live("Calling the TV…");
+    // Both in one request: asking for them one after the other confuses some phones (iPhones especially).
+    var ask = {};
+    ["video", "audio"].forEach(function (kind) { if (wants(kind) && !tracks[kind]) ask[kind] = want(kind); });
+    (ask.video || ask.audio ? navigator.mediaDevices.getUserMedia(ask).then(function (s) {
+      s.getTracks().forEach(function (t) { tracks[t.kind] = t; });
+      show();
+    }) : Promise.resolve()).then(function () {
+      pc = new RTCPeerConnection();
+      // Both are always in the call, even when off, so either can come on later without calling again.
+      ["audio", "video"].forEach(function (kind) {
+        senders[kind] = pc.addTransceiver(kind, { direction: "sendonly" }).sender;
+        if (tracks[kind]) senders[kind].replaceTrack(tracks[kind]);
+      });
+      pc.oniceconnectionstatechange = function () {
+        var st = pc && pc.iceConnectionState;
+        if (st === "connected" || st === "completed") live("On the TV", true);
+        else if (st === "disconnected") live("Connection lost…");
+        else if (st === "failed") { TV.toast("The connection to the TV failed"); end(); }
+      };
+      return pc.createOffer();
+    }).then(function (o) { return pc.setLocalDescription(o); })
+      .then(gathered)
+      .then(function () { return post("/call/offer", { sdp: pc.localDescription.sdp, size: value($("size")), video: !!tracks.video }); })
+      .then(function (j) { id = j.id; return answer(0); })
+      .then(function () {
+        $("start").hidden = true;
+        $("end").hidden = false;
+        show();
+        follow(id);
+        if (navigator.wakeLock) navigator.wakeLock.request("screen").then(function (w) { wake = w; }).catch(function () {});
+      })
+      .catch(function (e) {
+        TV.toast(e.name === "NotAllowedError" ? "Allow the camera and microphone to call" : e.message);
+        end();
+      })
+      .then(function () { $("start").disabled = false; });
+  }
+
+  // While the call is on: whether the TV is getting the sound, and whether the TV ended it.
+  function follow(call) {
+    wait(2000).then(function () {
+      if (id !== call) return;
+      fetch("/call/answer?id=" + call).then(function (r) { return r.json(); }).then(function (j) {
+        if (id !== call) return;
+        if (j.ended) { TV.toast("The call ended on the TV"); return end(); }
+        if (pc && /connected|completed/.test(pc.iceConnectionState))
+          live(!tracks.audio ? "On the TV" : !j.playing ? "On the TV · its sound is blocked" :
+            j.sound ? "On the TV · it hears you" : holding() && !pressing ? "On the TV · hold to talk" : "On the TV", true);
+        follow(call);
+      }).catch(function () { follow(call); });
+    });
+  }
+
+  function end() {
+    if (id) post("/call/end", { id: id }).catch(function () {});
+    if (pc) pc.close();
+    pc = null;
+    id = null;
+    senders = {};
+    pressing = false;
+    if (wake) { wake.release().catch(function () {}); wake = null; }
+    // The camera and microphone go off too, so their lights don't stay on.
+    ["video", "audio"].forEach(function (kind) { if (tracks[kind]) tracks[kind].stop(); tracks[kind] = null; });
+    show();
+    $("start").hidden = false;
+    $("end").hidden = true;
+    live("Not on the TV");
+  }
+
+  if (location.protocol === "http:") {
+    $("secure").hidden = false;
+    $("go").href = "https://" + location.hostname + ":7980/call";
+  } else {
+    $("call").hidden = false;
+    pick($("facing"), function () { if (tracks.video) set("video", true).catch(function () { TV.toast("Couldn't switch the camera"); }); else show(); });
+    pick($("size"), function () { if (id) layout(); });
+    pick($("talk"), show);
+    // Hold to talk: the microphone only reaches the TV while this is held down.
+    function talk(down) { pressing = down; $("ptt").classList.toggle("down", down); $("ptt").textContent = down ? "Talking…" : "Hold to talk"; mic(); }
+    $("ptt").addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      try { $("ptt").setPointerCapture(e.pointerId); } catch (x) {} // so sliding off the button still counts as held
+      talk(true);
+    });
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(function (ev) { $("ptt").addEventListener(ev, function () { talk(false); }); });
+    $("ptt").addEventListener("contextmenu", function (e) { e.preventDefault(); });
+    // Before a call this only chooses; during one it turns the camera or microphone on or off.
+    pick($("send"), function () {
+      if (!id) return show();
+      ["video", "audio"].forEach(function (kind) {
+        if (!!tracks[kind] !== wants(kind))
+          set(kind, wants(kind)).catch(function () { TV.toast("Allow the " + (kind === "video" ? "camera" : "microphone") + " first"); });
+      });
+    });
+    show();
+    $("start").addEventListener("click", start);
+    $("end").addEventListener("click", end);
+    // Closing the page ends the call too.
+    window.addEventListener("pagehide", function () { if (id) navigator.sendBeacon("/call/end?id=" + id); });
+    if (!window.RTCPeerConnection || !navigator.mediaDevices) {
+      $("start").disabled = true;
+      $("empty").textContent = "This browser can't make calls.";
+    }
+  }
+
+  TV.start("call");
+</script>
+</body>
+</html>

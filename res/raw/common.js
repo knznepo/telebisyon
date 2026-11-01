@@ -69,6 +69,7 @@ var TV = (function () {
       '<a href="/message"' + (page === "message" ? ' class="on" aria-current="page"' : "") + '>Message</a>' +
       '<a href="/wallpapers"' + (page === "wallpapers" ? ' class="on" aria-current="page"' : "") + '>Wallpapers</a>' +
       '<a href="/files"' + (page === "files" ? ' class="on" aria-current="page"' : "") + '>Files</a>' +
+      '<a href="/call"' + (page === "call" ? ' class="on" aria-current="page"' : "") + '>Call</a>' +
       '</nav></header>');
     document.body.insertAdjacentHTML("beforeend", '<div id="toast" role="status" aria-live="polite"></div>');
     setInterval(tick, 1000);

@@ -23,6 +23,7 @@ Looking for the **TV cleanup** (turning off bloatware, ads and sponsored rows) o
 - **Your own photos** as wallpaper, shuffled on a timer, plus a **photo frame** when the TV sits idle.
 - **A web page on the TV** (`http://<TV_IP>:7979`) for any phone or computer on your Wi-Fi: a live copy of the home screen whose tiles open on the TV, a message sender, a wallpaper manager and a **file manager** for the TV's storage and USB drives. It can sit behind a **PIN**.
 - **Messages** over whatever is playing, compatible with PiPup, with an optional chime.
+- **Call the TV** from a phone's browser, with video or audio only. It plays on the TV straight away, over whatever is on, without pausing it. Nobody has to answer. Audio only works like an intercom, with hold to talk.
 - **Home Assistant control**: what's playing, pause and play, volume, open an app.
 - **Banners for phone apps** that don't come with one, so every tile matches.
 - **An account avatar** next to the network icon.
@@ -113,6 +114,7 @@ This downloads the home screen, installs it, turns on the phone pages, sets the 
 | `http://<TV_IP>:7979/message` | Send a message that pops up over whatever is playing |
 | `http://<TV_IP>:7979/wallpapers` | Upload photos, pick the wallpaper, shuffle them, set up the photo frame and your profile picture |
 | `http://<TV_IP>:7979/files` | Browse the TV and USB drives, upload, download, rename, delete and install APKs. Off until you run `sh files.sh <TV_IP>` |
+| `http://<TV_IP>:7979/call` | Call the TV with video or audio only. It plays on the TV straight away |
 
 Tip: add these to your phone's home screen (in the browser's Share menu, choose **Add to Home Screen**).
 
@@ -176,6 +178,40 @@ sh send.sh <TV_IP> --cancel                                          # take it a
 **Floating pictures:** turn off **Box behind it** on the web page (or `BOX=0`) and a transparent PNG floats on the screen with no card around it; text gets a shadow instead. **Picture size** (or `IMAGE_SIZE`, in percent of the screen's width) goes from small up to full screen.
 
 It speaks PiPup's API on port 7979 (`POST /notify` with `title`, `message`, `duration`, `position`, colours, sizes and `media.image.uri`, plus `"sound": true` for the chime, `"box": false` and `"imageSize": 50`), so anything already set up for PiPup works as it is.
+
+</details>
+
+<details>
+<summary><b>Can I call the TV from my phone?</b></summary>
+<br>
+
+Yes, one way. Open **Call** on the TV's web page (or the **Call** tile), pick **Video** or **Audio only**, and tap **Start call**. It plays on the TV straight away, over whatever is on, and nobody has to answer. **End call**, or closing the page, takes it off the TV and turns your camera and microphone off.
+
+| Call with | On the TV |
+|---|---|
+| **Video** | Your camera and your voice, full screen or in a corner |
+| **Audio only** | Your voice, over whatever is on. A small **Phone** badge shows in the corner only while you're talking. Your camera stays off. |
+
+During the call you can switch between **Video** and **Audio only**, the **Front** or **Back** camera, and **Full screen** or **Corner**. While the call is on, the phone shows **On the TV · it hears you** when your voice is reaching the TV.
+
+**Like an intercom:** with **Audio only**, pick **Hold to talk** (the default) or **Always on**. With Hold to talk, the call stays open and the TV only hears you while you hold the big button, so you can speak whenever you need to.
+
+**First time:**
+
+1. The page explains a one-off step: browsers only let a page use the camera and microphone over a secure (https) connection, so calls open on the TV's secure address, `https://<TV_IP>:7980/call`. Tap **Continue**.
+2. Your browser warns that the connection isn't private, because the TV made its own certificate. Tap **Advanced**, then **Proceed** (on iPhone: **Show details**, then **visit this website**).
+3. Allow the camera and microphone when asked.
+
+It only warns again if the TV's IP address changes, or once a year. Set a fixed IP for the TV in your router to avoid the first.
+
+**Good to know:**
+- **The TV can't see or hear you back.** TVs have no camera, and apps can't use the remote's microphone.
+- **One call at a time.** A new call replaces the one on the TV.
+- The video goes straight from the phone to the TV over your Wi-Fi, never through the internet. Calls need the PIN if you set one.
+- **It doesn't interrupt what's on.** Your voice plays over the show, at the TV's volume, and the show keeps playing.
+- The call stays open while the call page is open. Android phones keep it going with the screen off; iPhones usually drop it when locked.
+
+**Which TVs:** calls need **Android 6 or newer** and Android's **WebView** turned on (keep `com.google.android.webview` on in the cleanup). Tested on a Sony BRAVIA with Google TV. Most Android TVs and boxes made since about 2017 should work: Sony, Philips, TCL, Chromecast with Google TV, Nvidia Shield, Xiaomi Mi Box S and Mi Box 4. On cheaper boxes like the Mi Box or Mi TV Stick, video can be less smooth (audio only is always easy). Boxes on Android 5, like the Mi Box 3, can't take calls. Fire TV is untested.
 
 </details>
 

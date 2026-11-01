@@ -67,6 +67,7 @@
   .fr:active { background: rgba(255,255,255,.2); }
 
   #offline { text-align: center; color: rgba(255,255,255,.6); padding: 48px 16px; display: none; }
+  #closed { text-align: center; color: rgba(255,255,255,.6); padding: 0 16px 32px; display: none; }
 </style>
 </head>
 <body>
@@ -81,6 +82,7 @@
   <div class="fgrid" id="fmore"></div>
 </div>
 <div id="offline">Can't reach the TV right now.</div>
+<div id="closed">Telebisyon isn't open on the TV, so its apps can't show here. Press Home on the TV, or open Telebisyon from its apps.</div>
 <script src="/common.js"></script>
 <script>
   // Tiles only this page has (not the TV): the other pages.
@@ -90,7 +92,9 @@
     { key: "web:wallpapers", label: "Wallpapers", href: "/wallpapers",
       ops: [0, 30, 50, 1, 210, 50, 1, 210, 190, 1, 30, 190, 2, 0, 30, 170, 1, 95, 110, 1, 145, 155, 1, 170, 132, 1, 210, 168, 3, 160, 92, 16] },
     { key: "web:files", label: "Files", href: "/files",
-      ops: [0, 30, 60, 1, 95, 60, 1, 117, 85, 1, 210, 85, 1, 210, 185, 1, 30, 185, 2] }
+      ops: [0, 30, 60, 1, 95, 60, 1, 117, 85, 1, 210, 85, 1, 210, 185, 1, 30, 185, 2] },
+    { key: "web:call", label: "Call", href: "/call",
+      ops: [0, 25, 70, 1, 165, 70, 1, 165, 175, 1, 25, 175, 2, 0, 165, 108, 1, 215, 80, 1, 215, 165, 1, 165, 137, 2] }
   ];
   var home = null, drawn = "";
   var stage = document.getElementById("stage"), wrap = document.getElementById("wrap");
@@ -126,9 +130,11 @@
   function tileSrc(t) { return "/tile?key=" + encodeURIComponent(t.key) + "&v=" + encodeURIComponent(t.label); }
 
   // The TV's tiles plus the web ones, which go after the last one in the bottom row (onto a new row
-  // if that's full), laid out the way MainActivity does.
+  // if that's full), laid out the way MainActivity does. With no tiles (the home screen isn't running
+  // on the TV, say after an update), they go where its first row would be, under the clock.
   function withWeb(h) {
     var k = h.width / 1920, tiles = h.tiles.slice(), bottom = 0, last = null;
+    if (!tiles.some(function (t) { return !t.round; })) bottom = 604 * k;
     tiles.forEach(function (t) { if (!t.round && t.y >= bottom) bottom = t.y; });
     tiles.forEach(function (t) { if (!t.round && t.y === bottom && (!last || t.x > last.x)) last = t; });
     var w = last ? last.w : 258 * k, hh = last ? last.h : 145 * k, x = last ? last.x + w + 36 * k : 96 * k, y = bottom, extra = 0;
@@ -273,6 +279,7 @@
       document.getElementById("offline").style.display = off ? "block" : "none";
       wrap.style.visibility = off ? "hidden" : "";
       if (off) return;
+      document.getElementById("closed").style.display = h.tiles.some(function (t) { return !t.round; }) ? "none" : "block";
       home = h;
       var key = JSON.stringify([h.tiles, h.picture, h.gradient, h.width, h.pageHeight, h.avatarStamp, narrow()]);
       if (key !== drawn) { drawn = key; draw(); }

@@ -99,6 +99,7 @@ This downloads the home screen, installs it, turns on the phone pages, sets the 
 | `http://192.168.1.50:7979` | See the TV's home screen and tap an app to open it on the TV. The **Message**, **Wallpapers** and **Files** tiles there open the other pages |
 | `http://192.168.1.50:7979/message` | Send a message to the TV screen, with an optional chime |
 | `http://192.168.1.50:7979/wallpapers` | Upload photos, pick the wallpaper, shuffle them, set up the photo frame, and set your profile picture |
+| `http://192.168.1.50:7979/call` | Call the TV with video or audio only. It plays on the TV straight away, over whatever is on, with nothing to answer. Audio only has **Hold to talk**, like an intercom. The first time, your browser warns that the connection isn't private: tap **Advanced**, then **Proceed** |
 | `http://192.168.1.50:7979/files` | Browse the TV and USB drives, upload (drag files onto the page), download, rename, delete, and install APKs. Off until you run `sh files.sh 192.168.1.50` |
 
 Tip: add these to your phone's home screen (in the browser's Share menu, choose **Add to Home Screen**).
@@ -117,6 +118,9 @@ See **"Can Home Assistant control the TV?"** in [README.md](README.md#web-page) 
 | The TV's clock is wrong | `sh clock.sh 192.168.1.50` turns on internet time and sets your time zone. |
 | The TV's IP address changed | Use the new one. Setting a fixed IP for the TV in your router stops this from happening. |
 | Home opens the TV's old home screen | Run `sh setup.sh 192.168.1.50` again and answer **y** when asked. On Google TV, use `GOOGLE_TV=1 YES_SETUP=1` (see above). |
+| A call doesn't start | Open it from the TV's web page (`http://192.168.1.50:7979/call`), so it uses the TV's current address. The TV needs Android 6 or newer, and Android's WebView turned on. |
+| The TV doesn't play your voice | Reload the call page. While a call is on, the phone should say **On the TV · it hears you** when you talk. If it never does, check the phone's microphone permission for the browser. |
+| A call is choppy | Try **Corner** or **Audio only**, or move the phone closer to the Wi-Fi router. Cheaper boxes decode video slowly. |
 | The photo frame never shows | It needs at least one picture, and the TV's own screensaver may start first: set that to start later in the TV's settings. |
 | The avatar shows the wrong letter, or none | It comes from the Google account on the TV when you install. Run `sh setup.sh 192.168.1.50` again after changing accounts, or upload a photo on the Wallpapers page. |
 | Undo everything | `sh undo.sh 192.168.1.50` |

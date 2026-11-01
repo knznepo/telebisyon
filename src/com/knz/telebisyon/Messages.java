@@ -66,7 +66,9 @@ public class Messages extends Service {
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private final Files files = new Files(this);
-    private ServerSocket server;
+    private final Call call = new Call(this, main);
+    private ServerSocket server, secureServer;
+    private volatile boolean stopping;
     private View shown;
     private final Runnable hide = this::hide;
 
@@ -99,6 +101,9 @@ public class Messages extends Service {
         Thread t = new Thread(this::listen, "messages");
         t.setDaemon(true);
         t.start();
+        Thread secure = new Thread(this::listenSecure, "messages-https");
+        secure.setDaemon(true);
+        secure.start();
     }
 
     @Override
@@ -108,7 +113,10 @@ public class Messages extends Service {
 
     @Override
     public void onDestroy() {
+        stopping = true;
         try { if (server != null) server.close(); } catch (Exception ignored) {}
+        try { if (secureServer != null) secureServer.close(); } catch (Exception ignored) {}
+        call.end();
         main.post(this::hide);
         super.onDestroy();
     }
@@ -121,13 +129,31 @@ public class Messages extends Service {
             server = new ServerSocket(PORT);
             while (!server.isClosed()) {
                 final Socket s = server.accept();
-                new Thread(() -> answer(s), "message").start();
+                new Thread(() -> answer(s, false), "message").start();
             }
         } catch (Exception ignored) {} // closed, or the port is taken (PiPup itself, say)
     }
 
+    // The same pages on https (Call.SECURE_PORT), for calls: browsers only give a page the camera there.
+    // If it can't start (the port still held, say), it tries again every few seconds for a minute.
+    private void listenSecure() {
+        for (int tries = 0; tries < 12 && !stopping; tries++) {
+            try {
+                secureServer = Call.secureServer(this);
+                while (!secureServer.isClosed()) {
+                    final Socket s = secureServer.accept();
+                    new Thread(() -> answer(s, true), "message").start();
+                }
+            } catch (Exception e) {
+                if (stopping) return;
+                android.util.Log.w("TelebisyonCall", "https on " + Call.SECURE_PORT + ": " + e);
+                try { Thread.sleep(5000); } catch (InterruptedException x) { return; }
+            }
+        }
+    }
+
     // A tiny HTTP server: one request per connection, then close.
-    private void answer(Socket s) {
+    private void answer(Socket s, boolean secure) {
         try {
             s.setSoTimeout(10000);
             InputStream in = s.getInputStream();
@@ -157,11 +183,13 @@ public class Messages extends Service {
             }
             // Another website open in a browser here can't make changes on the TV: browsers say where
             // a request comes from, and it must be one of these pages. (Scripts don't say.)
-            if (!method.equals("GET") && origin != null && !origin.equals("http://" + host)) {
+            if (!method.equals("GET") && origin != null && !origin.equals((secure ? "https://" : "http://") + host)) {
                 reply(s, 403, "{\"error\":\"not from this TV's pages\"}");
                 return;
             }
-            if (!signedIn(method, path, cookie, pin.isEmpty() ? form(query).optString("pin") : pin)) {
+            // The call page the TV shows itself comes in with the call's token instead of the PIN.
+            boolean tv = path.startsWith("/call/tv") && call.mine(s, form(query).optString("t"));
+            if (!tv && !signedIn(method, path, cookie, pin.isEmpty() ? form(query).optString("pin") : pin)) {
                 if (method.equals("GET") && PAGES.contains(path)) reply(s, 200, "text/html; charset=utf-8", page("login"));
                 else reply(s, 401, "{\"error\":\"PIN needed\"}");
                 return;
@@ -233,6 +261,22 @@ public class Messages extends Service {
                 JSONObject j = params(query, text);
                 if (range != null) j.put("range", range);
                 files.handle(s, method, path, j);
+            } else if (path.equals("/call/tv") || path.startsWith("/call/tv/")) {
+                callTv(s, method, path, tv, form(query).optString("t"), text);
+            } else if (method.equals("GET") && path.equals("/call")) {
+                reply(s, 200, "text/html; charset=utf-8", page("call"));
+            } else if (method.equals("POST") && path.equals("/call/offer")) {
+                if (!secure) reply(s, 400, "{\"error\":\"Calls need the https page\"}");
+                else reply(s, 200, call.start(new JSONObject(text)).toString());
+            } else if (method.equals("GET") && path.equals("/call/answer")) {
+                reply(s, 200, call.answerFor(form(query).optString("id")).toString());
+            } else if (method.equals("POST") && path.equals("/call/layout")) {
+                JSONObject j = params(query, text);
+                call.layout(j.optString("id"), j.optString("size"), j.optBoolean("video", true));
+                reply(s, 200, "{\"ok\":true}");
+            } else if (method.equals("POST") && path.equals("/call/end")) {
+                call.end(params(query, text).optString("id"));
+                reply(s, 200, "{\"ok\":true}");
             } else if (CONTROL.contains(path)) {
                 control(s, method, path, params(query, text));
             } else reply(s, 404, "{\"error\":\"POST /notify or DELETE /cancel, or open / in a browser\"}");
@@ -241,6 +285,29 @@ public class Messages extends Service {
         } finally {
             try { s.close(); } catch (Exception ignored) {}
         }
+    }
+
+    // The page the TV shows during a call (calltv.html), and what it asks for: the phone's offer, its
+    // answer, the video's shape, and the end of the call when the phone goes away.
+    private void callTv(Socket s, String method, String path, boolean tv, String t, String text) throws Exception {
+        if (!tv) reply(s, 403, "{\"error\":\"not this call\"}");
+        else if (method.equals("GET") && path.equals("/call/tv")) reply(s, 200, "text/html; charset=utf-8", page("calltv"));
+        else if (method.equals("GET") && path.equals("/call/tv/offer")) reply(s, 200, call.offer().toString());
+        else if (method.equals("POST") && path.equals("/call/tv/answer")) {
+            call.answered(new JSONObject(text).getString("sdp"));
+            reply(s, 200, "{\"ok\":true}");
+        } else if (method.equals("POST") && path.equals("/call/tv/size")) {
+            JSONObject j = new JSONObject(text);
+            call.videoSize(j.optInt("w"), j.optInt("h"));
+            reply(s, 200, "{\"ok\":true}");
+        } else if (method.equals("POST") && path.equals("/call/tv/heard")) {
+            JSONObject j = new JSONObject(text);
+            call.heard(j.optBoolean("sound"), j.optBoolean("playing"));
+            reply(s, 200, "{\"ok\":true}");
+        } else if (method.equals("POST") && path.equals("/call/tv/end")) {
+            call.end(t);
+            reply(s, 200, "{\"ok\":true}");
+        } else reply(s, 404, "{\"error\":\"no such page\"}");
     }
 
     // The /wallpapers page: the pictures in MainActivity's wallpapers folder, put there, taken away and
@@ -734,7 +801,7 @@ public class Messages extends Service {
     // (POST /notify, /cancel) never need it, so what speaks PiPup keeps working.
     static final String PREF_PIN_HASH = "pinhash", PREF_PIN_SALT = "pinsalt", PREF_PIN_TOKEN = "pintoken";
     private static final String COOKIE = "telebisyon";
-    private static final java.util.List<String> PAGES = java.util.Arrays.asList("/", "/message", "/notify", "/wallpapers", "/files");
+    private static final java.util.List<String> PAGES = java.util.Arrays.asList("/", "/message", "/notify", "/wallpapers", "/files", "/call");
     private static int failures;
     private static long lockedUntil;
 
