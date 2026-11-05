@@ -28,6 +28,8 @@
         <package android:name="com.google.android.tv.inputplayer" />
         <!-- Google TV's own home screen, which HomeButton opens when Back is held. -->
         <package android:name="com.google.android.apps.tv.launcherx" />
+        <!-- FLIXNET (optional, flixnet/), whose library the /flixnet page lists. -->
+        <package android:name="com.knz.flixnet" />
     </queries>
     <!-- Only for messages (Messages.java, off until messages.sh turns it on): listening on the network
          for them, and showing them over other apps. -->
@@ -43,6 +45,10 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Only for the /flixnet page: FLIXNET's library. Declared here too (as FLIXNET does), so it works
+         whichever of the two is installed first; only apps with the same signing key get it. -->
+    <permission android:name="com.knz.flixnet.permission.LIBRARY" android:protectionLevel="signature" />
+    <uses-permission android:name="com.knz.flixnet.permission.LIBRARY" />
     <!-- Lets "Uninstall" in the app menu open Android's uninstall prompt. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <uses-feature android:name="android.software.leanback" android:required="false" />

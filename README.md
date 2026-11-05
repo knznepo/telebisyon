@@ -24,6 +24,7 @@ Looking for the **TV cleanup** (turning off bloatware, ads and sponsored rows) o
 - **A web page on the TV** (`http://<TV_IP>:7979`) for any phone or computer on your Wi-Fi: a live copy of the home screen whose tiles open on the TV, a message sender, a wallpaper manager and a **file manager** for the TV's storage and USB drives. It can sit behind a **PIN**.
 - **Messages** over whatever is playing, compatible with PiPup, with an optional chime.
 - **A remote on your phone or computer:** arrows, OK, Back, Home, volume, play/pause and power.
+- **FLIXNET** (optional): your own movies and series from a USB drive or hard disk, in a streaming-app style, with a page on the web page that lists them. See [flixnet/](flixnet/README.md).
 - **Call the TV** from a phone's browser, with video or audio only. It plays on the TV straight away, over whatever is on: the show keeps playing, turned down while you talk. Nobody has to answer. Audio only works like an intercom, with hold to talk.
 - **Home Assistant control**: what's playing, pause and play, volume, open an app.
 - **Banners for phone apps** that don't come with one, so every tile matches.
@@ -180,6 +181,16 @@ sh send.sh <TV_IP> --cancel                                          # take it a
 **Floating pictures:** turn off **Box behind it** on the web page (or `BOX=0`) and a transparent PNG floats on the screen with no card around it; text gets a shadow instead. **Picture size** (or `IMAGE_SIZE`, in percent of the screen's width) goes from small up to full screen.
 
 It speaks PiPup's API on port 7979 (`POST /notify` with `title`, `message`, `duration`, `position`, colours, sizes and `media.image.uri`, plus `"sound": true` for the chime, `"box": false` and `"imageSize": 50`), so anything already set up for PiPup works as it is.
+
+</details>
+
+<details>
+<summary><b>Can I watch my own movies from a USB drive?</b></summary>
+<br>
+
+Yes, with **FLIXNET**, an optional app in the [flixnet/](flixnet/README.md) folder: `sh flixnet/flixnet.sh <TV_IP>` installs it. Put a **Movies** and a **Series** folder on the drive, one folder per movie or series with the video, a `poster.jpg`, a `background.jpg` and an `info.json` (only a title and a description are needed). It shows them in rows like a streaming app, remembers where you stopped, plays subtitles and the next episode. Plug the drive in and they appear.
+
+Once it's installed, the TV's web page gets a **FLIXNET** tile: a page listing everything found on the drives, and what needs fixing. How to arrange a drive: [flixnet/docs/library.md](flixnet/docs/library.md).
 
 </details>
 

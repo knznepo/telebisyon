@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#161113">
+<title>FLIXNET · Telebisyon</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+  .brand { color: #ffb347; letter-spacing: .08em; font-weight: 800; }
+  .drives { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+  .drive { padding: 8px 16px; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); font-size: 14px; color: var(--dim); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 22px; }
+  .title { min-width: 0; }
+  .poster { position: relative; aspect-ratio: 2 / 3; border-radius: 12px; overflow: hidden; background: #2a2326 center / cover; border: 1px solid var(--line);
+    display: grid; place-items: center; text-align: center; padding: 10px; box-sizing: border-box; color: var(--dim); font-weight: 600; }
+  .poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .name { font-weight: 600; margin-top: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meta { color: var(--faint); font-size: 13px; margin-top: 4px; }
+  .ok { color: #7bd88f; font-size: 13px; margin-top: 6px; }
+  .problems { color: #ffb38a; font-size: 13px; margin: 6px 0 0; padding-left: 16px; }
+  .problems li { margin-top: 3px; }
+  .note { color: var(--dim); }
+  pre { background: rgba(0, 0, 0, .35); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; overflow-x: auto; font-size: 13px; line-height: 1.5; color: var(--dim); }
+  .head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="head">
+    <h1><span class="brand">FLIXNET</span></h1>
+    <button type="button" class="btn" id="again">Look again</button>
+  </div>
+  <p class="lede">The movies and series FLIXNET finds on the TV's USB drives and hard disks, and anything that needs fixing.</p>
+
+  <div id="out"><p class="note">Looking…</p></div>
+
+  <details class="panel" style="margin-top:32px">
+    <summary><b>How to arrange a drive</b></summary>
+    <p class="note">A <b>Movies</b> and a <b>Series</b> folder at the top of the drive, with one folder per movie or series. Only <code>title</code> and <code>description</code> are needed in <code>info.json</code>.</p>
+<pre>Movies/
+  Inception/
+    movie.mkv          the video (any name)
+    poster.jpg         2:3, about 600×900
+    background.jpg     16:9, about 1920×1080
+    info.json
+    movie.en.srt       subtitles (optional)
+Series/
+  The Office/
+    poster.jpg, background.jpg, info.json
+    Season 1/
+      01 Pilot.mp4
+      01 Pilot.json    {"title": "...", "description": "..."} (optional)
+      01 Pilot.jpg     episode picture (optional)</pre>
+<pre>{
+  "title": "Inception",
+  "description": "A thief who steals secrets through dreams…",
+  "year": 2010,
+  "released": "2010-07-16",
+  "rating": "PG-13",
+  "score": 8.8,
+  "runtime": 148,
+  "genres": ["Sci-Fi", "Thriller"],
+  "cast": ["Leonardo DiCaprio", "Elliot Page"],
+  "director": "Christopher Nolan",
+  "language": "English",
+  "tagline": "Your mind is the scene of the crime."
+}</pre>
+  </details>
+</main>
+<script src="/common.js"></script>
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+  function card(t, series) {
+    var pic = t.poster ? '<img loading="lazy" alt="" src="/flixnet/image?path=' + encodeURIComponent(t.poster) + '">' : esc(t.title);
+    var meta = series ? t.seasons + (t.seasons === 1 ? " season · " : " seasons · ") + t.episodes + (t.episodes === 1 ? " episode" : " episodes") : (t.meta || t.video || "");
+    var state = t.problems.length
+      ? '<ul class="problems">' + t.problems.map(function (p) { return "<li>" + esc(p) + "</li>"; }).join("") + "</ul>"
+      : '<div class="ok">✓ Ready</div>';
+    return '<div class="title"><div class="poster">' + pic + '</div><div class="name" title="' + esc(t.title) + '">' + esc(t.title) +
+      '</div><div class="meta">' + esc(meta) + " · " + esc(t.drive) + '</div>' + state + "</div>";
+  }
+
+  function section(name, list, series) {
+    if (!list.length) return "";
+    var bad = list.filter(function (t) { return t.problems.length; }).length;
+    return "<h2>" + name + " <small>" + list.length + (bad ? " · " + bad + " to fix" : "") + "</small></h2>" +
+      '<div class="grid">' + list.map(function (t) { return card(t, series); }).join("") + "</div>";
+  }
+
+  function load() {
+    $("out").innerHTML = '<p class="note">Looking…</p>';
+    fetch("/flixnet/library").then(function (r) { return r.json(); }).then(function (j) {
+      if (!j.installed) {
+        $("out").innerHTML = '<div class="panel"><b>FLIXNET isn\'t installed on this TV.</b><p class="note">It\'s optional. On a computer, in the Telebisyon folder: <code>sh flixnet/flixnet.sh &lt;TV_IP&gt;</code></p></div>';
+        return;
+      }
+      if (j.error) { $("out").innerHTML = '<div class="panel">' + esc(j.error) + "</div>"; return; }
+      if (j.canRead === false) {
+        $("out").innerHTML = '<div class="panel"><b>FLIXNET can\'t read drives yet.</b><p class="note">On a computer: <code>sh flixnet/flixnet.sh &lt;TV_IP&gt;</code> lets it.</p></div>';
+        return;
+      }
+      if (!j.drives.length) {
+        $("out").innerHTML = '<div class="panel"><b>No drive with movies is connected.</b><p class="note">Plug in a USB drive or hard disk with a <b>Movies</b> or <b>Series</b> folder on it, then <b>Look again</b>.</p></div>';
+        return;
+      }
+      var html = '<div class="drives">' + j.drives.map(function (d) { return '<span class="drive">💾 ' + esc(d.name) + "</span>"; }).join("") + "</div>";
+      html += section("Movies", j.movies, false) + section("Series", j.series, true);
+      if (!j.movies.length && !j.series.length) html += '<div class="panel">No movies or series on the drive yet. See <b>How to arrange a drive</b> below.</div>';
+      $("out").innerHTML = html;
+    }).catch(function () { $("out").innerHTML = '<div class="panel">Couldn\'t reach the TV.</div>'; });
+  }
+
+  $("again").addEventListener("click", load);
+  TV.start("flixnet");
+  load();
+</script>
+</body>
+</html>
