@@ -30,11 +30,11 @@ import java.util.Map;
 
 // The browsing screen: the highlighted title big at the top (its background, title, year, rating and
 // description), and rows of posters under it: Continue watching, Recently added, Movies, Series, a row
-// per collection (Fast & Furious), and a row per genre. With no drive it says so; plugging one in or taking it out rescans by itself.
+// per collection (Fast & Furious), and a row per genre, with Search at the top right. With no drive it says so; plugging one in or taking it out rescans by itself.
 public class MainActivity extends Activity {
     private final Handler main = new Handler(Looper.getMainLooper());
     private ImageView back;
-    private TextView title, meta, description, message;
+    private TextView title, meta, description, message, search;
     private LinearLayout hero, rows;
     private ScrollView scroller;
     private String shown = ""; // what the rows were built from, so a rescan with no change keeps the focus
@@ -72,6 +72,14 @@ public class MainActivity extends Activity {
         bp.leftMargin = Ui.px(this, 96);
         bp.topMargin = Ui.px(this, 56);
         root.addView(brand, bp);
+
+        // Search, at the top right: up from the first row, or the remote's search key.
+        search = Ui.button(this, "Search");
+        search.setOnClickListener(v -> openSearch());
+        FrameLayout.LayoutParams qp = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.END);
+        qp.rightMargin = Ui.px(this, 96);
+        qp.topMargin = Ui.px(this, 52);
+        root.addView(search, qp);
 
         hero = new LinearLayout(this);
         hero.setOrientation(LinearLayout.VERTICAL);
@@ -149,6 +157,14 @@ public class MainActivity extends Activity {
             scanning = false;
             main.post(() -> show(lib));
         }, "scan").start();
+    }
+
+    private void openSearch() { startActivity(new Intent(this, SearchActivity.class)); }
+
+    @Override
+    public boolean onKeyDown(int code, android.view.KeyEvent e) {
+        if (code == android.view.KeyEvent.KEYCODE_SEARCH) { openSearch(); return true; }
+        return super.onKeyDown(code, e);
     }
 
     private void say(String text) {

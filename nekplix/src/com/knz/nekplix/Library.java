@@ -230,6 +230,91 @@ final class Library {
         return out;
     }
 
+    // Search: titles whose name, collection, people, genres or year match what was typed, the closest
+    // first. Every word typed has to start a word somewhere ("fur 7" finds Furious 7), and "&" reads as
+    // "and", so "fast and furious" finds "Fast & Furious".
+    List<Title> search(String query) {
+        String q = norm(query);
+        List<Title> out = new ArrayList<>();
+        if (q.isEmpty()) return out;
+        String[] words = q.split(" ");
+        List<Title> all = new ArrayList<>(movies);
+        all.addAll(series);
+        final java.util.Map<Title, Integer> score = new java.util.HashMap<>();
+        for (Title t : all) {
+            int best = 0;
+            String name = norm(t.title);
+            if (name.startsWith(q)) best = 100;
+            else if (name.contains(" " + q)) best = 90;
+            else if (name.contains(q)) best = 70;
+            if (t.collection != null && norm(t.collection).contains(q)) best = Math.max(best, 80);
+            for (String p : people(t)) if (startsWord(norm(p), q)) best = Math.max(best, 60);
+            for (String g : t.genres) if (startsWord(norm(g), q)) best = Math.max(best, 50);
+            if (t.year > 0 && String.valueOf(t.year).startsWith(q)) best = Math.max(best, 40);
+            if (best == 0) { // every word somewhere: "spider 2018", "hanks drama"
+                StringBuilder all_ = new StringBuilder(name).append(' ').append(norm(t.folder.name()));
+                if (t.collection != null) all_.append(' ').append(norm(t.collection));
+                for (String p : people(t)) all_.append(' ').append(norm(p));
+                for (String g : t.genres) all_.append(' ').append(norm(g));
+                if (t.year > 0) all_.append(' ').append(t.year);
+                String hay = all_.toString();
+                boolean every = true;
+                for (String w : words) every &= startsWord(hay, w);
+                if (every) best = 20;
+            }
+            if (best > 0) { score.put(t, best); out.add(t); }
+        }
+        Collections.sort(out, (a, b) -> {
+            int d = score.get(b) - score.get(a);
+            if (d != 0) return d;
+            if (a.year != b.year) return Integer.compare(a.year == 0 ? 9999 : a.year, b.year == 0 ? 9999 : b.year);
+            return natural(a.title, b.title);
+        });
+        return out;
+    }
+
+    // Words to pick instead of typing on: the collections, genres and people in the library that what
+    // was typed starts. With nothing typed, the biggest genres.
+    List<String> suggestions(String query, int max) {
+        String q = norm(query);
+        List<Title> all = new ArrayList<>(movies);
+        all.addAll(series);
+        java.util.Map<String, Integer> count = new java.util.LinkedHashMap<>();
+        for (Title t : all) {
+            List<String> terms = new ArrayList<>();
+            if (!q.isEmpty() && t.collection != null) terms.add(t.collection);
+            terms.addAll(t.genres);
+            if (!q.isEmpty()) terms.addAll(people(t));
+            for (String term : terms) {
+                if (!q.isEmpty() && !startsWord(norm(term), q)) continue;
+                Integer n = count.get(term);
+                count.put(term, n == null ? 1 : n + 1);
+            }
+        }
+        List<String> out = new ArrayList<>(count.keySet());
+        Collections.sort(out, (a, b) -> count.get(b) - count.get(a));
+        return out.subList(0, Math.min(max, out.size()));
+    }
+
+    private static List<String> people(Title t) {
+        List<String> p = new ArrayList<>(t.cast);
+        if (t.director != null) p.add(t.director);
+        return p;
+    }
+
+    // Lower case, no accents, "&" as "and", and only letters and digits between single spaces.
+    static String norm(String s) {
+        if (s == null) return "";
+        s = java.text.Normalizer.normalize(s.toLowerCase(Locale.ROOT), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "").replace("&", " and ").replace("'", "");
+        return s.replaceAll("[^\\p{L}\\p{N}]+", " ").trim();
+    }
+
+    // Whether a word in text starts with this: "fur" in "fast and furious".
+    private static boolean startsWord(String text, String start) {
+        return text.startsWith(start) || text.contains(" " + start);
+    }
+
     // For a title's details: the rest of its collection, else up to 12 others sharing its genres, the
     // most shared first, then the best scored.
     List<Title> related(Title t) {

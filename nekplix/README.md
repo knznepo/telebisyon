@@ -8,9 +8,10 @@
 
 NEKPLIX is an optional TV app that shows the movies and series on a USB drive, a hard disk or a computer on the same Wi-Fi the way a streaming app does: the highlighted title big at the top, with rows of posters under it. Plug a drive in and it fills up by itself; take it out and they go.
 
-- **Rows:** Continue watching, Recently added, Movies, Series, and a row per genre.
+- **Rows:** Continue watching, Recently added, Movies, Series, a row per collection (Fast & Furious), and a row per genre.
+- **Search:** at the top right. Type with the arrows on an on-screen keyboard (or speak, if the TV has voice input), and the titles that match show as you go: by name, collection, genre, actor, director or year.
 - **Details:** the background, title, year, rating, runtime, score, description, cast and director. Movies have **Play**, or **Resume** and **Start over**. Series pick up where you were, with seasons and episodes underneath.
-- **The player:** resume where you stopped, subtitles from `.srt` files (in more than one language if you have them), and the next episode starts by itself.
+- **The player:** resume where you stopped, subtitles from `.srt` files or inside the video (in more than one language if you have them), and the next episode starts by itself.
 - **On Telebisyon:** NEKPLIX joins the apps row on the home screen (and on the web page's copy of it), and the web page gets a **NEKPLIX library** tile: a page listing everything found on the drives, and what needs fixing (no poster, a broken `info.json`…).
 
 It's a separate app from Telebisyon, built and installed on its own.

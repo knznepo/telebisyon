@@ -29,6 +29,8 @@
         </activity>
         <activity android:name=".DetailsActivity" android:exported="false" android:screenOrientation="landscape"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|uiMode" />
+        <activity android:name=".SearchActivity" android:exported="false" android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|uiMode" />
         <activity android:name=".PlayerActivity" android:exported="false" android:screenOrientation="landscape"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|uiMode" />
         <provider android:name=".LibraryProvider" android:authorities="com.knz.nekplix.library"
