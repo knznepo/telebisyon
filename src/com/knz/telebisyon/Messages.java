@@ -261,8 +261,8 @@ public class Messages extends Service {
                 JSONObject j = params(query, text);
                 if (range != null) j.put("range", range);
                 files.handle(s, method, path, j);
-            } else if (path.equals("/flixnet") || path.startsWith("/flixnet/")) {
-                flixnet(s, path, form(query));
+            } else if (path.equals("/nekplix") || path.startsWith("/nekplix/")) {
+                nekplix(s, path, form(query));
             } else if (path.equals("/remote") || path.startsWith("/remote/")) {
                 remote(s, method, path, params(query, text));
             } else if (path.equals("/call/tv") || path.startsWith("/call/tv/")) {
@@ -291,32 +291,32 @@ public class Messages extends Service {
         }
     }
 
-    // The /flixnet page (flixnet.html): what FLIXNET, the optional movie app in flixnet/, finds on the
-    // TV's drives, and its posters. FLIXNET says, through its LibraryProvider.
-    static final String FLIXNET = "com.knz.flixnet";
+    // The /nekplix page (nekplix.html): what NEKPLIX, the optional movie app in nekplix/, finds on the
+    // TV's drives, and its posters. NEKPLIX says, through its LibraryProvider.
+    static final String NEKPLIX = "com.knz.nekplix";
 
-    boolean flixnetInstalled() {
-        try { getPackageManager().getPackageInfo(FLIXNET, 0); return true; }
+    boolean nekplixInstalled() {
+        try { getPackageManager().getPackageInfo(NEKPLIX, 0); return true; }
         catch (Exception e) { return false; }
     }
 
-    private void flixnet(Socket s, String path, JSONObject q) throws Exception {
-        android.net.Uri uri = android.net.Uri.parse("content://" + FLIXNET + ".library");
-        if (path.equals("/flixnet")) {
-            reply(s, 200, "text/html; charset=utf-8", page("flixnet"));
-        } else if (!flixnetInstalled()) {
+    private void nekplix(Socket s, String path, JSONObject q) throws Exception {
+        android.net.Uri uri = android.net.Uri.parse("content://" + NEKPLIX + ".library");
+        if (path.equals("/nekplix")) {
+            reply(s, 200, "text/html; charset=utf-8", page("nekplix"));
+        } else if (!nekplixInstalled()) {
             reply(s, 200, "{\"installed\":false}");
-        } else if (path.equals("/flixnet/library")) {
+        } else if (path.equals("/nekplix/library")) {
             android.os.Bundle b;
             try { b = getContentResolver().call(uri, "library", null, null); }
             catch (SecurityException e) {
-                reply(s, 200, "{\"installed\":true,\"error\":\"FLIXNET is signed with a different key than Telebisyon, so it can't be listed here.\"}");
+                reply(s, 200, "{\"installed\":true,\"error\":\"NEKPLIX is signed with a different key than Telebisyon, so it can't be listed here.\"}");
                 return;
             }
             String json = b == null ? null : b.getString("json");
             if (json == null) reply(s, 500, new JSONObject().put("error", b == null ? "no answer" : b.getString("error")).toString());
             else reply(s, 200, new JSONObject(json).put("installed", true).toString());
-        } else if (path.equals("/flixnet/image")) {
+        } else if (path.equals("/nekplix/image")) {
             String file = q.optString("path"), type = file.toLowerCase(java.util.Locale.ROOT).endsWith(".png") ? "image/png"
                     : file.toLowerCase(java.util.Locale.ROOT).endsWith(".webp") ? "image/webp" : "image/jpeg";
             try (InputStream in = getContentResolver().openInputStream(uri.buildUpon().path("image").appendQueryParameter("path", file).build())) {
@@ -737,7 +737,7 @@ public class Messages extends Service {
                 .put("time", now).put("tzOffset", tz.getOffset(now) / 60000).put("h24", h24)
                 .put("locale", java.util.Locale.getDefault().toLanguageTag())
                 .put("avatarStamp", getSharedPreferences(MainActivity.PREFS, 0).getLong(MainActivity.PREF_AVATAR_STAMP, 0))
-                .put("flixnet", flixnetInstalled());
+                .put("nekplix", nekplixInstalled());
         org.json.JSONArray tiles = new org.json.JSONArray();
         for (MainActivity.Shown t : MainActivity.shown) {
             JSONObject o = new JSONObject().put("key", t.key).put("label", t.label)
@@ -867,7 +867,7 @@ public class Messages extends Service {
     // (POST /notify, /cancel) never need it, so what speaks PiPup keeps working.
     static final String PREF_PIN_HASH = "pinhash", PREF_PIN_SALT = "pinsalt", PREF_PIN_TOKEN = "pintoken";
     private static final String COOKIE = "telebisyon";
-    private static final java.util.List<String> PAGES = java.util.Arrays.asList("/", "/message", "/notify", "/wallpapers", "/files", "/call", "/remote", "/flixnet");
+    private static final java.util.List<String> PAGES = java.util.Arrays.asList("/", "/message", "/notify", "/wallpapers", "/files", "/call", "/remote", "/nekplix");
     private static int failures;
     private static long lockedUntil;
 

@@ -297,7 +297,7 @@ public class MainActivity extends Activity {
 
     // Saves an app list passed with --es apps "...", shortcuts passed with --es quick "...", and a
     // clock override passed with --es clock 12|24|auto. --es addapp <package> puts one app at the end of
-    // the top row, keeping the rest as it is (flixnet.sh adds FLIXNET this way). Returns true if it changed.
+    // the top row, keeping the rest as it is (nekplix.sh adds NEKPLIX this way). Returns true if it changed.
     // When Android kills the home screen in the background, it can start it again with the same old
     // intent; the stamp install.sh sends stops that from undoing changes made on the TV since.
     private boolean saveConfig(Intent intent) {

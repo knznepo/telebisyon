@@ -1,0 +1,6 @@
+out/
+key.jks
+*.apk
+.DS_Store
+NEKPLIX Share.app/
+__pycache__/
