@@ -8,9 +8,6 @@ import android.os.storage.StorageVolume;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,8 +17,8 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-// What's on the connected drives: every USB drive or hard disk, plus a Flixnet folder on the TV's own
-// storage. On each, a Movies folder with one folder per movie, and a Series folder with one folder per
+// What's on the connected drives: every USB drive or hard disk, a Flixnet folder on the TV's own storage,
+// and computers on the Wi-Fi sharing their movies with share.py (Shares). On each, a Movies folder with one folder per movie, and a Series folder with one folder per
 // series and a folder per season in it (see docs/library.md):
 //
 //   Movies/Inception/movie.mkv, poster.jpg, background.jpg, info.json, movie.en.srt
@@ -37,14 +34,15 @@ final class Library {
 
     static final class Drive {
         String name;
-        File root;
+        Node root;
+        boolean share; // a computer, not a drive in the TV
     }
 
     static final class Video {
-        File file;
+        Node file;
         String title, description;
-        File thumb;
-        List<File> subtitles = new ArrayList<>();
+        Node thumb;
+        List<Node> subtitles = new ArrayList<>();
         int season, number; // for episodes: which season (from 1) and which episode in it (from 1)
     }
 
@@ -55,12 +53,12 @@ final class Library {
 
     static final class Title {
         boolean series;
-        File folder;
+        Node folder;
         String title, description, tagline, rating, released, director, language;
         int year, runtime; // runtime in minutes
         double score;
         List<String> genres = new ArrayList<>(), cast = new ArrayList<>(), problems = new ArrayList<>();
-        File poster, background;
+        Node poster, background;
         Video movie;
         List<Season> seasons = new ArrayList<>();
         Drive drive;
@@ -72,7 +70,8 @@ final class Library {
             return all;
         }
 
-        // "2010 · PG-13 · 2h 28m · ★ 8.8", or "3 seasons" for a series, from what's known.
+        // "2010 · PG-13 · 2h 28m · ★ 8.8", or "3 seasons" for a series, from what's known. With more than
+        // one drive or computer, also where it is: "· on Den MacBook".
         String meta() {
             List<String> bits = new ArrayList<>();
             if (year > 0) bits.add(String.valueOf(year));
@@ -81,6 +80,8 @@ final class Library {
             else if (runtime > 0) bits.add(runtime >= 60 ? runtime / 60 + "h " + runtime % 60 + "m" : runtime + "m");
             if (score > 0) bits.add("★ " + (score == Math.floor(score) ? String.valueOf((int) score) : String.valueOf(score)));
             if (!genres.isEmpty()) bits.add(join(genres.subList(0, Math.min(3, genres.size()))));
+            Library lib = current;
+            if (lib != null && lib.drives.size() > 1 && drive != null) bits.add("on " + drive.name);
             return android.text.TextUtils.join("  ·  ", bits);
         }
     }
@@ -94,13 +95,13 @@ final class Library {
 
     static Library scan(Context c) {
         Library lib = new Library();
-        for (Drive d : drives(c)) {
+        List<Drive> all = drives(c);
+        all.addAll(shares());
+        for (Drive d : all) {
             boolean found = false;
-            File[] top = d.root.listFiles();
-            if (top == null) continue;
-            for (File f : top) {
+            for (Node f : d.root.list()) {
                 if (!f.isDirectory()) continue;
-                String n = f.getName().toLowerCase(Locale.ROOT);
+                String n = f.name().toLowerCase(Locale.ROOT);
                 if (n.equals("movies") || n.equals("films")) { lib.readMovies(f, d); found = true; }
                 else if (n.equals("series") || n.equals("tv shows") || n.equals("shows")) { lib.readSeries(f, d); found = true; }
             }
@@ -121,6 +122,21 @@ final class Library {
                 || c.checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED;
     }
 
+    // Computers sharing their movies (share.py): asked on the Wi-Fi, then each one's folders.
+    static List<Drive> shares() {
+        List<Drive> out = new ArrayList<>();
+        for (Shares.Share s : Shares.find(1200)) {
+            Node.Remote root = Shares.tree(s);
+            if (root == null) continue;
+            Drive d = new Drive();
+            d.name = s.name;
+            d.root = root;
+            d.share = true;
+            out.add(d);
+        }
+        return out;
+    }
+
     // USB drives and hard disks that are plugged in, and the TV's own Flixnet folder if there is one.
     static List<Drive> drives(Context c) {
         List<Drive> out = new ArrayList<>();
@@ -132,7 +148,7 @@ final class Library {
                 if (dir == null) continue;
                 Drive d = new Drive();
                 d.name = v.getDescription(c);
-                d.root = dir;
+                d.root = new Node.Local(dir);
                 out.add(d);
             }
         } else {
@@ -143,7 +159,7 @@ final class Library {
                 if (f.getName().equals("emulated") || f.getName().equals("self") || own.startsWith(f.getAbsolutePath()) || !f.canRead()) continue;
                 Drive d = new Drive();
                 d.name = f.getName();
-                d.root = f;
+                d.root = new Node.Local(f);
                 out.add(d);
             }
         }
@@ -151,7 +167,7 @@ final class Library {
         if (own.isDirectory()) {
             Drive d = new Drive();
             d.name = "TV storage";
-            d.root = own;
+            d.root = new Node.Local(own);
             out.add(d);
         }
         return out;
@@ -166,17 +182,15 @@ final class Library {
         }
     }
 
-    private void readMovies(File dir, Drive drive) {
-        File[] all = dir.listFiles();
-        if (all == null) return;
-        for (File f : all) {
-            if (!f.isDirectory() || f.getName().startsWith(".")) continue;
+    private void readMovies(Node dir, Drive drive) {
+        for (Node f : dir.list()) {
+            if (!f.isDirectory() || f.name().startsWith(".")) continue;
             Title t = new Title();
             t.folder = f;
             t.drive = drive;
             readInfo(t);
-            File video = null;
-            for (File x : list(f)) if (isVideo(x) && (video == null || x.length() > video.length())) video = x; // the film, not a trailer
+            Node video = null;
+            for (Node x : list(f)) if (isVideo(x) && (video == null || x.length() > video.length())) video = x; // the film, not a trailer
             if (video == null) { t.problems.add("No video file in the folder"); movies.add(t); continue; }
             Video v = new Video();
             v.file = video;
@@ -188,23 +202,21 @@ final class Library {
         }
     }
 
-    private void readSeries(File dir, Drive drive) {
-        File[] all = dir.listFiles();
-        if (all == null) return;
-        for (File f : all) {
-            if (!f.isDirectory() || f.getName().startsWith(".")) continue;
+    private void readSeries(Node dir, Drive drive) {
+        for (Node f : dir.list()) {
+            if (!f.isDirectory() || f.name().startsWith(".")) continue;
             Title t = new Title();
             t.series = true;
             t.folder = f;
             t.drive = drive;
             readInfo(t);
             // A folder per season, or the episodes straight in the series' folder for just one.
-            List<File> seasonDirs = new ArrayList<>();
-            for (File x : list(f)) if (x.isDirectory() && !x.getName().startsWith(".")) seasonDirs.add(x);
+            List<Node> seasonDirs = new ArrayList<>();
+            for (Node x : list(f)) if (x.isDirectory() && !x.name().startsWith(".")) seasonDirs.add(x);
             Season loose = episodes(f, "Episodes", 1);
             if (loose != null) t.seasons.add(loose);
-            for (File s : seasonDirs) {
-                Season season = episodes(s, s.getName(), t.seasons.size() + 1);
+            for (Node s : seasonDirs) {
+                Season season = episodes(s, s.name(), t.seasons.size() + 1);
                 if (season != null) t.seasons.add(season);
             }
             if (t.seasons.isEmpty()) t.problems.add("No episodes: put video files in a folder per season");
@@ -212,20 +224,20 @@ final class Library {
         }
     }
 
-    private static Season episodes(File dir, String name, int number) {
-        List<File> videos = new ArrayList<>();
-        for (File x : list(dir)) if (isVideo(x)) videos.add(x);
+    private static Season episodes(Node dir, String name, int number) {
+        List<Node> videos = new ArrayList<>();
+        for (Node x : list(dir)) if (isVideo(x)) videos.add(x);
         if (videos.isEmpty()) return null;
         Season s = new Season();
         s.name = name;
-        for (File file : videos) {
+        for (Node file : videos) {
             Video v = new Video();
             v.file = file;
             v.season = number;
             v.number = s.episodes.size() + 1;
             String base = base(file);
             v.title = cleanEpisode(base);
-            File json = sibling(file, base, Collections.singletonList("json"));
+            Node json = sibling(file, base, Collections.singletonList("json"));
             if (json != null) {
                 try {
                     JSONObject j = new JSONObject(read(json));
@@ -243,18 +255,17 @@ final class Library {
     // info.json, the poster and the background. The folder's name is the title until info.json says
     // otherwise, with a year in brackets taken off: "Inception (2010)".
     private static void readInfo(Title t) {
-        Matcher m = Pattern.compile("^(.*?)\\s*[(\\[](\\d{4})[)\\]]\\s*$").matcher(t.folder.getName());
+        Matcher m = Pattern.compile("^(.*?)\\s*[(\\[](\\d{4})[)\\]]\\s*$").matcher(t.folder.name());
         if (m.matches()) { t.title = m.group(1); t.year = Integer.parseInt(m.group(2)); }
-        else t.title = t.folder.getName();
-        File[] files = t.folder.listFiles();
-        if (files != null) for (File f : files) {
+        else t.title = t.folder.name();
+        for (Node f : t.folder.list()) {
             String base = base(f).toLowerCase(Locale.ROOT), ext = ext(f);
             if (!IMAGE.contains(ext)) continue;
             if (POSTER.contains(base) && t.poster == null) t.poster = f;
             else if (BACKGROUND.contains(base) && t.background == null) t.background = f;
         }
-        File info = new File(t.folder, "info.json");
-        if (!info.isFile()) {
+        Node info = t.folder.child("info.json");
+        if (info == null || !info.isFile()) {
             t.problems.add("No info.json (using the folder name as the title)");
         } else {
             try {
@@ -296,18 +307,46 @@ final class Library {
         return out;
     }
 
-    // .srt files named after the video: movie.srt, movie.en.srt, movie.English.srt. The TV's language first.
-    private static List<File> subtitles(File video) {
-        List<File> out = new ArrayList<>();
-        String base = base(video).toLowerCase(Locale.ROOT), lang = Locale.getDefault().getLanguage();
-        for (File f : list(video.getParentFile())) {
-            String n = f.getName().toLowerCase(Locale.ROOT);
-            if (n.endsWith(".srt") && n.startsWith(base)) {
-                if (n.contains("." + lang + ".")) out.add(0, f);
-                else out.add(f);
-            }
+    // Subtitles for a video: .srt files named after it (movie.srt, movie.en.srt, movie.English.srt), or,
+    // in a folder with just this one video, any .srt there, whatever its name. The TV's language first.
+    private static List<Node> subtitles(Node video) {
+        List<Node> named = new ArrayList<>(), any = new ArrayList<>();
+        String base = base(video).toLowerCase(Locale.ROOT);
+        int videos = 0;
+        for (Node f : list(video.parent())) {
+            String n = f.name().toLowerCase(Locale.ROOT);
+            if (isVideo(f)) videos++;
+            if (!n.endsWith(".srt") || n.startsWith(".")) continue;
+            any.add(f);
+            if (n.startsWith(base)) named.add(f);
         }
-        return out;
+        List<Node> out = named.isEmpty() && videos == 1 ? any : named;
+        String mine = Locale.getDefault().getDisplayLanguage();
+        List<Node> first = new ArrayList<>();
+        for (Node f : out) if (mine.equals(language(f))) first.add(f);
+        out.removeAll(first);
+        first.addAll(out);
+        return first;
+    }
+
+    // The language a subtitle file's name says, in the TV's language: "movie.en.srt" or
+    // "movie.English.srt" reads English. Null when the name doesn't say ("Inception.2010.1080p.srt").
+    static String language(Node srt) {
+        String b = base(srt);
+        int dot = b.lastIndexOf('.');
+        if (dot < 0) return null;
+        String tag = b.substring(dot + 1).trim();
+        if (tag.matches("[A-Za-z]{2,3}([-_][A-Za-z]{2})?")) {
+            Locale l = Locale.forLanguageTag(tag.replace('_', '-'));
+            String name = l.getDisplayLanguage();
+            if (!name.isEmpty() && !name.equalsIgnoreCase(tag)) return name;
+        }
+        for (String code : Locale.getISOLanguages()) {
+            Locale l = new Locale(code);
+            if (tag.equalsIgnoreCase(l.getDisplayLanguage(Locale.ENGLISH)) || tag.equalsIgnoreCase(l.getDisplayLanguage()))
+                return l.getDisplayLanguage();
+        }
+        return null;
     }
 
     // "S01E02 - Diversity Day" or "02. Diversity Day" reads "Diversity Day"; a bare "02" stays.
@@ -317,34 +356,35 @@ final class Library {
         return cut.isEmpty() ? s : cut;
     }
 
-    private static List<File> list(File dir) {
-        File[] all = dir == null ? null : dir.listFiles();
-        if (all == null) return new ArrayList<>();
-        List<File> out = new ArrayList<>(Arrays.asList(all));
-        Collections.sort(out, (a, b) -> natural(a.getName(), b.getName()));
+    private static List<Node> list(Node dir) {
+        if (dir == null) return new ArrayList<>();
+        List<Node> out = dir.list();
+        Collections.sort(out, (a, b) -> natural(a.name(), b.name()));
         return out;
     }
 
-    private static File sibling(File file, String base, List<String> exts) {
+    private static Node sibling(Node file, String base, List<String> exts) {
+        Node dir = file.parent();
+        if (dir == null) return null;
         for (String e : exts) {
             for (String c : new String[]{e, e.toUpperCase(Locale.ROOT)}) {
-                File f = new File(file.getParentFile(), base + "." + c);
-                if (f.isFile()) return f;
+                Node f = dir.child(base + "." + c);
+                if (f != null && f.isFile()) return f;
             }
         }
         return null;
     }
 
-    static boolean isVideo(File f) { return f.isFile() && !f.getName().startsWith(".") && VIDEO.contains(ext(f)); }
+    static boolean isVideo(Node f) { return f.isFile() && !f.name().startsWith(".") && VIDEO.contains(ext(f)); }
 
-    static String ext(File f) {
-        String n = f.getName();
+    static String ext(Node f) {
+        String n = f.name();
         int dot = n.lastIndexOf('.');
         return dot < 0 ? "" : n.substring(dot + 1).toLowerCase(Locale.ROOT);
     }
 
-    static String base(File f) {
-        String n = f.getName();
+    static String base(Node f) {
+        String n = f.name();
         int dot = n.lastIndexOf('.');
         return dot < 0 ? n : n.substring(0, dot);
     }
@@ -353,17 +393,10 @@ final class Library {
 
     private static String join(List<String> s) { return android.text.TextUtils.join(", ", s); }
 
-    static String read(File f) throws Exception {
-        try (InputStream in = new FileInputStream(f)) {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            byte[] buf = new byte[8192];
-            for (int n; (n = in.read(buf)) > 0; ) {
-                out.write(buf, 0, n);
-                if (out.size() > 1024 * 1024) throw new Exception("too big");
-            }
-            String s = new String(out.toByteArray(), StandardCharsets.UTF_8);
-            return s.startsWith("﻿") ? s.substring(1) : s;
-        }
+    // A text file (info.json), as UTF-8, without the byte-order mark some editors put first.
+    static String read(Node f) throws Exception {
+        String s = new String(f.bytes(1024 * 1024), StandardCharsets.UTF_8);
+        return s.startsWith("\uFEFF") ? s.substring(1) : s;
     }
 
     // "Episode 2" before "Episode 10", ignoring case.
@@ -385,7 +418,7 @@ final class Library {
     JSONObject toJson(Context c) throws Exception {
         JSONObject j = new JSONObject().put("canRead", canRead(c));
         JSONArray d = new JSONArray();
-        for (Drive drive : drives) d.put(new JSONObject().put("name", drive.name).put("path", drive.root.getAbsolutePath()));
+        for (Drive drive : drives) d.put(new JSONObject().put("name", drive.name).put("path", drive.root.key()).put("share", drive.share));
         j.put("drives", d);
         j.put("movies", titles(movies));
         j.put("series", titles(series));
@@ -395,22 +428,25 @@ final class Library {
     private static JSONArray titles(List<Title> list) throws Exception {
         JSONArray a = new JSONArray();
         for (Title t : list) {
-            JSONObject o = new JSONObject().put("title", t.title).put("folder", t.folder.getName())
+            JSONObject o = new JSONObject().put("title", t.title).put("folder", t.folder.name())
                     .put("drive", t.drive.name).put("meta", t.meta()).put("description", t.description == null ? "" : t.description)
                     .put("problems", new JSONArray(t.problems));
-            if (t.poster != null) o.put("poster", t.poster.getAbsolutePath());
-            if (t.background != null) o.put("background", t.background.getAbsolutePath());
-            if (t.movie != null) o.put("video", t.movie.file.getName()).put("subtitles", t.movie.subtitles.size());
+            if (t.poster != null) o.put("poster", t.poster.key());
+            if (t.background != null) o.put("background", t.background.key());
+            if (t.movie != null) o.put("video", t.movie.file.name()).put("subtitles", t.movie.subtitles.size());
             if (t.series) o.put("seasons", t.seasons.size()).put("episodes", t.episodes().size());
             a.put(o);
         }
         return a;
     }
 
-    // The posters and backgrounds the library found: the only files the web page may ask for.
-    boolean isArt(File f) {
+    // The poster or background the library found with this key: the only files the web page may ask for.
+    Node art(String key) {
         for (List<Title> list : Arrays.asList(movies, series))
-            for (Title t : list) if (f.equals(t.poster) || f.equals(t.background)) return true;
-        return false;
+            for (Title t : list) {
+                if (t.poster != null && t.poster.key().equals(key)) return t.poster;
+                if (t.background != null && t.background.key().equals(key)) return t.background;
+            }
+        return null;
     }
 }

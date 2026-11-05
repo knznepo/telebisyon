@@ -14,7 +14,6 @@ import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import java.io.File;
 import java.util.List;
 
 // One movie or series: its background, title, details and description, and what to play. A movie has
@@ -57,7 +56,7 @@ public class DetailsActivity extends Activity {
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Ui.BG);
         ImageView back = Ui.backdrop(this, root);
-        File art = t.background != null ? t.background : t.poster;
+        Node art = t.background != null ? t.background : t.poster;
         if (art != null) Images.into(back, art, getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
 
         ImageView brand = Ui.brand(this);
@@ -217,7 +216,7 @@ public class DetailsActivity extends Activity {
         ImageView img = new ImageView(this);
         img.setScaleType(ImageView.ScaleType.CENTER_CROP);
         pic.addView(img, new FrameLayout.LayoutParams(-1, -1));
-        File art = v.thumb != null ? v.thumb : t.background != null ? t.background : t.poster;
+        Node art = v.thumb != null ? v.thumb : t.background != null ? t.background : t.poster;
         Images.into(img, art, w, h);
         Progress.Entry p = Progress.get(this, v.file);
         if (p != null) {

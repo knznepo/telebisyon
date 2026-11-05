@@ -21,7 +21,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -40,7 +39,7 @@ public class MainActivity extends Activity {
     private ScrollView scroller;
     private String shown = ""; // what the rows were built from, so a rescan with no change keeps the focus
     private String focusedKey;
-    private File backdropNow;
+    private Node backdropNow;
 
     // A drive was plugged in or taken out: look again, once it's settled.
     private final BroadcastReceiver drives = new BroadcastReceiver() {
@@ -51,6 +50,15 @@ public class MainActivity extends Activity {
         }
     };
     private final Runnable rescan = this::scan;
+    // Computers can start or stop sharing at any time: look again every 30 seconds while this is open.
+    private final Runnable again = new Runnable() {
+        @Override
+        public void run() {
+            scan();
+            main.postDelayed(this, 30000);
+        }
+    };
+    private volatile boolean scanning;
 
     @Override
     protected void onCreate(Bundle saved) {
@@ -118,6 +126,7 @@ public class MainActivity extends Activity {
         f.addDataScheme("file");
         registerReceiver(drives, f);
         scan(); // also picks up what was watched since
+        main.postDelayed(again, 30000);
     }
 
     @Override
@@ -125,6 +134,7 @@ public class MainActivity extends Activity {
         super.onPause();
         unregisterReceiver(drives);
         main.removeCallbacks(rescan);
+        main.removeCallbacks(again);
     }
 
     private void scan() {
@@ -132,8 +142,11 @@ public class MainActivity extends Activity {
             say("FLIXNET can't read drives yet.\nOn a computer, run:  sh flixnet.sh <TV_IP>");
             return;
         }
+        if (scanning) return; // one at a time: asking the Wi-Fi takes a second or two
+        scanning = true;
         new Thread(() -> {
             Library lib = Library.scan(this);
+            scanning = false;
             main.post(() -> show(lib));
         }, "scan").start();
     }
@@ -158,7 +171,8 @@ public class MainActivity extends Activity {
 
     private void show(Library lib) {
         if (lib.empty()) {
-            if (lib.drives.isEmpty() && Library.drives(this).isEmpty()) say("Connect a USB drive or hard disk.\nFLIXNET shows the Movies and Series folders on it.");
+            if (lib.drives.isEmpty() && Library.drives(this).isEmpty())
+                say("Connect a USB drive or hard disk, or share your movies from a computer (share.py).\nFLIXNET shows the Movies and Series folders on it.");
             else say("No movies or series found.\nPut them in a Movies or Series folder on the drive, one folder each.");
             return;
         }
@@ -217,7 +231,7 @@ public class MainActivity extends Activity {
         for (Library.Title t : titles) {
             Card c = new Card();
             c.title = t;
-            c.key = t.folder.getAbsolutePath();
+            c.key = t.folder.key();
             out.add(c);
         }
         return out;
@@ -226,9 +240,9 @@ public class MainActivity extends Activity {
     // What was started and not finished, latest first: the movie, or the episode the series is at.
     private List<Card> continueWatching(Library lib) {
         Map<String, Card> byPath = new HashMap<>();
-        for (Library.Title t : lib.movies) if (t.movie != null) byPath.put(t.movie.file.getAbsolutePath(), card(t, t.movie, null));
+        for (Library.Title t : lib.movies) if (t.movie != null) byPath.put(t.movie.file.key(), card(t, t.movie, null));
         for (Library.Title t : lib.series) for (Library.Video v : t.episodes())
-            byPath.put(v.file.getAbsolutePath(), card(t, v, "S" + v.season + ":E" + v.number));
+            byPath.put(v.file.key(), card(t, v, "S" + v.season + ":E" + v.number));
         List<Card> out = new ArrayList<>();
         List<Library.Title> seen = new ArrayList<>();
         for (Progress.Entry e : Progress.started(this)) {
@@ -246,7 +260,7 @@ public class MainActivity extends Activity {
         c.title = t;
         c.video = v;
         c.badge = badge;
-        c.key = "continue:" + v.file.getAbsolutePath();
+        c.key = "continue:" + v.file.key();
         return c;
     }
 
@@ -346,7 +360,7 @@ public class MainActivity extends Activity {
         meta.setText(m);
         meta.setVisibility(m.isEmpty() ? View.GONE : View.VISIBLE);
         description.setText(t.description == null ? "" : t.description);
-        File art = t.background != null ? t.background : t.poster;
+        Node art = t.background != null ? t.background : t.poster;
         if (art == null ? backdropNow == null : art.equals(backdropNow)) return;
         backdropNow = art;
         main.removeCallbacksAndMessages(back);
@@ -368,14 +382,14 @@ public class MainActivity extends Activity {
             startActivity(PlayerActivity.intent(this, c.title, c.video, true));
             return;
         }
-        startActivity(new Intent(this, DetailsActivity.class).putExtra("folder", c.title.folder.getAbsolutePath()));
+        startActivity(new Intent(this, DetailsActivity.class).putExtra("folder", c.title.folder.key()));
     }
 
     static Library.Title find(String folder) {
         Library lib = Library.current;
         if (lib == null) return null;
         for (List<Library.Title> list : java.util.Arrays.asList(lib.movies, lib.series))
-            for (Library.Title t : list) if (t.folder.getAbsolutePath().equals(folder)) return t;
+            for (Library.Title t : list) if (t.folder.key().equals(folder)) return t;
         return null;
     }
 }

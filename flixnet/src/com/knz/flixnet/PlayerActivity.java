@@ -19,7 +19,6 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.VideoView;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -27,10 +26,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 // Plays a movie, or a series from an episode on into the next ones, with the TV's own video player
-// (so what plays is what the TV's hardware can: most MP4 and MKV with H.264 or H.265).
+// (so what plays is what the TV's hardware can: most MP4 and MKV with H.264 or H.265), from a drive or
+// streamed from a computer sharing it.
 //
 // OK or play/pause pauses. Left and right skip 10 seconds (further while held); rewind and fast
-// forward 30. Down turns subtitles on or off, up shows where it is. Back stops, and it remembers where.
+// forward 30. Down goes through the subtitles (off, then each language), up shows where it is. Back
+// stops, and it remembers where. The subtitle choice is remembered too: off stays off, and the language
+// last picked comes first next time.
 // After an episode, the next one starts in 5 seconds (OK: now, Back: not at all).
 public class PlayerActivity extends Activity {
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -40,7 +42,9 @@ public class PlayerActivity extends Activity {
     private Bar bar;
     private List<Library.Video> list = new ArrayList<>();
     private int index;
-    private boolean resume, prepared, subtitlesOn = true, finishing;
+    private boolean resume, prepared, finishing;
+    private int subtitleAt = -1; // which of the video's subtitles shows, -1 for none
+    private final List<String> subtitleNames = new ArrayList<>();
     private Library.Title t;
     private List<Cue> cues = Collections.emptyList();
     private long lastSaved, hideAt;
@@ -48,8 +52,8 @@ public class PlayerActivity extends Activity {
     private float subtitleLift = 1; // where the subtitles were last moved to (1: not yet)
 
     static Intent intent(Context c, Library.Title t, Library.Video v, boolean resume) {
-        return new Intent(c, PlayerActivity.class).putExtra("folder", t.folder.getAbsolutePath())
-                .putExtra("video", v.file.getAbsolutePath()).putExtra("resume", resume);
+        return new Intent(c, PlayerActivity.class).putExtra("folder", t.folder.key())
+                .putExtra("video", v.file.key()).putExtra("resume", resume);
     }
 
     @Override
@@ -60,7 +64,7 @@ public class PlayerActivity extends Activity {
         if (t == null) { finish(); return; }
         list = t.series ? t.episodes() : Collections.singletonList(t.movie);
         String path = getIntent().getStringExtra("video");
-        for (int i = 0; i < list.size(); i++) if (list.get(i).file.getAbsolutePath().equals(path)) index = i;
+        for (int i = 0; i < list.size(); i++) if (list.get(i).file.key().equals(path)) index = i;
         resume = getIntent().getBooleanExtra("resume", false);
 
         FrameLayout root = new FrameLayout(this);
@@ -153,16 +157,20 @@ public class PlayerActivity extends Activity {
         heading.setText(t.title);
         sub.setText(t.series ? "S" + v.season + ":E" + v.number + "  " + v.title : t.meta());
         keysHint();
-        cues = Collections.emptyList();
-        subtitle.setText("");
-        if (!v.subtitles.isEmpty()) {
-            File srt = v.subtitles.get(0);
-            new Thread(() -> {
-                List<Cue> c = parse(srt);
-                main.post(() -> { if (current() == v) cues = c; });
-            }).start();
+        // Each subtitle's name: its language, else "Subtitles" (with a number if there are more).
+        subtitleNames.clear();
+        for (int i = 0; i < v.subtitles.size(); i++) {
+            String lang = Library.language(v.subtitles.get(i));
+            subtitleNames.add(lang != null ? lang : v.subtitles.size() == 1 ? "Subtitles" : "Subtitles " + (i + 1));
         }
-        video.setVideoPath(v.file.getAbsolutePath());
+        // As last chosen: off, or the language picked, else the first (the TV's language).
+        String last = getSharedPreferences(PREFS, 0).getString(PREF_SUBTITLES, null);
+        int at = subtitleNames.isEmpty() || "off".equals(last) ? -1 : Math.max(0, subtitleNames.indexOf(last));
+        showSubtitles(at);
+        // A path on a drive, or a link to the computer sharing it (share.py serves any part asked for,
+        // so skipping around works).
+        if (v.file.remote()) video.setVideoURI(android.net.Uri.parse(v.file.uri()));
+        else video.setVideoPath(v.file.uri());
     }
 
     // Four times a second: the subtitle on screen, the bar and the clock, and every few seconds, where it is.
@@ -172,7 +180,7 @@ public class PlayerActivity extends Activity {
             if (prepared) {
                 long pos = video.getCurrentPosition(), dur = video.getDuration();
                 String text = "";
-                if (subtitlesOn) for (Cue c : cues) if (pos >= c.start && pos <= c.end) { text = c.text; break; }
+                if (subtitleAt >= 0) for (Cue c : cues) if (pos >= c.start && pos <= c.end) { text = c.text; break; }
                 if (!text.contentEquals(subtitle.getText())) subtitle.setText(text);
                 bar.set(dur > 0 ? (float) pos / dur : 0);
                 clock.setText(Ui.time(pos) + "  /  " + Ui.time(Math.max(0, dur)));
@@ -260,17 +268,37 @@ public class PlayerActivity extends Activity {
             case KeyEvent.KEYCODE_MEDIA_FAST_FORWARD: seek(30000); return true;
             case KeyEvent.KEYCODE_MEDIA_NEXT: if (index + 1 < list.size()) { save(); playNext(); } return true;
             case KeyEvent.KEYCODE_DPAD_DOWN:
-                if (!current().subtitles.isEmpty() && held == 0) {
-                    subtitlesOn = !subtitlesOn;
-                    if (!subtitlesOn) subtitle.setText("");
-                    hint.setText(subtitlesOn ? "Subtitles on" : "Subtitles off");
+                if (!subtitleNames.isEmpty() && held == 0) {
+                    // Off, then each one in turn, then off again. Remembered for the next video.
+                    int at = subtitleAt + 1 >= subtitleNames.size() ? -1 : subtitleAt + 1;
+                    showSubtitles(at);
+                    getSharedPreferences(PREFS, 0).edit().putString(PREF_SUBTITLES, at < 0 ? "off" : subtitleNames.get(at)).apply();
+                    hint.setText(at < 0 ? "Subtitles off" : subtitleNames.size() == 1 ? "Subtitles on" : "Subtitles: " + subtitleNames.get(at));
                     showControls();
-                    main.postDelayed(this::keysHint, 2500);
+                    main.removeCallbacks(keysHintLater);
+                    main.postDelayed(keysHintLater, 2500);
                 } else showControls();
                 return true;
             case KeyEvent.KEYCODE_DPAD_UP: showControls(); return true;
         }
         return super.onKeyDown(code, e);
+    }
+
+    private static final String PREFS = "player", PREF_SUBTITLES = "subtitles";
+    private final Runnable keysHintLater = this::keysHint;
+
+    // Shows the video's subtitle at, read off the main thread (-1: none).
+    private void showSubtitles(int at) {
+        subtitleAt = at;
+        cues = Collections.emptyList();
+        subtitle.setText("");
+        if (at < 0) return;
+        Library.Video v = current();
+        Node srt = v.subtitles.get(at);
+        new Thread(() -> {
+            List<Cue> c = parse(srt);
+            main.post(() -> { if (current() == v && subtitleAt == at) cues = c; });
+        }).start();
     }
 
     private void keysHint() {
@@ -324,11 +352,12 @@ public class PlayerActivity extends Activity {
 
     // An .srt file: numbered blocks of "00:01:02,500 --> 00:01:05,000" and the lines to show. Formatting
     // tags (<i>, {\an8}) are dropped. Read as UTF-8, or as Windows Latin if that doesn't fit.
-    private static List<Cue> parse(File f) {
+    private static List<Cue> parse(Node f) {
         List<Cue> out = new ArrayList<>();
         try {
-            String s = Library.read(f);
-            if (s.indexOf('�') >= 0) s = new String(bytes(f), "windows-1252");
+            byte[] raw = f.bytes(4 * 1024 * 1024);
+            String s = new String(raw, java.nio.charset.StandardCharsets.UTF_8);
+            if (s.indexOf('\uFFFD') >= 0) s = new String(raw, "windows-1252");
             Pattern time = Pattern.compile("(\\d+):(\\d+):(\\d+)[,.](\\d+)\\s*-->\\s*(\\d+):(\\d+):(\\d+)[,.](\\d+)");
             for (String block : s.replace("\r", "").split("\n\\s*\n")) {
                 String[] lines = block.trim().split("\n");
@@ -350,15 +379,6 @@ public class PlayerActivity extends Activity {
             }
         } catch (Exception ignored) {} // unreadable: no subtitles
         return out;
-    }
-
-    private static byte[] bytes(File f) throws Exception {
-        try (java.io.InputStream in = new java.io.FileInputStream(f)) {
-            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
-            byte[] buf = new byte[8192];
-            for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
-            return out.toByteArray();
-        }
     }
 
     private static long ms(Matcher m, int g) {

@@ -6,14 +6,13 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
-import java.io.File;
 import java.io.FileNotFoundException;
 
 // For Telebisyon's web page (its FLIXNET page): the library as JSON, and the posters and backgrounds in
 // it. Only apps signed with the same key can ask (the LIBRARY permission), and only those pictures can
 // be read, nothing else on the drive.
 //   call("library")                           -> {"json": the library, as Library.toJson}
-//   content://com.knz.flixnet.library/image?path=<a poster or background's path>
+//   content://com.knz.flixnet.library/image?path=<a poster or background's key>
 public class LibraryProvider extends ContentProvider {
     @Override
     public boolean onCreate() { return true; }
@@ -30,14 +29,28 @@ public class LibraryProvider extends ContentProvider {
         return b;
     }
 
+    // A picture on a drive is handed over as it is; one on a computer is passed through a pipe as it downloads.
     @Override
     public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
-        String path = uri.getQueryParameter("path");
+        String key = uri.getQueryParameter("path");
         Library lib = Library.current;
         if (lib == null) lib = Library.scan(getContext());
-        File f = path == null ? null : new File(path);
-        if (f == null || !lib.isArt(f)) throw new FileNotFoundException("not a poster or background in the library");
-        return ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY);
+        Node art = key == null ? null : lib.art(key);
+        if (art == null) throw new FileNotFoundException("not a poster or background in the library");
+        if (art instanceof Node.Local) return ParcelFileDescriptor.open(((Node.Local) art).file, ParcelFileDescriptor.MODE_READ_ONLY);
+        try {
+            ParcelFileDescriptor[] pipe = ParcelFileDescriptor.createPipe();
+            new Thread(() -> {
+                try (java.io.InputStream in = art.open();
+                     java.io.OutputStream out = new ParcelFileDescriptor.AutoCloseOutputStream(pipe[1])) {
+                    byte[] buf = new byte[16384];
+                    for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
+                } catch (Exception ignored) {} // the computer went away: a cut-off picture
+            }).start();
+            return pipe[0];
+        } catch (java.io.IOException e) {
+            throw new FileNotFoundException(e.getMessage());
+        }
     }
 
     @Override

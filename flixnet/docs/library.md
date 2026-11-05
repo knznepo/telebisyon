@@ -27,6 +27,8 @@ Series/
       ...
 ```
 
+Movies on a computer? Share the folder with `share.py` (see the [README](../README.md#share-from-a-computer)): the same layout, played over the Wi-Fi.
+
 No USB drive? A **Flixnet** folder on the TV's own storage works too (`Flixnet/Movies/...`, `Flixnet/Series/...`): upload into it from Telebisyon's Files page.
 
 ## Movies
@@ -37,7 +39,7 @@ No USB drive? A **Flixnet** folder on the TV's own storage works too (`Flixnet/M
 | `poster.jpg` | The picture in the rows. Portrait, 2:3, about 600×900. Also found as `thumbnail`, `thumb`, `cover` or `folder`, and as `.png` or `.webp`. |
 | `background.jpg` | The big picture behind the title. Landscape, 16:9, about 1920×1080. Also found as `backdrop`, `fanart` or `landscape`. |
 | `info.json` | About the movie (below). Without one, the folder's name is the title: `Arrival (2016)` reads as *Arrival*, 2016. |
-| `<video name>.srt` | Subtitles, named after the video: `movie.srt`, `movie.en.srt`. One in the TV's language is picked first. |
+| `<video name>.srt` | Subtitles, named after the video: `movie.srt`, `movie.en.srt`, `movie.fil.srt`, `movie.English.srt`. In a folder with only one video, any `.srt` in it is used, whatever its name. The language comes from the name (`.en.`, `.fil.`, `.English.`), and the TV's language is picked first. |
 
 ## Series
 
@@ -88,6 +90,10 @@ Only **title** and **description** are needed. The rest makes the screens richer
 | `tagline` | optional | A line in gold above the description. |
 
 Save it as UTF-8 (any editor's default). A mistake in it (a missing comma, say) doesn't hide the movie: it shows with its folder's name, and Telebisyon's FLIXNET page says what's wrong.
+
+## Subtitles
+
+FLIXNET finds subtitles by itself, as above. While a video plays, **▼** goes through them: off, then each language, then off again ("Subtitles: English", "Subtitles: Filipino"). The choice is remembered: turned off, they stay off for the next videos; with a language picked, that one comes first next time. Only `.srt` subtitles are read (UTF-8, or Windows' Western encoding).
 
 ## What plays
 

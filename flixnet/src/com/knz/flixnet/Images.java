@@ -6,12 +6,12 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.LruCache;
 import android.widget.ImageView;
-import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 // Posters and backgrounds, read off the main thread at about the size they're shown (a TV box has
 // little memory, and a background straight from a camera can be 6000 pixels wide), and kept a while.
+// From a drive they're read in place; from a computer (share.py), downloaded first.
 final class Images {
     private static final ExecutorService POOL = Executors.newFixedThreadPool(3);
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
@@ -23,8 +23,8 @@ final class Images {
     interface Done { void loaded(Bitmap b); }
 
     // Into the view, unless the view has been given another picture meanwhile. Null clears it.
-    static void into(ImageView v, File f, int w, int h) {
-        String key = f == null ? null : f.getAbsolutePath() + "@" + w;
+    static void into(ImageView v, Node f, int w, int h) {
+        String key = f == null ? null : f.key() + "@" + w;
         v.setTag(key);
         if (key == null) { v.setImageDrawable(null); return; }
         Bitmap hit = CACHE.get(key);
@@ -39,8 +39,8 @@ final class Images {
         });
     }
 
-    static void load(File f, int w, int h, Done done) {
-        String key = f.getAbsolutePath() + "@" + w;
+    static void load(Node f, int w, int h, Done done) {
+        String key = f.key() + "@" + w;
         Bitmap hit = CACHE.get(key);
         if (hit != null) { done.loaded(hit); return; }
         POOL.execute(() -> {
@@ -50,18 +50,21 @@ final class Images {
         });
     }
 
-    private static Bitmap decode(File f, int w, int h) {
+    private static Bitmap decode(Node f, int w, int h) {
         try {
+            byte[] data = f.remote() ? f.bytes(16 * 1024 * 1024) : null;
+            String path = f.remote() ? null : f.uri();
             BitmapFactory.Options o = new BitmapFactory.Options();
             o.inJustDecodeBounds = true;
-            BitmapFactory.decodeFile(f.getAbsolutePath(), o);
+            if (data != null) BitmapFactory.decodeByteArray(data, 0, data.length, o);
+            else BitmapFactory.decodeFile(path, o);
             if (o.outWidth <= 0) return null;
             int sample = 1;
             while (o.outWidth / (sample * 2) >= w && o.outHeight / (sample * 2) >= h) sample *= 2;
             o = new BitmapFactory.Options();
             o.inSampleSize = sample;
             o.inPreferredConfig = Bitmap.Config.RGB_565; // half the memory; posters don't need the rest
-            return BitmapFactory.decodeFile(f.getAbsolutePath(), o);
+            return data != null ? BitmapFactory.decodeByteArray(data, 0, data.length, o) : BitmapFactory.decodeFile(path, o);
         } catch (Throwable t) { // a broken file, or out of memory: just no picture
             return null;
         }

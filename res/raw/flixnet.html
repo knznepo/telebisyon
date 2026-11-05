@@ -106,10 +106,10 @@ Series/
         return;
       }
       if (!j.drives.length) {
-        $("out").innerHTML = '<div class="panel"><b>No drive with movies is connected.</b><p class="note">Plug in a USB drive or hard disk with a <b>Movies</b> or <b>Series</b> folder on it, then <b>Look again</b>.</p></div>';
+        $("out").innerHTML = '<div class="panel"><b>No drive or computer with movies.</b><p class="note">Plug in a USB drive or hard disk with a <b>Movies</b> or <b>Series</b> folder on it, or share one from a computer with <code>python3 flixnet/share.py &lt;folder&gt;</code>, then <b>Look again</b>.</p></div>';
         return;
       }
-      var html = '<div class="drives">' + j.drives.map(function (d) { return '<span class="drive">💾 ' + esc(d.name) + "</span>"; }).join("") + "</div>";
+      var html = '<div class="drives">' + j.drives.map(function (d) { return '<span class="drive">' + (d.share ? "💻 " : "💾 ") + esc(d.name) + "</span>"; }).join("") + "</div>";
       html += section("Movies", j.movies, false) + section("Series", j.series, true);
       if (!j.movies.length && !j.series.length) html += '<div class="panel">No movies or series on the drive yet. See <b>How to arrange a drive</b> below.</div>';
       $("out").innerHTML = html;

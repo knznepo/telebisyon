@@ -2,3 +2,5 @@ out/
 key.jks
 *.apk
 .DS_Store
+FLIXNET Share.app/
+__pycache__/

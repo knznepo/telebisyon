@@ -1,6 +1,7 @@
 # Redraws FLIXNET's pictures: res/drawable-xhdpi/banner.png (the TV's app row, 640x360),
-# res/drawable-xxxhdpi/icon.png (192x192) and res/drawable-xhdpi/logo.png (the wordmark at the top of
-# each screen). Needs Python with Pillow, on a Mac (it uses DIN Condensed Bold from the system fonts):
+# res/drawable-xxxhdpi/icon.png (192x192), res/drawable-xhdpi/logo.png (the wordmark at the top of
+# each screen) and share-app/icon.png (1024x1024, for the Mac app). Needs Python with Pillow, on a Mac
+# (it uses DIN Condensed Bold from the system fonts):
 #   python3 art.py res
 #
 # A tall, condensed, heavy red wordmark on black, with a darker red edge underneath.
@@ -52,4 +53,12 @@ m = Image.new("L", (192, 192), 0)
 ImageDraw.Draw(m).rounded_rectangle((0, 0, 191, 191), radius=40, fill=255)
 rounded.paste(icon, (0, 0), m)
 rounded.save(out + "/drawable-xxxhdpi/icon.png", optimize=True)
+
+# The same icon at 1024 pixels, for the Mac app that shares a computer's movies (share-app/).
+big = on_black((1024, 1024), wordmark("F", 900, 0), (512, 535))
+m = Image.new("L", (1024, 1024), 0)
+ImageDraw.Draw(m).rounded_rectangle((0, 0, 1023, 1023), radius=220, fill=255)
+big_rounded = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
+big_rounded.paste(big, (0, 0), m)
+big_rounded.save(out + "/../share-app/icon.png", optimize=True)
 print("drawn")

@@ -2,14 +2,13 @@ package com.knz.flixnet;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-// Where each video was stopped, by its path on the drive: for Resume, the progress bars and the
-// Continue watching row. Near the end counts as watched.
+// Where each video was stopped, by its key (its path on the drive, or share://<computer>/<path>): for
+// Resume, the progress bars and the Continue watching row. Near the end counts as watched.
 final class Progress {
     private static final String PREFS = "progress";
 
@@ -25,18 +24,16 @@ final class Progress {
         boolean resumable() { return position > 60000 && !watched(); }
     }
 
-    static Entry get(Context c, File f) {
-        String v = c.getSharedPreferences(PREFS, 0).getString(f.getAbsolutePath(), null);
-        return v == null ? null : parse(f.getAbsolutePath(), v);
+    static Entry get(Context c, Node f) {
+        String v = c.getSharedPreferences(PREFS, 0).getString(f.key(), null);
+        return v == null ? null : parse(f.key(), v);
     }
 
-    static void save(Context c, File f, long position, long duration) {
+    static void save(Context c, Node f, long position, long duration) {
         if (duration <= 0) return;
         c.getSharedPreferences(PREFS, 0).edit()
-                .putString(f.getAbsolutePath(), position + "," + duration + "," + System.currentTimeMillis()).apply();
+                .putString(f.key(), position + "," + duration + "," + System.currentTimeMillis()).apply();
     }
-
-    static void forget(Context c, File f) { c.getSharedPreferences(PREFS, 0).edit().remove(f.getAbsolutePath()).apply(); }
 
     // Everything started and not finished, latest first.
     static List<Entry> started(Context c) {
