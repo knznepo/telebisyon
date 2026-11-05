@@ -69,5 +69,11 @@ if [ "$SDK" -ge 30 ]; then
 elif [ "$SDK" -ge 23 ]; then
   adb -s "$TV" shell pm grant "$PKG" android.permission.READ_EXTERNAL_STORAGE
 fi
-echo "FLIXNET is on the TV. Open it from the TV's apps, or add it to Telebisyon's home screen (Add app)."
+# On Telebisyon's home screen, FLIXNET goes at the end of the apps row (the rest stays as it is).
+if adb -s "$TV" shell pm path com.knz.telebisyon >/dev/null 2>&1; then
+  adb -s "$TV" shell am start -n com.knz.telebisyon/.MainActivity --es addapp "$PKG" --es stamp "flixnet-$(date +%s)" >/dev/null
+  echo "FLIXNET is on the TV, at the end of the apps row on Telebisyon's home screen."
+else
+  echo "FLIXNET is on the TV. Open it from the TV's apps."
+fi
 echo "Put movies on a USB drive or hard disk: Movies/<name>/ and Series/<name>/ (see docs/library.md)."

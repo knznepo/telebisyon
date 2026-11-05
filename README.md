@@ -190,7 +190,7 @@ It speaks PiPup's API on port 7979 (`POST /notify` with `title`, `message`, `dur
 
 Yes, with **FLIXNET**, an optional app in the [flixnet/](flixnet/README.md) folder: `sh flixnet/flixnet.sh <TV_IP>` installs it. Put a **Movies** and a **Series** folder on the drive, one folder per movie or series with the video, a `poster.jpg`, a `background.jpg` and an `info.json` (only a title and a description are needed). It shows them in rows like a streaming app, remembers where you stopped, plays subtitles and the next episode. Plug the drive in and they appear.
 
-Once it's installed, the TV's web page gets a **FLIXNET** tile: a page listing everything found on the drives, and what needs fixing. How to arrange a drive: [flixnet/docs/library.md](flixnet/docs/library.md).
+Once it's installed, FLIXNET sits at the end of the apps row on the home screen, like any app. On a phone, the TV's web page gets a **FLIXNET library** tile: a page listing everything found on the drives, and what needs fixing. How to arrange a drive: [flixnet/docs/library.md](flixnet/docs/library.md).
 
 </details>
 

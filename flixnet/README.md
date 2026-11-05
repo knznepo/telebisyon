@@ -11,7 +11,7 @@ FLIXNET is an optional TV app that shows the movies and series on a USB drive or
 - **Rows:** Continue watching, Recently added, Movies, Series, and a row per genre.
 - **Details:** the background, title, year, rating, runtime, score, description, cast and director. Movies have **Play**, or **Resume** and **Start over**. Series pick up where you were, with seasons and episodes underneath.
 - **The player:** resume where you stopped, subtitles from `.srt` files, and the next episode starts by itself.
-- **Telebisyon's web page** gets a FLIXNET page listing everything found, and what needs fixing (no poster, a broken `info.json`…).
+- **On Telebisyon:** FLIXNET joins the apps row on the home screen (and on the web page's copy of it), and the web page gets a **FLIXNET library** tile: a page listing everything found on the drives, and what needs fixing (no poster, a broken `info.json`…).
 
 It's a separate app from Telebisyon, built and installed on its own.
 
@@ -26,7 +26,7 @@ sh flixnet.sh <TV_IP> off      # uninstalls it
 
 It builds FLIXNET if the computer can (Java 17 and the Android SDK, see `build.sh`), or downloads the latest release. It also lets FLIXNET read drives: TVs have no screen to ask for that.
 
-Then open **FLIXNET** from the TV's apps. On Telebisyon's home screen, add it with the **Add app** tile.
+It also puts FLIXNET at the end of the apps row on Telebisyon's home screen, if Telebisyon is installed (the rest of the row stays as it is). Otherwise, open it from the TV's apps.
 
 ## Arrange the drive
 

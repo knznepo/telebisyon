@@ -296,7 +296,8 @@ public class MainActivity extends Activity {
     }
 
     // Saves an app list passed with --es apps "...", shortcuts passed with --es quick "...", and a
-    // clock override passed with --es clock 12|24|auto. Returns true if it changed.
+    // clock override passed with --es clock 12|24|auto. --es addapp <package> puts one app at the end of
+    // the top row, keeping the rest as it is (flixnet.sh adds FLIXNET this way). Returns true if it changed.
     // When Android kills the home screen in the background, it can start it again with the same old
     // intent; the stamp install.sh sends stops that from undoing changes made on the TV since.
     private boolean saveConfig(Intent intent) {
@@ -307,7 +308,9 @@ public class MainActivity extends Activity {
         String account = intent == null ? null : intent.getStringExtra("account");
         String pin = intent == null ? null : intent.getStringExtra("pin");
         String files = intent == null ? null : intent.getStringExtra("files");
-        if (apps == null && quick == null && clock == null && fake == null && account == null && pin == null && files == null) return false;
+        String add = intent == null ? null : intent.getStringExtra("addapp");
+        if (apps == null && quick == null && clock == null && fake == null && account == null && pin == null && files == null
+                && add == null) return false;
         SharedPreferences prefs = getSharedPreferences(PREFS, 0);
         String stamp = intent.getStringExtra("stamp");
         if (stamp != null && stamp.equals(prefs.getString("stamp", null))) return false;
@@ -317,6 +320,13 @@ public class MainActivity extends Activity {
             apps = apps.trim();
             if (apps.isEmpty() || apps.equalsIgnoreCase("auto")) e.remove("apps");
             else e.putString("apps", apps);
+        }
+        if (apps == null && add != null && !add.trim().isEmpty()) {
+            List<String> now = appList(getPackageManager());
+            if (!now.contains(add.trim())) {
+                now.add(add.trim());
+                e.putString("apps", android.text.TextUtils.join(",", now));
+            }
         }
         if (quick != null) {
             quick = quick.trim();
