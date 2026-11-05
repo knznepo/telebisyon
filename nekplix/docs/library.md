@@ -35,7 +35,7 @@ No USB drive? A **Nekplix** folder on the TV's own storage works too (`Nekplix/M
 
 | File | What it is |
 |---|---|
-| **The video** | Any name. `.mp4`, `.mkv`, `.webm`, `.avi`, `.mov`, `.ts`, `.m2ts`, `.mpg`, `.wmv`, `.flv`, `.3gp`. If there's more than one (a trailer, say), the biggest is the movie. |
+| **The video** | Any name. `.mp4`, `.mkv`, `.webm`, `.mov`, `.ts`, `.m2ts`, `.mpg`, `.wmv`, `.flv`, `.3gp` (and `.avi`, after `avi2mkv.sh`, below). If there's more than one (a trailer, say), the biggest is the movie. |
 | `poster.jpg` | The picture in the rows. Portrait, 2:3, about 600×900. Also found as `thumbnail`, `thumb`, `cover` or `folder`, and as `.png` or `.webp`. |
 | `background.jpg` | The big picture behind the title. Landscape, 16:9, about 1920×1080. Also found as `backdrop`, `fanart` or `landscape`. |
 | `info.json` | About the movie (below). Without one, the folder's name is the title: `Arrival (2016)` reads as *Arrival*, 2016. |
@@ -108,3 +108,10 @@ NEKPLIX finds subtitles by itself, as above. While a video plays, **▼** goes t
 ## What plays
 
 NEKPLIX plays with the TV's own video player, so it plays what the TV's hardware can: most **MP4** and **MKV** files with **H.264** or **H.265 (HEVC)** video and AAC, AC3 or MP3 sound. If a file won't play, NEKPLIX says so: convert it to MP4 with H.264 video and AAC sound (HandBrake's "Fast 1080p30" preset does).
+
+**AVI files** don't play: Android TVs can't read the AVI file itself, though they decode the XviD or DivX video and MP3 or AC3 sound inside. `avi2mkv.sh` copies them into MKV files without re-encoding, so there's no loss of quality, and it takes a minute or two a film. It needs ffmpeg (`brew install ffmpeg` on a Mac):
+
+```
+./avi2mkv.sh /Volumes/Movies             # each AVI is moved to "AVI originals" on the drive
+./avi2mkv.sh /Volumes/Movies --delete    # or deleted, once its MKV checks out
+```

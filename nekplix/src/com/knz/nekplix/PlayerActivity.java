@@ -148,7 +148,10 @@ public class PlayerActivity extends Activity {
         });
         video.setOnCompletionListener(mp -> ended());
         video.setOnErrorListener((mp, what, extra) -> {
-            problem.setText("This TV can't play this video (" + Library.ext(current().file).toUpperCase(java.util.Locale.ROOT) + ").\n"
+            String ext = Library.ext(current().file);
+            problem.setText("avi".equals(ext)
+                    ? "This TV can't open AVI files.\nTurn it into an MKV with avi2mkv.sh: it takes a minute and keeps the quality."
+                    : "This TV can't play this video (" + ext.toUpperCase(java.util.Locale.ROOT) + ").\n"
                     + "Try an MP4 or MKV with H.264 or H.265 video.");
             problem.setVisibility(View.VISIBLE);
             main.postDelayed(this::finish, 6000);
