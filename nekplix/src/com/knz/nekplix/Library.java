@@ -55,6 +55,7 @@ final class Library {
         boolean series;
         Node folder;
         String title, description, tagline, rating, released, director, language;
+        String collection; // the films it goes with: "Fast & Furious" (info.json, or a collection folder)
         int year, runtime; // runtime in minutes
         double score;
         List<String> genres = new ArrayList<>(), cast = new ArrayList<>(), problems = new ArrayList<>();
@@ -185,21 +186,70 @@ final class Library {
     private void readMovies(Node dir, Drive drive) {
         for (Node f : dir.list()) {
             if (!f.isDirectory() || f.name().startsWith(".")) continue;
-            Title t = new Title();
-            t.folder = f;
-            t.drive = drive;
-            readInfo(t);
-            Node video = null;
-            for (Node x : list(f)) if (isVideo(x) && (video == null || x.length() > video.length())) video = x; // the film, not a trailer
-            if (video == null) { t.problems.add("No video file in the folder"); movies.add(t); continue; }
-            Video v = new Video();
-            v.file = video;
-            v.title = t.title;
-            v.description = t.description;
-            v.subtitles = subtitles(video);
-            t.movie = v;
-            movies.add(t);
+            // A folder of film folders (and no video of its own) is a collection: "Fast & Furious Collection".
+            boolean video = false, films = false;
+            for (Node x : f.list()) { video |= isVideo(x); films |= x.isDirectory() && !x.name().startsWith("."); }
+            if (!video && films) {
+                String name = f.name().replaceAll("(?i)\\s*[-–:]?\\s*(collection|saga|series|films|movies)\\s*$", "").trim();
+                for (Node m : f.list()) if (m.isDirectory() && !m.name().startsWith(".")) readMovie(m, drive, name.isEmpty() ? f.name() : name);
+            } else readMovie(f, drive, null);
         }
+    }
+
+    private void readMovie(Node f, Drive drive, String collection) {
+        Title t = new Title();
+        t.folder = f;
+        t.drive = drive;
+        readInfo(t);
+        if (t.collection == null) t.collection = collection;
+        Node video = null;
+        for (Node x : list(f)) if (isVideo(x) && (video == null || x.length() > video.length())) video = x; // the film, not a trailer
+        if (video == null) { t.problems.add("No video file in the folder"); movies.add(t); return; }
+        Video v = new Video();
+        v.file = video;
+        v.title = t.title;
+        v.description = t.description;
+        v.subtitles = subtitles(video);
+        t.movie = v;
+        movies.add(t);
+    }
+
+    // Collections with two films or more, each in release order: "Fast & Furious" -> its films.
+    java.util.Map<String, List<Title>> collections() {
+        java.util.Map<String, List<Title>> out = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        for (Title t : movies) if (t.collection != null) {
+            List<Title> l = out.get(t.collection);
+            if (l == null) out.put(t.collection, l = new ArrayList<>());
+            l.add(t);
+        }
+        for (java.util.Iterator<List<Title>> it = out.values().iterator(); it.hasNext(); ) {
+            List<Title> l = it.next();
+            if (l.size() < 2) { it.remove(); continue; }
+            Collections.sort(l, (a, b) -> a.year != b.year ? Integer.compare(a.year == 0 ? 9999 : a.year, b.year == 0 ? 9999 : b.year) : natural(a.title, b.title));
+        }
+        return out;
+    }
+
+    // For a title's details: the rest of its collection, else up to 12 others sharing its genres, the
+    // most shared first, then the best scored.
+    List<Title> related(Title t) {
+        if (t.collection != null) {
+            List<Title> c = collections().get(t.collection);
+            if (c != null) { List<Title> out = new ArrayList<>(c); out.remove(t); return out; }
+        }
+        List<Title> all = new ArrayList<>(movies);
+        all.addAll(series);
+        all.remove(t);
+        List<Title> out = new ArrayList<>();
+        for (Title o : all) if (shared(t, o) > 0) out.add(o);
+        Collections.sort(out, (a, b) -> shared(t, b) != shared(t, a) ? shared(t, b) - shared(t, a) : Double.compare(b.score, a.score));
+        return out.subList(0, Math.min(12, out.size()));
+    }
+
+    private static int shared(Title a, Title b) {
+        int n = 0;
+        for (String g : a.genres) for (String h : b.genres) if (g.equalsIgnoreCase(h)) n++;
+        return n;
     }
 
     private void readSeries(Node dir, Drive drive) {
@@ -287,6 +337,7 @@ final class Library {
                 if (Double.isNaN(t.score)) t.score = 0;
                 t.genres = strings(j.opt("genres"));
                 t.cast = strings(j.opt("cast"));
+                t.collection = emptyToNull(j.optString("collection"));
             } catch (Exception e) {
                 t.problems.add("info.json can't be read: " + e.getMessage());
             }

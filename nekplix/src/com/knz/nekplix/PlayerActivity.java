@@ -43,8 +43,15 @@ public class PlayerActivity extends Activity {
     private List<Library.Video> list = new ArrayList<>();
     private int index;
     private boolean resume, prepared, finishing;
-    private int subtitleAt = -1; // which of the video's subtitles shows, -1 for none
+    private int subtitleAt = -1; // which of the choices shows, -1 for none
     private final List<String> subtitleNames = new ArrayList<>();
+    // Each choice: an .srt beside the video (srt set), or a track inside it (track, its index in the
+    // TV's player). The ones inside come in once the video is ready.
+    private final List<Node> subtitleFiles = new ArrayList<>();
+    private final List<Integer> subtitleTracks = new ArrayList<>();
+    private android.media.MediaPlayer player;
+    private int trackOn = -1; // the track inside the video selected now, -1 for none
+    private String trackText = "";
     private Library.Title t;
     private List<Cue> cues = Collections.emptyList();
     private long lastSaved, hideAt;
@@ -132,6 +139,8 @@ public class PlayerActivity extends Activity {
 
         video.setOnPreparedListener(mp -> {
             prepared = true;
+            player = mp;
+            addInsideSubtitles(mp);
             Progress.Entry p = Progress.get(this, current().file);
             if (resume && p != null && p.resumable()) video.seekTo((int) p.position);
             video.start();
@@ -157,16 +166,19 @@ public class PlayerActivity extends Activity {
         heading.setText(t.title);
         sub.setText(t.series ? "S" + v.season + ":E" + v.number + "  " + v.title : t.meta());
         keysHint();
-        // Each subtitle's name: its language, else "Subtitles" (with a number if there are more).
+        // The .srt files beside it, each named by its language, else "Subtitles" (numbered if more).
         subtitleNames.clear();
+        subtitleFiles.clear();
+        subtitleTracks.clear();
+        player = null;
+        trackOn = -1;
         for (int i = 0; i < v.subtitles.size(); i++) {
             String lang = Library.language(v.subtitles.get(i));
             subtitleNames.add(lang != null ? lang : v.subtitles.size() == 1 ? "Subtitles" : "Subtitles " + (i + 1));
+            subtitleFiles.add(v.subtitles.get(i));
+            subtitleTracks.add(-1);
         }
-        // As last chosen: off, or the language picked, else the first (the TV's language).
-        String last = getSharedPreferences(PREFS, 0).getString(PREF_SUBTITLES, null);
-        int at = subtitleNames.isEmpty() || "off".equals(last) ? -1 : Math.max(0, subtitleNames.indexOf(last));
-        showSubtitles(at);
+        showSubtitles(chosen());
         // A path on a drive, or a link to the computer sharing it (share.py serves any part asked for,
         // so skipping around works).
         if (v.file.remote()) video.setVideoURI(android.net.Uri.parse(v.file.uri()));
@@ -180,7 +192,8 @@ public class PlayerActivity extends Activity {
             if (prepared) {
                 long pos = video.getCurrentPosition(), dur = video.getDuration();
                 String text = "";
-                if (subtitleAt >= 0) for (Cue c : cues) if (pos >= c.start && pos <= c.end) { text = c.text; break; }
+                if (trackOn >= 0) text = trackText;
+                else if (subtitleAt >= 0) for (Cue c : cues) if (pos >= c.start && pos <= c.end) { text = c.text; break; }
                 if (!text.contentEquals(subtitle.getText())) subtitle.setText(text);
                 bar.set(dur > 0 ? (float) pos / dur : 0);
                 clock.setText(Ui.time(pos) + "  /  " + Ui.time(Math.max(0, dur)));
@@ -292,17 +305,72 @@ public class PlayerActivity extends Activity {
         subtitleAt = at;
         cues = Collections.emptyList();
         subtitle.setText("");
+        trackText = "";
+        if (player != null && trackOn >= 0) {
+            try { player.deselectTrack(trackOn); } catch (Exception ignored) {}
+        }
+        trackOn = -1;
         if (at < 0) return;
+        if (subtitleTracks.get(at) >= 0) { // inside the video: the TV's player reads it
+            if (player == null) return;
+            try {
+                player.selectTrack(subtitleTracks.get(at));
+                trackOn = subtitleTracks.get(at);
+            } catch (Exception e) {
+                subtitleAt = -1; // this TV can't show that one
+            }
+            return;
+        }
         Library.Video v = current();
-        Node srt = v.subtitles.get(at);
+        Node srt = subtitleFiles.get(at);
         new Thread(() -> {
             List<Cue> c = parse(srt);
             main.post(() -> { if (current() == v && subtitleAt == at) cues = c; });
         }).start();
     }
 
+    // As last chosen: off, or the language picked (beside or inside the video), else the first.
+    private int chosen() {
+        String last = getSharedPreferences(PREFS, 0).getString(PREF_SUBTITLES, null);
+        if (subtitleNames.isEmpty() || "off".equals(last)) return -1;
+        if (last != null) {
+            int at = subtitleNames.indexOf(last);
+            if (at >= 0) return at;
+            for (int i = 0; i < subtitleNames.size(); i++) if (subtitleNames.get(i).startsWith(last.replace(" (in video)", ""))) return i;
+        }
+        return 0;
+    }
+
+    // Subtitles inside the video (an MKV's or MP4's text tracks), as the TV's player finds them: added
+    // after the .srt files, named by their language, "English (in video)". With none beside it, one of
+    // these comes on if subtitles were on.
+    private void addInsideSubtitles(android.media.MediaPlayer mp) {
+        android.media.MediaPlayer.TrackInfo[] tracks;
+        try { tracks = mp.getTrackInfo(); } catch (Exception e) { return; }
+        int found = 0;
+        for (int i = 0; i < tracks.length; i++) {
+            int type = tracks[i].getTrackType();
+            if (type != android.media.MediaPlayer.TrackInfo.MEDIA_TRACK_TYPE_TIMEDTEXT
+                    && type != android.media.MediaPlayer.TrackInfo.MEDIA_TRACK_TYPE_SUBTITLE) continue;
+            String code = tracks[i].getLanguage(), lang = null;
+            if (code != null && !code.isEmpty() && !code.equals("und")) {
+                lang = new java.util.Locale(code).getDisplayLanguage();
+                if (lang.equalsIgnoreCase(code)) lang = null;
+            }
+            subtitleNames.add((lang != null ? lang : "Subtitles") + " (in video)");
+            subtitleFiles.add(null);
+            subtitleTracks.add(i);
+            found++;
+        }
+        android.util.Log.i("NekplixPlayer", tracks.length + " tracks, " + found + " subtitles inside");
+        if (found == 0) return;
+        mp.setOnTimedTextListener((m, text) -> trackText = text == null || text.getText() == null ? "" : text.getText().trim());
+        if (subtitleAt < 0 && subtitleFiles.get(0) == null) showSubtitles(chosen()); // only ones inside: as chosen
+        keysHint();
+    }
+
     private void keysHint() {
-        hint.setText("OK  pause     ◀ ▶  skip" + (current().subtitles.isEmpty() ? "" : "     ▼  subtitles"));
+        hint.setText("OK  pause     ◀ ▶  skip" + (subtitleNames.isEmpty() ? "" : "     ▼  subtitles"));
     }
 
     @Override

@@ -74,7 +74,7 @@ public class DetailsActivity extends Activity {
         info.addView(name);
         line(info, t.meta(), 26, Ui.DIM, 18, 1);
         if (t.tagline != null) line(info, t.tagline, 28, 0xFFFF4D57, 22, 2); // a lighter red, to read on the dark
-        if (t.description != null) line(info, t.description, 28, Ui.DIM, 22, t.series ? 3 : 6);
+        if (t.description != null) line(info, t.description, 28, Ui.DIM, 22, 3); // room for the row under it
         if (!t.cast.isEmpty()) line(info, "Starring: " + TextUtils.join(", ", t.cast.subList(0, Math.min(5, t.cast.size()))), 24, Ui.FAINT, 22, 1);
         if (t.director != null) line(info, "Director: " + t.director, 24, Ui.FAINT, 8, 1);
 
@@ -120,6 +120,12 @@ public class DetailsActivity extends Activity {
             eh.addView(episodes);
             bottom.addView(eh);
             root.addView(bottom, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
+        } else if (!t.series && Library.current != null) {
+            // Under a film: the rest of its collection ("More in Fast & Furious"), else "More like this".
+            java.util.List<Library.Title> more = Library.current.related(t);
+            boolean inCollection = !more.isEmpty() && t.collection != null && t.collection.equals(more.get(0).collection);
+            if (!more.isEmpty()) root.addView(relatedRow(inCollection ? "More in " + t.collection : "More like this", more),
+                    new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
         }
         setContentView(root);
         fillButtons();
@@ -128,6 +134,34 @@ public class DetailsActivity extends Activity {
             showSeason(next == null ? 0 : next.season - 1);
         }
         if (buttons.getChildCount() > 0) buttons.getChildAt(0).requestFocus();
+    }
+
+    // A row of posters under the details; each opens that title's details.
+    private View relatedRow(String label, java.util.List<Library.Title> titles) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setClipChildren(false);
+        TextView name = Ui.text(this, 28, Color.WHITE, true);
+        name.setText(label);
+        name.setPadding(Ui.px(this, 96), 0, 0, Ui.px(this, 6));
+        box.addView(name);
+        HorizontalScrollView h = new HorizontalScrollView(this);
+        h.setHorizontalScrollBarEnabled(false);
+        h.setClipChildren(false);
+        h.setClipToPadding(false);
+        h.setPadding(Ui.px(this, 96), Ui.px(this, 18), Ui.px(this, 96), Ui.px(this, 34));
+        LinearLayout strip = new LinearLayout(this);
+        strip.setClipChildren(false);
+        for (Library.Title o : titles) {
+            View card = Ui.poster(this, o, Ui.px(this, 150), Ui.px(this, 225));
+            card.setOnClickListener(v -> startActivity(new android.content.Intent(this, DetailsActivity.class).putExtra("folder", o.folder.key())));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(Ui.px(this, 150), Ui.px(this, 225));
+            lp.rightMargin = Ui.px(this, 24);
+            strip.addView(card, lp);
+        }
+        h.addView(strip);
+        box.addView(h);
+        return box;
     }
 
     private void line(LinearLayout into, String text, float size, int color, int top, int lines) {

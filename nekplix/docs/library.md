@@ -41,6 +41,15 @@ No USB drive? A **Nekplix** folder on the TV's own storage works too (`Nekplix/M
 | `info.json` | About the movie (below). Without one, the folder's name is the title: `Arrival (2016)` reads as *Arrival*, 2016. |
 | `<video name>.srt` | Subtitles, named after the video: `movie.srt`, `movie.en.srt`, `movie.fil.srt`, `movie.English.srt`. In a folder with only one video, any `.srt` in it is used, whatever its name. The language comes from the name (`.en.`, `.fil.`, `.English.`), and the TV's language is picked first. |
 
+## Collections
+
+Films that go together, like a franchise, become a collection two ways:
+
+- **`"collection"` in each film's `info.json`**, the same name on each: `"collection": "Fast & Furious"`. Their folders can stay where they are.
+- **Or a folder of film folders** in Movies: `Movies/Fast & Furious Collection/Fast Five/…`. The folder's name is the collection's, without a last word like *Collection* or *Saga*.
+
+A collection with two films or more gets its own row on the main screen, in release order (by `year`), and each film's details show the rest of it.
+
 ## Series
 
 The same files in the series' folder (`poster.jpg`, `background.jpg`, `info.json`), and a **folder per season** with the episodes in it. Seasons and episodes go in name order, with numbers read as numbers (`Season 2` before `Season 10`), so start names with the number: `01 Pilot.mp4`, `02 Diversity Day.mkv`. If a series has just one season, the episodes can go straight in the series' folder.
@@ -87,7 +96,8 @@ Only **title** and **description** are needed. The rest makes the screens richer
 | `cast` | optional | A list. The first five show as *Starring*. |
 | `director` | optional | Shown on the details. |
 | `language` | optional | For your own reference. |
-| `tagline` | optional | A line in gold above the description. |
+| `tagline` | optional | A line in red above the description. |
+| `collection` | optional | The films it goes with, the same name on each: `"Fast & Furious"`. They get a row of their own on the main screen, in release order, and each film's details show **More in Fast & Furious**. Films without one show **More like this** (others sharing their genres). |
 
 Save it as UTF-8 (any editor's default). A mistake in it (a missing comma, say) doesn't hide the movie: it shows with its folder's name, and Telebisyon's NEKPLIX page says what's wrong.
 

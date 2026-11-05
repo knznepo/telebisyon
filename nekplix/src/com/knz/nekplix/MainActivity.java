@@ -29,8 +29,8 @@ import java.util.List;
 import java.util.Map;
 
 // The browsing screen: the highlighted title big at the top (its background, title, year, rating and
-// description), and rows of posters under it: Continue watching, Recently added, Movies, Series, and
-// a row per genre. With no drive it says so; plugging one in or taking it out rescans by itself.
+// description), and rows of posters under it: Continue watching, Recently added, Movies, Series, a row
+// per collection (Fast & Furious), and a row per genre. With no drive it says so; plugging one in or taking it out rescans by itself.
 public class MainActivity extends Activity {
     private final Handler main = new Handler(Looper.getMainLooper());
     private ImageView back;
@@ -185,6 +185,9 @@ public class MainActivity extends Activity {
         if (all.size() > 6) lists.put("Recently added", cards(recent.subList(0, Math.min(15, recent.size()))));
         lists.put("Movies", cards(lib.movies));
         lists.put("Series", cards(lib.series));
+        // A row per collection ("Fast & Furious"), its films in release order.
+        for (Map.Entry<String, List<Library.Title>> c : lib.collections().entrySet())
+            if (!lists.containsKey(c.getKey())) lists.put(c.getKey(), cards(c.getValue()));
         // A row per genre with two or more titles, the biggest first.
         Map<String, List<Library.Title>> genres = new HashMap<>();
         for (Library.Title t : all) for (String g : t.genres) {

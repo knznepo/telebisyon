@@ -75,6 +75,41 @@ final class Ui {
         return logo;
     }
 
+    // A poster card: the title's poster (its name until there is one), growing a little with a white
+    // edge when focused.
+    static FrameLayout poster(Context c, Library.Title t, int w, int h) {
+        int r = px(c, 12);
+        FrameLayout card = new FrameLayout(c);
+        card.setFocusable(true);
+        card.setClickable(true);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(r);
+        bg.setColor(0xFF2A2326);
+        card.setBackground(bg);
+        card.setOutlineProvider(new android.view.ViewOutlineProvider() {
+            @Override
+            public void getOutline(View v, android.graphics.Outline o) { o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), r); }
+        });
+        card.setClipToOutline(true);
+        TextView name = text(c, 22, Color.WHITE, true);
+        name.setText(t.title);
+        name.setGravity(Gravity.CENTER);
+        name.setPadding(px(c, 10), 0, px(c, 10), 0);
+        card.addView(name, new FrameLayout.LayoutParams(-1, -1));
+        ImageView img = new ImageView(c);
+        img.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        card.addView(img, new FrameLayout.LayoutParams(-1, -1));
+        Images.into(img, t.poster, w, h);
+        GradientDrawable edge = new GradientDrawable();
+        edge.setCornerRadius(r);
+        edge.setStroke(px(c, 4), Color.WHITE);
+        card.setOnFocusChangeListener((v, has) -> {
+            card.animate().scaleX(has ? 1.08f : 1f).scaleY(has ? 1.08f : 1f).setDuration(150).start();
+            card.setForeground(has ? edge : null);
+        });
+        return card;
+    }
+
     // "1:02:03" or "4:05".
     static String time(long ms) {
         long s = ms / 1000, h = s / 3600, m = s / 60 % 60;
