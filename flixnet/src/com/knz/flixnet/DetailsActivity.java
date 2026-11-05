@@ -60,8 +60,8 @@ public class DetailsActivity extends Activity {
         File art = t.background != null ? t.background : t.poster;
         if (art != null) Images.into(back, art, getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
 
-        TextView brand = Ui.brand(this);
-        FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(-2, -2);
+        ImageView brand = Ui.brand(this);
+        FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(-2, Ui.px(this, 54));
         bp.leftMargin = Ui.px(this, 96);
         bp.topMargin = Ui.px(this, 56);
         root.addView(brand, bp);
@@ -74,7 +74,7 @@ public class DetailsActivity extends Activity {
         name.setEllipsize(TextUtils.TruncateAt.END);
         info.addView(name);
         line(info, t.meta(), 26, Ui.DIM, 18, 1);
-        if (t.tagline != null) line(info, t.tagline, 28, Ui.GOLD, 22, 2);
+        if (t.tagline != null) line(info, t.tagline, 28, 0xFFFF4D57, 22, 2); // a lighter red, to read on the dark
         if (t.description != null) line(info, t.description, 28, Ui.DIM, 22, t.series ? 3 : 6);
         if (!t.cast.isEmpty()) line(info, "Starring: " + TextUtils.join(", ", t.cast.subList(0, Math.min(5, t.cast.size()))), 24, Ui.FAINT, 22, 1);
         if (t.director != null) line(info, "Director: " + t.director, 24, Ui.FAINT, 8, 1);
@@ -225,7 +225,7 @@ public class DetailsActivity extends Activity {
             track.setBackgroundColor(0x66FFFFFF);
             pic.addView(track, new FrameLayout.LayoutParams(-1, Ui.px(this, 7), Gravity.BOTTOM));
             View done = new View(this);
-            done.setBackgroundColor(Ui.GOLD);
+            done.setBackgroundColor(Ui.RED);
             pic.addView(done, new FrameLayout.LayoutParams(Math.max(1, Math.round(w * p.fraction())), Ui.px(this, 7), Gravity.BOTTOM));
         }
         box.addView(pic, new LinearLayout.LayoutParams(w, h));

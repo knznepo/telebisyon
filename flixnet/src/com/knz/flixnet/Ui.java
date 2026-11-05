@@ -14,7 +14,7 @@ import android.widget.TextView;
 
 // The look every screen shares, drawn in code: sizes are for a 1920-wide TV and scaled to the real one.
 final class Ui {
-    static final int GOLD = 0xFFFFB347, DIM = 0xB3FFFFFF, FAINT = 0x80FFFFFF, BG = 0xFF0E0A0C;
+    static final int RED = 0xFFE50914, DIM = 0xB3FFFFFF, FAINT = 0x80FFFFFF, BG = 0xFF0E0A0C;
 
     static int px(Context c, float v) { return Math.round(v * c.getResources().getDisplayMetrics().widthPixels / 1920f); }
 
@@ -64,13 +64,15 @@ final class Ui {
         return b;
     }
 
-    // The small FLIXNET wordmark at the top of each screen.
-    static TextView brand(Context c) {
-        TextView t = text(c, 30, GOLD, true);
-        t.setText("FLIXNET");
-        t.setLetterSpacing(0.12f);
-        t.setTypeface(Typeface.create("sans-serif-black", Typeface.BOLD));
-        return t;
+    // The red FLIXNET wordmark at the top of each screen: a picture (art.py draws it), since TVs don't
+    // have its tall condensed font.
+    static ImageView brand(Context c) {
+        ImageView logo = new ImageView(c);
+        logo.setImageResource(c.getResources().getIdentifier("logo", "drawable", c.getPackageName())); // no R class: build.sh skips it
+        logo.setAdjustViewBounds(true);
+        logo.setMaxHeight(px(c, 54));
+        logo.setScaleType(ImageView.ScaleType.FIT_START);
+        return logo;
     }
 
     // "1:02:03" or "4:05".

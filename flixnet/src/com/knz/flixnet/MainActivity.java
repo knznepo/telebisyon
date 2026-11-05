@@ -59,8 +59,8 @@ public class MainActivity extends Activity {
         root.setBackgroundColor(Ui.BG);
         back = Ui.backdrop(this, root);
 
-        TextView brand = Ui.brand(this);
-        FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(-2, -2);
+        ImageView brand = Ui.brand(this);
+        FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(-2, Ui.px(this, 54));
         bp.leftMargin = Ui.px(this, 96);
         bp.topMargin = Ui.px(this, 56);
         root.addView(brand, bp);
@@ -314,7 +314,7 @@ public class MainActivity extends Activity {
             track.setBackgroundColor(0x66FFFFFF);
             card.addView(track, new FrameLayout.LayoutParams(-1, Ui.px(this, 8), Gravity.BOTTOM));
             View done = new View(this);
-            done.setBackgroundColor(Ui.GOLD);
+            done.setBackgroundColor(Ui.RED);
             card.addView(done, new FrameLayout.LayoutParams(Math.max(1, Math.round(w * c.progress.fraction())), Ui.px(this, 8), Gravity.BOTTOM));
         }
 

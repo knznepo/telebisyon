@@ -45,6 +45,7 @@ public class PlayerActivity extends Activity {
     private List<Cue> cues = Collections.emptyList();
     private long lastSaved, hideAt;
     private int countdown;
+    private float subtitleLift = 1; // where the subtitles were last moved to (1: not yet)
 
     static Intent intent(Context c, Library.Title t, Library.Video v, boolean resume) {
         return new Intent(c, PlayerActivity.class).putExtra("folder", t.folder.getAbsolutePath())
@@ -115,7 +116,8 @@ public class PlayerActivity extends Activity {
         next.setBackground(card);
         next.setVisibility(View.GONE);
         FrameLayout.LayoutParams nl = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.END);
-        nl.rightMargin = nl.bottomMargin = Ui.px(this, 96);
+        nl.rightMargin = Ui.px(this, 96);
+        nl.bottomMargin = Ui.px(this, 200); // above the bar and the clock
         root.addView(next, nl);
 
         problem = Ui.text(this, 34, Color.WHITE, false);
@@ -181,6 +183,12 @@ public class PlayerActivity extends Activity {
             if (controls.getAlpha() != a) {
                 controls.animate().alpha(a).setDuration(250).start();
                 top.animate().alpha(a).setDuration(250).start();
+            }
+            // Subtitles go up out of the way while the bar shows, and back down after.
+            float lift = show ? -Ui.px(PlayerActivity.this, 150) : 0;
+            if (lift != subtitleLift) {
+                subtitleLift = lift;
+                subtitle.animate().translationY(lift).setDuration(250).start();
             }
             main.postDelayed(this, 250);
         }
@@ -283,7 +291,7 @@ public class PlayerActivity extends Activity {
         if (video != null) video.stopPlayback();
     }
 
-    // A thin bar: the whole length, and the part played in gold.
+    // A thin bar: the whole length, and the part played in red.
     private static final class Bar extends View {
         private final Paint back = new Paint(Paint.ANTI_ALIAS_FLAG), done = new Paint(Paint.ANTI_ALIAS_FLAG);
         private float at;
@@ -291,7 +299,7 @@ public class PlayerActivity extends Activity {
         Bar(Context c) {
             super(c);
             back.setColor(0x4DFFFFFF);
-            done.setColor(Ui.GOLD);
+            done.setColor(Ui.RED);
         }
 
         void set(float f) {

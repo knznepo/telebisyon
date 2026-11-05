@@ -1,51 +1,55 @@
-# Redraws res/drawable-xhdpi/banner.png and res/drawable-xxxhdpi/icon.png. Needs Python with Pillow, on a
-# Mac (it uses Arial Black from the system fonts):  python3 art.py res
-# Draws FLIXNET's TV banner (640x360, xhdpi) and icon (192x192, xxxhdpi): a gold-to-orange wordmark
-# on a warm near-black, with a soft glow.
+# Redraws FLIXNET's pictures: res/drawable-xhdpi/banner.png (the TV's app row, 640x360),
+# res/drawable-xxxhdpi/icon.png (192x192) and res/drawable-xhdpi/logo.png (the wordmark at the top of
+# each screen). Needs Python with Pillow, on a Mac (it uses DIN Condensed Bold from the system fonts):
+#   python3 art.py res
+#
+# A tall, condensed, heavy red wordmark on black, with a darker red edge underneath.
 import sys
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
 out = sys.argv[1]
-FONT = "/System/Library/Fonts/Supplemental/Arial Black.ttf"
+FONT = "/System/Library/Fonts/Supplemental/DIN Condensed Bold.ttf"
+RED, DEEP = (229, 9, 20), (120, 0, 6)
 
-def background(w, h):
-    img = Image.new("RGB", (w, h), (14, 10, 12))
-    glow = Image.new("RGB", (w, h), (0, 0, 0))
-    d = ImageDraw.Draw(glow)
-    d.ellipse((-w * 0.3, h * 0.15, w * 1.3, h * 1.6), fill=(70, 30, 12))
-    return Image.blend(img, glow.filter(ImageFilter.GaussianBlur(w / 6)), 0.75)
 
-def gradient_text(img, text, size, center, track=0):
-    font = ImageFont.truetype(FONT, size)
-    w, h = img.size
-    mask = Image.new("L", (w, h), 0)
-    md = ImageDraw.Draw(mask)
-    widths = [md.textlength(c, font=font) for c in text]
-    total = sum(widths) + track * (len(text) - 1)
-    x = center[0] - total / 2
+def wordmark(text, height, track):
+    """The word in red, stretched a little taller than the font, on a transparent background."""
+    font = ImageFont.truetype(FONT, height)
+    probe = ImageDraw.Draw(Image.new("L", (1, 1)))
+    widths = [probe.textlength(c, font=font) for c in text]
+    w = int(sum(widths) + track * (len(text) - 1)) + 8
     box = font.getbbox(text)
-    y = center[1] - (box[1] + box[3]) / 2
+    h = box[3] - box[1] + 8
+    mask = Image.new("L", (w, h), 0)
+    d = ImageDraw.Draw(mask)
+    x = 4
     for c, cw in zip(text, widths):
-        md.text((x, y), c, font=font, fill=255)
+        d.text((x, 4 - box[1]), c, font=font, fill=255)
         x += cw + track
-    grad = Image.new("RGB", (w, h))
-    gd = ImageDraw.Draw(grad)
-    top, bottom = (255, 214, 102), (255, 112, 36)
-    for yy in range(h):
-        t = yy / max(1, h - 1)
-        gd.line([(0, yy), (w, yy)], fill=tuple(int(a + (b - a) * t) for a, b in zip(top, bottom)))
-    shadow = mask.filter(ImageFilter.GaussianBlur(size / 10))
-    img.paste((255, 120, 40), (0, 0), shadow.point(lambda v: v * 0.35))
-    img.paste(grad, (0, 0), mask)
+    mask = mask.resize((w, int(h * 1.18)), Image.LANCZOS)  # taller and narrower-looking
+    img = Image.new("RGBA", mask.size, (0, 0, 0, 0))
+    edge = Image.new("RGBA", mask.size, DEEP + (255,))
+    img.paste(edge, (0, 3), mask)  # a darker red just below, for depth
+    img.paste(Image.new("RGBA", mask.size, RED + (255,)), (0, 0), mask)
     return img
 
-banner = gradient_text(background(640, 360), "FLIXNET", 92, (320, 180), track=4)
-banner.save(out + "/drawable-xhdpi/banner.png", optimize=True)
 
-icon = background(192, 192)
-icon = gradient_text(icon, "F", 150, (96, 100))
+def on_black(size, word, center):
+    img = Image.new("RGB", size, (0, 0, 0))
+    glow = Image.new("RGB", size, (0, 0, 0))
+    ImageDraw.Draw(glow).ellipse((-size[0] * 0.2, size[1] * 0.35, size[0] * 1.2, size[1] * 1.5), fill=(45, 0, 4))
+    img = Image.blend(img, glow.filter(ImageFilter.GaussianBlur(size[0] / 8)), 0.8)
+    img.paste(word, (int(center[0] - word.width / 2), int(center[1] - word.height / 2)), word)
+    return img
+
+
+on_black((640, 360), wordmark("FLIXNET", 150, 6), (320, 180)).save(out + "/drawable-xhdpi/banner.png", optimize=True)
+wordmark("FLIXNET", 110, 4).save(out + "/drawable-xhdpi/logo.png", optimize=True)
+
+icon = on_black((192, 192), wordmark("F", 170, 0), (96, 100))
+rounded = Image.new("RGBA", (192, 192), (0, 0, 0, 0))
 m = Image.new("L", (192, 192), 0)
 ImageDraw.Draw(m).rounded_rectangle((0, 0, 191, 191), radius=40, fill=255)
-rounded = Image.new("RGBA", (192, 192), (0, 0, 0, 0))
 rounded.paste(icon, (0, 0), m)
 rounded.save(out + "/drawable-xxxhdpi/icon.png", optimize=True)
 print("drawn")
