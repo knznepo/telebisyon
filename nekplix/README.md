@@ -53,6 +53,21 @@ NEKPLIX finds it by itself (it looks every 30 seconds while it's open) and shows
 - If macOS asks to **allow incoming connections** for Python, click **Allow**, or the TV can't reach it.
 - It uses ports 8765 (the files) and 8766 (NEKPLIX finding it). Windows and Linux work too; there, keep the computer from sleeping yourself.
 
+### From an Android phone or TV box
+
+**NEKPLIX Share for Android**, in `share-android/`, does the same from a phone, a tablet or an Android TV box: plug a USB drive or hard disk into it (with a USB OTG adapter on a phone) and the TV plays what's on it over the Wi-Fi. Handy when the TV itself won't read a drive, since phones read exFAT drives.
+
+```sh
+cd share-android && sh build.sh
+adb install out/nekplix-share.apk          # or copy the .apk to the phone and open it
+```
+
+Open **NEKPLIX Share**, tap **Allow access to drives** (Android's *All files access* switch), then **Start sharing**. It shares every drive with a **Movies** or **Series** folder at its top, laid out as above, and a **Nekplix** folder on the device's own storage. Each drive shows on the TV as its own source.
+
+- **It goes on with the screen off**, with a notification to stop it. It keeps the device awake while it shares, and **stops by itself after two hours with no TV using it**.
+- On a TV box without the *All files access* screen, allow it from a computer: `adb shell appops set com.knz.nekplix.share MANAGE_EXTERNAL_STORAGE allow`.
+- Same ports, same code-protected, read-only sharing as `share.py`.
+
 ## Arrange the drive
 
 A **Movies** and a **Series** folder at the top of the drive, one folder per movie or series:
