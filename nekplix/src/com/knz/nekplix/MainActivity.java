@@ -28,12 +28,30 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-// The browsing screen: the highlighted title big at the top (its background, title, year, rating and
-// description), and rows of posters under it: Continue watching, Recently added, Movies, Series, a row
-// per collection (Fast & Furious), and a row per genre, with Search at the top right. With no drive it says so; plugging one in or taking it out rescans by itself.
+// The browsing screen: a title big at the top (its background, title, year, rating and description),
+// and rows of posters under it: Continue watching, Recently added, Movies, Series, a row per collection
+// (Fast & Furious), and a row per genre, with Search at the top right. At the top, a few featured
+// titles take turns, with Play and More info, until you go down to the rows; then it shows the focused
+// one. With no drive it says so; plugging one in or taking it out rescans by itself.
 public class MainActivity extends Activity {
     private final Handler main = new Handler(Looper.getMainLooper());
-    private ImageView back;
+    private ImageView back, under; // two backgrounds, to fade one into the other
+    private boolean topShowing;
+    private android.animation.Animator drift, driftUnder;
+    // The featured titles at the top, changing every few seconds until you go down to the rows.
+    private static final long FEATURE_MS = 9000;
+    private final List<Library.Title> picks = new ArrayList<>();
+    private int pickAt;
+    private boolean featuring;
+    private LinearLayout heroButtons, dots;
+    private TextView playButton, infoButton;
+    private final Runnable rotate = new Runnable() {
+        @Override
+        public void run() {
+            if (!featuring || picks.size() < 2) return;
+            showPick((pickAt + 1) % picks.size());
+        }
+    };
     private TextView title, meta, description, message, search;
     private LinearLayout hero, rows;
     private ScrollView scroller;
@@ -66,6 +84,10 @@ public class MainActivity extends Activity {
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Ui.BG);
         back = Ui.backdrop(this, root);
+        under = new ImageView(this);
+        under.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        root.addView(under, 0, new FrameLayout.LayoutParams(-1, -1));
+        back.setAlpha(0f);
 
         ImageView brand = Ui.brand(this);
         FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(-2, Ui.px(this, 54));
@@ -96,10 +118,33 @@ public class MainActivity extends Activity {
         hero.addView(title);
         hero.addView(meta);
         hero.addView(description);
+        // Play and More info, for the featured title. Down goes to the rows.
+        heroButtons = new LinearLayout(this);
+        heroButtons.setPadding(0, Ui.px(this, 34), 0, 0);
+        playButton = Ui.button(this, "▶   Play");
+        playButton.setId(View.generateViewId());
+        infoButton = Ui.button(this, "More info");
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(-2, -2);
+        blp.rightMargin = Ui.px(this, 18);
+        heroButtons.addView(playButton, blp);
+        heroButtons.addView(infoButton, new LinearLayout.LayoutParams(-2, -2));
+        hero.addView(heroButtons);
+        for (TextView b : new TextView[]{playButton, infoButton}) {
+            View.OnFocusChangeListener look = b.getOnFocusChangeListener();
+            b.setOnFocusChangeListener((v, has) -> { look.onFocusChange(v, has); if (has) featureAgain(); });
+        }
+        playButton.setOnClickListener(v -> { if (!picks.isEmpty()) playFeatured(picks.get(pickAt)); });
+        infoButton.setOnClickListener(v -> { if (!picks.isEmpty()) details(picks.get(pickAt)); });
         FrameLayout.LayoutParams hp = new FrameLayout.LayoutParams(Ui.px(this, 1000), -2);
         hp.leftMargin = Ui.px(this, 96);
         hp.topMargin = Ui.px(this, 150);
         root.addView(hero, hp);
+
+        dots = new LinearLayout(this);
+        FrameLayout.LayoutParams dp = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.END);
+        dp.rightMargin = Ui.px(this, 96);
+        dp.topMargin = Ui.px(this, 520);
+        root.addView(dots, dp);
 
         scroller = new ScrollView(this);
         scroller.setVerticalScrollBarEnabled(false);
@@ -135,6 +180,7 @@ public class MainActivity extends Activity {
         registerReceiver(drives, f);
         scan(); // also picks up what was watched since
         main.postDelayed(again, 30000);
+        if (featuring && picks.size() > 1) { main.removeCallbacks(rotate); main.postDelayed(rotate, FEATURE_MS); }
     }
 
     @Override
@@ -143,6 +189,7 @@ public class MainActivity extends Activity {
         unregisterReceiver(drives);
         main.removeCallbacks(rescan);
         main.removeCallbacks(again);
+        main.removeCallbacks(rotate);
     }
 
     private void scan() {
@@ -173,8 +220,12 @@ public class MainActivity extends Activity {
         hero.setVisibility(View.INVISIBLE);
         scroller.setVisibility(View.INVISIBLE);
         back.setImageDrawable(null);
+        under.setImageDrawable(null);
         backdropNow = null;
         shown = "";
+        featuring = false;
+        main.removeCallbacks(rotate);
+        dots.removeAllViews();
     }
 
     // One card on a row: a title, or for Continue watching, the episode or movie to go on with.
@@ -235,14 +286,106 @@ public class MainActivity extends Activity {
             LinearLayout row = row(e.getKey());
             LinearLayout strip = (LinearLayout) ((HorizontalScrollView) row.getChildAt(1)).getChildAt(0);
             for (Card c : e.getValue()) {
-                View v = card(c, row);
+                View v = card(c, row, WIDE_ROWS.contains(e.getKey()));
+                if (rows.getChildCount() == 0) v.setNextFocusUpId(playButton.getId()); // up from the first row: Play
                 strip.addView(v);
                 if (first == null) first = v;
                 if (focus == null && c.key.equals(focusedKey)) focus = v;
             }
             rows.addView(row);
         }
-        (focus != null ? focus : first).requestFocus();
+        // The featured titles: what's being watched first, then a few picked at random, with a background
+        // and a description. Coming back from a title, the focus goes back to it instead.
+        picks.clear();
+        List<Card> going = lists.get("Continue watching");
+        if (going != null && !going.isEmpty()) picks.add(going.get(0).title);
+        List<Library.Title> pool = new ArrayList<>();
+        for (Library.Title t : all) if (t.background != null && t.description != null && !picks.contains(t)) pool.add(t);
+        Collections.shuffle(pool);
+        for (Library.Title t : pool) { if (picks.size() >= 6) break; picks.add(t); }
+        if (picks.isEmpty()) picks.add(all.get(0));
+        dots.removeAllViews();
+        if (picks.size() > 1) for (int i = 0; i < picks.size(); i++) {
+            View d = new View(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(Ui.px(this, 30), Ui.px(this, 5));
+            lp.leftMargin = Ui.px(this, 8);
+            dots.addView(d, lp);
+        }
+        pickAt = 0;
+        if (focus != null) {
+            featuring = false;
+            heroButtons.setAlpha(0f);
+            dots.setAlpha(0f);
+            focus.requestFocus();
+        } else {
+            featuring = false; // so featureAgain shows the first one
+            playButton.requestFocus();
+        }
+    }
+
+    // The focus is on Play or More info: the featured titles again, changing by themselves.
+    private void featureAgain() {
+        scroller.smoothScrollTo(0, 0);
+        if (featuring) return;
+        featuring = true;
+        focusedKey = null;
+        title.setMaxLines(1);
+        title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, Ui.px(this, 86));
+        description.setMaxLines(2);
+        scroller.animate().translationY(Ui.px(this, 160)).setDuration(450)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator(2f)).start();
+        heroButtons.animate().alpha(1f).setDuration(250).start();
+        dots.animate().alpha(1f).setDuration(250).start();
+        showPick(pickAt);
+    }
+
+    private void showPick(int i) {
+        if (picks.isEmpty()) return;
+        pickAt = i;
+        Library.Title t = picks.get(i);
+        // The text slides up into place as the picture fades.
+        hero.animate().cancel();
+        hero.animate().alpha(0f).translationY(-Ui.px(this, 10)).setDuration(220)
+                .setInterpolator(new android.view.animation.AccelerateInterpolator()).withEndAction(() -> {
+                    title.setText(t.title);
+                    String m = t.meta();
+                    meta.setText(m);
+                    meta.setVisibility(m.isEmpty() ? View.GONE : View.VISIBLE);
+                    description.setText(t.description == null ? "" : t.description);
+                    Progress.Entry p = t.movie != null ? Progress.get(this, t.movie.file) : null;
+                    playButton.setText(p != null && p.resumable() ? "▶   Resume" : "▶   Play");
+                    hero.setTranslationY(Ui.px(this, 18));
+                    hero.animate().alpha(1f).translationY(0).setDuration(520)
+                            .setInterpolator(new android.view.animation.DecelerateInterpolator(2f)).withEndAction(null).start();
+                }).start();
+        backdrop(t.background != null ? t.background : t.poster, 0);
+        for (int k = 0; k < dots.getChildCount(); k++)
+            dots.getChildAt(k).setBackgroundColor(k == i ? Color.WHITE : 0x4DFFFFFF);
+        main.removeCallbacks(rotate);
+        if (picks.size() > 1) main.postDelayed(rotate, FEATURE_MS);
+    }
+
+    // Going down to the rows: the top of the screen follows the focus instead.
+    private void browse() {
+        if (!featuring) return;
+        featuring = false;
+        main.removeCallbacks(rotate);
+        title.setMaxLines(2);
+        title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, Ui.px(this, 72));
+        description.setMaxLines(3);
+        scroller.animate().translationY(0).setDuration(380)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator(2f)).start();
+        heroButtons.animate().alpha(0f).setDuration(200).start();
+        dots.animate().alpha(0f).setDuration(200).start();
+    }
+
+    private void playFeatured(Library.Title t) {
+        if (t.movie != null) startActivity(PlayerActivity.intent(this, t, t.movie, true));
+        else details(t);
+    }
+
+    private void details(Library.Title t) {
+        startActivity(new Intent(this, DetailsActivity.class).putExtra("folder", t.folder.key()));
     }
 
     private List<Card> cards(List<Library.Title> titles) {
@@ -304,8 +447,12 @@ public class MainActivity extends Activity {
     }
 
     // A poster card. Focused, it grows a little with a white edge, and the top of the screen shows it.
-    private View card(Card c, LinearLayout row) {
-        int w = Ui.px(this, 200), h = Ui.px(this, 300), r = Ui.px(this, 14);
+    // Wide cards (the background, with the title on it) for these rows; posters for the rest.
+    private static final List<String> WIDE_ROWS = java.util.Arrays.asList("Continue watching", "Recently added");
+
+    private View card(Card c, LinearLayout row, boolean wide) {
+        int w = Ui.px(this, wide ? 400 : 200), h = Ui.px(this, wide ? 225 : 300), r = Ui.px(this, 14);
+        Node pic = wide ? (c.title.background != null ? c.title.background : c.title.poster) : c.title.poster;
         FrameLayout card = new FrameLayout(this);
         card.setFocusable(true);
         card.setClickable(true);
@@ -328,7 +475,21 @@ public class MainActivity extends Activity {
         ImageView poster = new ImageView(this);
         poster.setScaleType(ImageView.ScaleType.CENTER_CROP);
         card.addView(poster, new FrameLayout.LayoutParams(-1, -1));
-        Images.into(poster, c.title.poster, w, h);
+        Images.into(poster, pic, w, h);
+        if (wide && pic != null) { // the background has no title on it: the name along the bottom
+            View shade = new View(this);
+            shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, new int[]{0xD9000000, 0x00000000}));
+            card.addView(shade, new FrameLayout.LayoutParams(-1, h / 2, Gravity.BOTTOM));
+            TextView label = Ui.text(this, 24, Color.WHITE, true);
+            label.setText(c.title.title);
+            label.setMaxLines(1);
+            label.setEllipsize(TextUtils.TruncateAt.END);
+            label.setShadowLayer(Ui.px(this, 6), 0, 0, 0xB3000000);
+            FrameLayout.LayoutParams llp = new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM);
+            llp.leftMargin = llp.rightMargin = Ui.px(this, 16);
+            llp.bottomMargin = Ui.px(this, c.progress != null ? 22 : 14);
+            card.addView(label, llp);
+        }
 
         if (c.badge != null) {
             TextView badge = Ui.text(this, 20, Color.WHITE, true);
@@ -355,10 +516,12 @@ public class MainActivity extends Activity {
         edge.setCornerRadius(r);
         edge.setStroke(Ui.px(this, 5), Color.WHITE);
         card.setOnFocusChangeListener((v, has) -> {
-            card.animate().scaleX(has ? 1.1f : 1f).scaleY(has ? 1.1f : 1f).setDuration(150).start();
+            card.animate().scaleX(has ? 1.1f : 1f).scaleY(has ? 1.1f : 1f).setDuration(has ? 220 : 160)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(2f)).start();
             card.setForeground(has ? edge : null);
             card.setElevation(has ? Ui.px(this, 20) : 0);
             if (!has) return;
+            browse();
             focusedKey = c.key;
             feature(c);
             scroller.smoothScrollTo(0, row.getTop());
@@ -379,21 +542,55 @@ public class MainActivity extends Activity {
         meta.setText(m);
         meta.setVisibility(m.isEmpty() ? View.GONE : View.VISIBLE);
         description.setText(t.description == null ? "" : t.description);
-        Node art = t.background != null ? t.background : t.poster;
+        hero.animate().cancel();
+        hero.setTranslationY(0);
+        hero.setAlpha(0.35f);
+        hero.animate().alpha(1f).setDuration(260).start();
+        // Only once the focus rests, so going along a row quickly doesn't load every background.
+        backdrop(t.background != null ? t.background : t.poster, 250);
+    }
+
+    // The picture behind the top of the screen: the new one fades in over the old, then slowly zooms out.
+    private void backdrop(Node art, long delay) {
         if (art == null ? backdropNow == null : art.equals(backdropNow)) return;
         backdropNow = art;
         main.removeCallbacksAndMessages(back);
-        // Only once the focus rests, so going along a row quickly doesn't load every background.
         main.postAtTime(() -> {
-            if (art == null) { back.animate().alpha(0f).setDuration(250).start(); return; }
+            if (art == null) {
+                back.animate().alpha(0f).setDuration(300).start();
+                under.animate().alpha(0f).setDuration(300).start();
+                return;
+            }
             int sw = getResources().getDisplayMetrics().widthPixels, sh = getResources().getDisplayMetrics().heightPixels;
             Images.load(art, sw, sh, b -> {
                 if (!art.equals(backdropNow) || b == null) return;
-                back.setAlpha(0f);
-                back.setImageBitmap(b);
-                back.animate().alpha(1f).setDuration(350).start();
+                if (topShowing) { // the new one goes underneath, and the top one fades away
+                    under.animate().cancel();
+                    under.setImageBitmap(b);
+                    under.setAlpha(1f);
+                    driftUnder = drift(under, driftUnder);
+                    back.animate().alpha(0f).setDuration(700).start();
+                } else { // the new one fades in on top
+                    under.setAlpha(1f);
+                    back.setImageBitmap(b);
+                    back.setAlpha(0f);
+                    drift = drift(back, drift);
+                    back.animate().alpha(1f).setDuration(700).start();
+                }
+                topShowing = !topShowing;
             });
-        }, back, android.os.SystemClock.uptimeMillis() + 250);
+        }, back, android.os.SystemClock.uptimeMillis() + delay);
+    }
+
+    private static android.animation.Animator drift(View v, android.animation.Animator old) {
+        if (old != null) old.cancel();
+        android.animation.ObjectAnimator a = android.animation.ObjectAnimator.ofPropertyValuesHolder(v,
+                android.animation.PropertyValuesHolder.ofFloat(View.SCALE_X, 1.08f, 1f),
+                android.animation.PropertyValuesHolder.ofFloat(View.SCALE_Y, 1.08f, 1f));
+        a.setDuration(14000);
+        a.setInterpolator(new android.view.animation.LinearInterpolator());
+        a.start();
+        return a;
     }
 
     private void open(Card c) {

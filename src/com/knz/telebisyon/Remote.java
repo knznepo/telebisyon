@@ -19,7 +19,12 @@ public class Remote extends AccessibilityService {
 
 
     @Override
-    protected void onServiceConnected() { self = this; }
+    protected void onServiceConnected() {
+        self = this;
+        // Android starts this again by itself after an update or a restart, before anyone opens the home
+        // screen: the web page and messages come back with it.
+        Messages.start(this);
+    }
 
     @Override
     public boolean onUnbind(Intent intent) {

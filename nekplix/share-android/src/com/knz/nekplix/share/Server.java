@@ -286,7 +286,11 @@ final class Server {
             int q = target.indexOf('?');
             if (q >= 0) { query = target.substring(q + 1); target = target.substring(0, q); }
             String code = "";
-            for (String kv : query.split("&")) if (kv.startsWith("code=")) code = Uri.decode(kv.substring(5));
+            int width = 0;
+            for (String kv : query.split("&")) {
+                if (kv.startsWith("code=")) code = Uri.decode(kv.substring(5));
+                else if (kv.startsWith("w=")) try { width = Integer.parseInt(kv.substring(2)); } catch (NumberFormatException ignored) {}
+            }
             if (web(out, Uri.decode(target))) return;
             Drive drive = null;
             for (Drive d : drives()) if (MessageDigest.isEqual(d.code.getBytes(StandardCharsets.UTF_8), code.getBytes(StandardCharsets.UTF_8))) drive = d;
@@ -295,6 +299,7 @@ final class Server {
             String path = Uri.decode(target);
             if (path.equals("/tree")) tree(out, drive);
             else if (path.startsWith("/file/")) file(out, drive, path.substring(6), range, req[0].equals("HEAD"), sock);
+            else if (path.startsWith("/img/")) image(out, drive, path.substring(5), width);
             else status(out, 404, "Not found");
         } catch (Exception ignored) {} // the player skipped elsewhere, or stopped
     }
@@ -306,6 +311,9 @@ final class Server {
         switch (path) {
             case "/": case "/index.html":
                 send(out, 200, "text/html; charset=utf-8", raw("web"), null);
+                return true;
+            case "/favicon.ico":
+                send(out, 200, "image/png", raw("icon"), "Cache-Control: max-age=86400\r\n");
                 return true;
             case "/logo.png": case "/icon.png":
                 send(out, 200, "image/png", raw(path.substring(1, path.length() - 4)), "Cache-Control: max-age=86400\r\n");
@@ -354,6 +362,51 @@ final class Server {
             }
         } catch (Exception ignored) {}
         return null;
+    }
+
+    // A poster or background made small for the browser version's cards: a full-size background is
+    // a few megabytes, a card's picture a few dozen kilobytes. Made once per size and kept in the
+    // app's cache; three at a time, so big pictures don't run the phone out of memory.
+    private final java.util.concurrent.Semaphore resizing = new java.util.concurrent.Semaphore(3);
+
+    private void image(OutputStream out, Drive d, String path, int width) throws Exception {
+        Listing l = listings.get(d.code);
+        Item f = l != null ? l.items.get(path) : null;
+        if (f == null) f = real(d, path);
+        if (f == null || f.dir) { status(out, 404, "Not found"); return; }
+        int w = Math.max(160, Math.min(1920, (width + 159) / 160 * 160));
+        File cache = new File(context.getCacheDir(), "img/" + hash(path + "|" + f.size + "|" + f.mtime + "|" + w) + hash(path) + ".jpg");
+        if (!cache.isFile()) {
+            resizing.acquire();
+            try {
+                if (!cache.isFile()) {
+                    android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+                    o.inJustDecodeBounds = true;
+                    try (FileInputStream in = f.open()) { android.graphics.BitmapFactory.decodeStream(in, null, o); }
+                    if (o.outWidth <= 0) { status(out, 415, "Not a picture"); return; }
+                    int sample = 1;
+                    while (o.outWidth / (sample * 2) >= w) sample *= 2;
+                    android.graphics.BitmapFactory.Options d2 = new android.graphics.BitmapFactory.Options();
+                    d2.inSampleSize = sample;
+                    android.graphics.Bitmap b;
+                    try (FileInputStream in = f.open()) { b = android.graphics.BitmapFactory.decodeStream(in, null, d2); }
+                    if (b == null) { status(out, 415, "Not a picture"); return; }
+                    if (b.getWidth() > w) {
+                        android.graphics.Bitmap s2 = android.graphics.Bitmap.createScaledBitmap(b, w, Math.max(1, b.getHeight() * w / b.getWidth()), true);
+                        if (s2 != b) b.recycle();
+                        b = s2;
+                    }
+                    cache.getParentFile().mkdirs();
+                    File tmp = new File(cache.getPath() + ".part");
+                    try (java.io.FileOutputStream o2 = new java.io.FileOutputStream(tmp)) { b.compress(android.graphics.Bitmap.CompressFormat.JPEG, 82, o2); }
+                    b.recycle();
+                    if (!tmp.renameTo(cache)) tmp.delete();
+                }
+            } finally {
+                resizing.release();
+            }
+        }
+        send(out, 200, "image/jpeg", Item.read(new Item.Path(cache), 8 * 1024 * 1024), "Cache-Control: max-age=604800\r\n");
     }
 
     private static void status(OutputStream out, int code, String text) throws IOException {

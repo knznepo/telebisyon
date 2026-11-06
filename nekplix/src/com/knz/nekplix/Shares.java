@@ -27,6 +27,7 @@ final class Shares {
     static final class Share {
         String name, host, code;
         int port;
+        volatile boolean noSmall; // share.py: no /img, so pictures come full size
 
         // A link on this computer, the code included: each part of the path encoded.
         String link(String path) {
@@ -39,14 +40,29 @@ final class Shares {
         }
     }
 
-    // Asks the Wi-Fi, and listens for answers for a moment. Nothing there: an empty list.
-    static List<Share> find(int waitMs) {
+    // Asks the Wi-Fi, and listens for answers for a moment. Nothing there: an empty list. Also asks
+    // each computer or phone that answered before straight to its address: a phone asleep often doesn't
+    // hear broadcasts, though it still shares, and answers when asked directly.
+    static List<Share> find(android.content.Context c, int waitMs) {
+        android.content.SharedPreferences prefs = c.getSharedPreferences("shares", android.content.Context.MODE_PRIVATE);
+        java.util.Set<String> known = new java.util.HashSet<>(prefs.getStringSet("hosts", new java.util.HashSet<>()));
+        List<Share> out = find(waitMs, known);
+        java.util.Set<String> now = new java.util.LinkedHashSet<>();
+        for (Share sh : out) now.add(sh.host);
+        for (String h : known) if (now.size() < 8) now.add(h); // kept a while, in case it's off for now
+        if (!now.equals(known)) prefs.edit().putStringSet("hosts", now).apply();
+        return out;
+    }
+
+    private static List<Share> find(int waitMs, java.util.Set<String> known) {
         List<Share> out = new ArrayList<>();
         try (DatagramSocket s = new DatagramSocket()) {
             s.setBroadcast(true);
             s.setSoTimeout(200);
             byte[] ask = "nekplix-discover".getBytes(StandardCharsets.US_ASCII);
-            for (InetAddress to : broadcasts()) {
+            List<InetAddress> to_ = broadcasts();
+            for (String h : known) try { to_.add(InetAddress.getByName(h)); } catch (Exception ignored) {}
+            for (InetAddress to : to_) {
                 try { s.send(new DatagramPacket(ask, ask.length, to, PORT)); } catch (Exception ignored) {}
             }
             long until = System.currentTimeMillis() + waitMs;

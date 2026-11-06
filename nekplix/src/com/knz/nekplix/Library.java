@@ -97,7 +97,7 @@ final class Library {
     static Library scan(Context c) {
         Library lib = new Library();
         List<Drive> all = drives(c);
-        all.addAll(shares());
+        all.addAll(shares(c));
         for (Drive d : all) {
             boolean found = false;
             for (Node f : d.root.list()) {
@@ -124,9 +124,9 @@ final class Library {
     }
 
     // Computers sharing their movies (share.py): asked on the Wi-Fi, then each one's folders.
-    static List<Drive> shares() {
+    static List<Drive> shares(Context c) {
         List<Drive> out = new ArrayList<>();
-        for (Shares.Share s : Shares.find(1200)) {
+        for (Shares.Share s : Shares.find(c, 1200)) {
             Node.Remote root = Shares.tree(s);
             if (root == null) continue;
             Drive d = new Drive();

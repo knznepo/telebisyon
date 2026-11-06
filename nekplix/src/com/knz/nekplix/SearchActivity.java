@@ -209,11 +209,22 @@ public class SearchActivity extends Activity {
         return super.onKeyDown(code, e);
     }
 
-    // What's typed changed: the field, the suggestions under the keyboard, and the posters.
+    // What's typed changed: the field at once; the suggestions and posters once typing pauses, so typing
+    // a word quickly doesn't redo them for every letter.
+    private final Runnable refresh = this::results;
+    private final java.util.Map<Library.Title, FrameLayout> cards = new java.util.HashMap<>(); // made once, then reused
+
     private void update() {
         String q = query.toString();
         field.setText(q.isEmpty() ? "Titles, genres, people" : q + "_");
         field.setTextColor(q.isEmpty() ? Ui.FAINT : Color.WHITE);
+        main.removeCallbacks(refresh);
+        main.postDelayed(refresh, 220);
+    }
+
+    private void results() {
+        main.removeCallbacks(refresh);
+        String q = query.toString();
         if (lib == null) return;
 
         suggestions.removeAllViews();
@@ -241,6 +252,7 @@ public class SearchActivity extends Activity {
                 query.setLength(0);
                 query.append(Library.norm(w));
                 update();
+                results();
                 // The list it was in was just rebuilt: go on to the first title found, else the keyboard.
                 View next = grid.getChildCount() > 0 ? ((LinearLayout) grid.getChildAt(0)).getChildAt(0) : firstKey;
                 next.requestFocus();
@@ -259,6 +271,7 @@ public class SearchActivity extends Activity {
             found = lib.search(q);
             heading.setText(found.isEmpty() ? "Nothing matches \"" + q.trim() + "\"" : "Results for \"" + q.trim() + "\"");
         }
+        for (int k = 0; k < grid.getChildCount(); k++) ((LinearLayout) grid.getChildAt(k)).removeAllViews(); // let the cards go, to reuse
         grid.removeAllViews();
         results.scrollTo(0, 0);
         int w = Ui.px(this, 186), h = Ui.px(this, 279), gap = Ui.px(this, 26);
@@ -272,8 +285,12 @@ public class SearchActivity extends Activity {
                 grid.addView(row, rp);
             }
             Library.Title t = found.get(i);
-            FrameLayout card = Ui.poster(this, t, w, h);
-            card.setOnClickListener(v -> startActivity(new Intent(this, DetailsActivity.class).putExtra("folder", t.folder.key())));
+            FrameLayout card = cards.get(t);
+            if (card == null) {
+                card = Ui.poster(this, t, w, h);
+                card.setOnClickListener(v -> startActivity(new Intent(this, DetailsActivity.class).putExtra("folder", t.folder.key())));
+                cards.put(t, card);
+            }
             LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(w, h);
             cp.rightMargin = gap;
             row.addView(card, cp);

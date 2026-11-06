@@ -141,6 +141,29 @@ abstract class Node {
 
         String uri() { return share.link("file/" + path); }
 
+        // A picture made small by the phone sharing it (NEKPLIX Share for Android has /img): a few dozen
+        // kilobytes instead of the whole file. Null when it can't, and then share.py's full picture.
+        byte[] small(int w) {
+            if (share.noSmall) return null;
+            try {
+                HttpURLConnection c = (HttpURLConnection) new URL(share.link("img/" + path) + "&w=" + w).openConnection();
+                c.setConnectTimeout(4000);
+                c.setReadTimeout(15000);
+                String type = c.getContentType();
+                // share.py answers a path it doesn't know with an HTML error page; the phone, plain text.
+                if (c.getResponseCode() == 404 && type != null && type.startsWith("text/html")) { share.noSmall = true; return null; }
+                if (c.getResponseCode() != 200) return null;
+                try (InputStream in = c.getInputStream()) {
+                    ByteArrayOutputStream out = new ByteArrayOutputStream();
+                    byte[] buf = new byte[16384];
+                    for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
+                    return out.toByteArray();
+                }
+            } catch (Exception e) {
+                return null;
+            }
+        }
+
         @Override
         byte[] bytes(int max) throws Exception {
             if (text != null) return text;

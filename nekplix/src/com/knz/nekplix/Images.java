@@ -11,7 +11,9 @@ import java.util.concurrent.Executors;
 
 // Posters and backgrounds, read off the main thread at about the size they're shown (a TV box has
 // little memory, and a background straight from a camera can be 6000 pixels wide), and kept a while.
-// From a drive they're read in place; from a computer (share.py), downloaded first.
+// From a drive they're read in place; from a phone sharing them, already made small there; from a
+// computer (share.py), downloaded first. Sizes go in steps of 100, so screens asking for nearly the same
+// size (the rows, search) share what's loaded.
 final class Images {
     private static final ExecutorService POOL = Executors.newFixedThreadPool(3);
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
@@ -23,8 +25,10 @@ final class Images {
     interface Done { void loaded(Bitmap b); }
 
     // Into the view, unless the view has been given another picture meanwhile. Null clears it.
+    private static int step(int w) { return (w + 99) / 100 * 100; }
+
     static void into(ImageView v, Node f, int w, int h) {
-        String key = f == null ? null : f.key() + "@" + w;
+        String key = f == null ? null : f.key() + "@" + step(w);
         v.setTag(key);
         if (key == null) { v.setImageDrawable(null); return; }
         Bitmap hit = CACHE.get(key);
@@ -39,7 +43,8 @@ final class Images {
         });
     }
 
-    static void load(Node f, int w, int h, Done done) {
+    static void load(Node f, int w0, int h0, Done done) {
+        int w = step(w0), h = h0 * w / Math.max(1, w0);
         String key = f.key() + "@" + w;
         Bitmap hit = CACHE.get(key);
         if (hit != null) { done.loaded(hit); return; }
@@ -52,7 +57,9 @@ final class Images {
 
     private static Bitmap decode(Node f, int w, int h) {
         try {
-            byte[] data = f.remote() ? f.bytes(16 * 1024 * 1024) : null;
+            byte[] data = null;
+            if (f instanceof Node.Remote) data = ((Node.Remote) f).small(w);
+            if (data == null && f.remote()) data = f.bytes(16 * 1024 * 1024);
             String path = f.remote() ? null : f.uri();
             BitmapFactory.Options o = new BitmapFactory.Options();
             o.inJustDecodeBounds = true;
