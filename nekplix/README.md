@@ -2,102 +2,176 @@
 
 <img src="res/drawable-xhdpi/banner.png" alt="NEKPLIX" width="320">
 
-### Your own movies and series, from a USB drive, on the TV.
+### Your own movies and series, on the TV and in any browser.
 
 </div>
 
-NEKPLIX is an optional TV app that shows the movies and series on a USB drive, a hard disk or a computer on the same Wi-Fi the way a streaming app does: the highlighted title big at the top, with rows of posters under it. Plug a drive in and it fills up by itself; take it out and they go.
+NEKPLIX shows the movies and series on a USB drive, a hard disk, a computer or a phone the way a streaming app does: the highlighted title big at the top, with rows of posters under it. Plug a drive in and it fills up by itself; take it out and they go.
 
-- **Rows:** Continue watching, Recently added, Movies, Series, a row per collection (Fast & Furious), and a row per genre.
-- **Search:** at the top right. Type with the arrows on an on-screen keyboard (or speak, if the TV has voice input), and the titles that match show as you go: by name, collection, genre, actor, director or year.
-- **Details:** the background, title, year, rating, runtime, score, description, cast and director. Movies have **Play**, or **Resume** and **Start over**. Series pick up where you were, with seasons and episodes underneath.
-- **The player:** resume where you stopped, subtitles from `.srt` files or inside the video (in more than one language if you have them), and the next episode starts by itself.
-- **On Telebisyon:** NEKPLIX joins the apps row on the home screen (and on the web page's copy of it), and the web page gets a **NEKPLIX library** tile: a page listing everything found on the drives, and what needs fixing (no poster, a broken `info.json`…).
+It comes in three parts, all in this folder:
 
-It's a separate app from Telebisyon, built and installed on its own.
+| | What it is | Where it runs |
+|---|---|---|
+| **NEKPLIX** | The app you watch on | Android TV, Google TV, TV boxes |
+| **NEKPLIX Share** | Shares a folder or drive over the Wi-Fi | Mac, Windows, Linux (`share.py`) |
+| **NEKPLIX Share for Android** | Shares a phone's or box's drives, and serves NEKPLIX to **browsers** | Android phones, tablets, TV boxes |
 
-## Install
+**Contents:** [What it does](#what-it-does) · [Install on the TV](#install-on-the-tv) · [Arrange the drive](#arrange-the-drive) · [Where the movies can be](#where-the-movies-can-be) · [Watch in a browser](#watch-in-a-browser) · [On the TV](#on-the-tv) · [What plays](#what-plays) · [When a drive doesn't show up](#when-a-drive-doesnt-show-up) · [Build it yourself](#build-it-yourself)
 
-On a computer on the same Wi-Fi as the TV, with debugging on (as for Telebisyon):
+## What it does
+
+- **Rows:** Continue watching, Recently added, Movies, Series, a row per collection (all the Fast & Furious films together, in order), and a row per genre.
+- **Search:** at the top right. Type on an on-screen keyboard made for the remote (or speak, if the TV has voice input); the titles that match show as you type, by name, collection, genre, actor, director or year.
+- **Details:** the background, title, year, rating, runtime, score, description, cast and director. Movies have **Play**, or **Resume** and **Start over**; series pick up where you were, with seasons and episodes underneath. At the bottom: the rest of the collection, or *More like this*.
+- **The player:** resumes where you stopped, plays the next episode by itself, and shows subtitles from `.srt` files or from inside the video, in every language you have.
+- **On Telebisyon:** NEKPLIX joins the apps row on the home screen, and Telebisyon's web page gets a **NEKPLIX library** tile listing everything found, and what needs fixing (no poster, a broken `info.json`…).
+
+It's a separate app from Telebisyon, and works without it.
+
+## Install on the TV
+
+On a computer on the same Wi-Fi as the TV, with network debugging on (as for Telebisyon):
 
 ```sh
 sh nekplix.sh <TV_IP>          # installs or updates it
 sh nekplix.sh <TV_IP> off      # uninstalls it
 ```
 
-It builds NEKPLIX if the computer can (Java 17 and the Android SDK, see `build.sh`), or downloads the latest release. It also lets NEKPLIX read drives: TVs have no screen to ask for that.
-
-It also puts NEKPLIX at the end of the apps row on Telebisyon's home screen, if Telebisyon is installed (the rest of the row stays as it is). Otherwise, open it from the TV's apps.
-
-## Share from a computer
-
-Movies can stay on your laptop, or on a hard disk plugged into it: NEKPLIX plays them over the Wi-Fi, next to what's on USB drives.
-
-**Mac: the NEKPLIX Share app.** Build it once, in `share-app/`: `sh make-mac-app.sh` makes **NEKPLIX Share.app** (drag it to Applications if you like). Then just double-click it: choose the folder with your movies (a hard disk is under **Locations**, or `/Volumes/<its name>`), and it shares them until you click **Stop sharing**. Next time, it offers the same folder again.
-
-**Windows: NEKPLIX Share.bat** in `share-app/`. Double-click it, choose the folder, and it shares until you close its window. It needs [Python 3](https://www.python.org/downloads/) (tick *Add python.exe to PATH* when installing); allow *Private networks* when Windows asks.
-
-**Or from a terminal**, on any computer, in this folder:
-
-```sh
-python3 share.py ~/Movies                # the folder with Movies and Series in it (or one of them)
-python3 share.py ~/Movies --name "Den"   # the name the TV shows (default: the computer's name)
-```
-
-NEKPLIX finds it by itself (it looks every 30 seconds while it's open) and shows it as a source next to the drives, with the same folder layout. Keep it running while you watch; **Ctrl+C** stops sharing.
-
-- **Nothing to install:** standard Python 3. On a Mac without it, `python3` offers to install Apple's free Command Line Tools the first time.
-- **Only that folder is shared**, read-only, and every request needs a code only NEKPLIX is told (kept in `~/.nekplix-share`), so others on the Wi-Fi can't browse it.
-- **Skipping around is instant:** the TV asks for just the part it needs.
-- **On a Mac, it keeps the computer awake while a video plays**, and lets it sleep otherwise. On battery, a long movie uses about as much as leaving the Mac idle with its screen off.
-- If macOS asks to **allow incoming connections** for Python, click **Allow**, or the TV can't reach it.
-- It uses ports 8765 (the files) and 8766 (NEKPLIX finding it). Windows and Linux work too; there, keep the computer from sleeping yourself.
-
-### From an Android phone or TV box
-
-**NEKPLIX Share for Android**, in `share-android/`, does the same from a phone, a tablet or an Android TV box: plug a USB drive or hard disk into it (with a USB OTG adapter on a phone) and the TV plays what's on it over the Wi-Fi. Handy when the TV itself won't read a drive, since phones read exFAT drives.
-
-```sh
-cd share-android && sh build.sh
-adb install out/nekplix-share.apk          # or copy the .apk to the phone and open it
-```
-
-Open **NEKPLIX Share**, tap **Allow access to drives** (Android's *All files access* switch), then **Start sharing**. It shares every drive with a **Movies** or **Series** folder at its top, laid out as above, and a **Nekplix** folder on the device's own storage. Each drive shows on the TV as its own source.
-
-- **It goes on with the screen off**, with a notification to stop it. It keeps the device awake while it shares, and **stops by itself after two hours with no TV using it**.
-- On a TV box without the *All files access* screen, allow it from a computer: `adb shell appops set com.knz.nekplix.share MANAGE_EXTERNAL_STORAGE allow`.
-- Same ports, same code-protected, read-only sharing as `share.py`.
-
-**Watch in a browser, too.** While it shares, any phone, tablet or computer on the same Wi-Fi can open the address the app shows (like `http://192.168.1.20:8765`): NEKPLIX in a browser, with the same rows, collections, search, details, seasons, subtitles and *Continue watching* (kept in each browser). It **shows only what that browser can play**: the phone reads each video's codecs once, in the background. MP4 with H.264 video and AAC sound plays in every browser, and Chrome and Edge also play MKVs with H.264 or H.265 video; XviD video, or AC3 or DTS sound, play only on the TV. Anyone on the same Wi-Fi can open it, so share on Wi-Fi you trust (read-only, and only the Movies and Series folders).
+It builds NEKPLIX if the computer can (see [Build it yourself](#build-it-yourself)), or downloads the latest release. It also lets NEKPLIX read drives, since TVs have no screen to ask for that, and puts NEKPLIX at the end of Telebisyon's apps row if Telebisyon is installed. Otherwise, open it from the TV's apps.
 
 ## Arrange the drive
 
-A **Movies** and a **Series** folder at the top of the drive, one folder per movie or series:
+A **Movies** and a **Series** folder at the **top** of the drive, one folder per movie or series:
 
 ```
-Movies/Inception/movie.mkv, poster.jpg, background.jpg, info.json
-Series/The Office/poster.jpg, background.jpg, info.json, Season 1/01 Pilot.mp4
+Movies/
+  Inception (2010)/          movie.mkv, poster.jpg, background.jpg, info.json, movie.en.srt
+  Fast & Furious Collection/ a folder of film folders is a collection
+Series/
+  The Office/                poster.jpg, background.jpg, info.json
+    Season 1/                01 Pilot.mp4, 02 Diversity Day.mp4
 ```
 
-`info.json` needs only a **title** and a **description**: year, release date, rating, score, runtime, genres, cast, director, language and tagline are optional. Everything is in [docs/library.md](docs/library.md).
+- Only what's inside **Movies** and **Series** shows: films anywhere else on the drive don't.
+- `info.json` needs only a **title** and a **description**. Year, rating, score, runtime, genres, cast, director, tagline and `"collection": "Fast & Furious"` are optional. Without one, the folder's name is the title.
+- Episodes go in a folder per season, straight inside the series' folder, not deeper.
+
+Everything, with examples: **[docs/library.md](docs/library.md)**.
+
+## Where the movies can be
+
+NEKPLIX shows every source it finds side by side. Computers and phones sharing on the Wi-Fi are found by themselves (it looks every 30 seconds while it's open).
+
+### A USB drive or hard disk in the TV
+
+Plug it in; it shows within seconds. The TV must be able to mount it: see [When a drive doesn't show up](#when-a-drive-doesnt-show-up).
+
+### A computer: NEKPLIX Share
+
+Movies can stay on a laptop, or on a hard disk plugged into it.
+
+- **Mac:** build the app once, in `share-app/`: `sh make-mac-app.sh` makes **NEKPLIX Share.app**. Double-click it, choose the folder or drive (a hard disk is under **Locations**), and it shares in the background. Open it again to **Stop sharing**; next time it offers the same folder.
+- **Windows:** double-click **NEKPLIX Share.bat** in `share-app/`, choose the folder, and it shares until you close its window. It needs [Python 3](https://www.python.org/downloads/) (tick *Add python.exe to PATH*); allow *Private networks* when Windows asks.
+- **Any computer, from a terminal:**
+
+  ```sh
+  python3 share.py /Volumes/Movies          # the folder or drive with Movies and Series in it
+  python3 share.py ~/Movies --name "Den"    # the name the TV shows (default: the computer's)
+  ```
+
+Choose the folder **holding** Movies and Series (the drive itself, usually), not Movies. Good to know:
+
+- **Read-only**, only Movies and Series, and every request needs a code only NEKPLIX is told.
+- **A Mac stays awake while a video plays**, and sleeps otherwise. Elsewhere, keep the computer from sleeping yourself.
+- If macOS asks to **allow incoming connections** for Python, click **Allow**.
+- Ports 8765 (files) and 8766 (finding it).
+
+### A phone, tablet or TV box: NEKPLIX Share for Android
+
+Plug the drive into an Android phone (with a USB OTG adapter), tablet or TV box, and the TV plays it over the Wi-Fi. Handy when the TV won't read a drive.
+
+1. Install `share-android/out/nekplix-share.apk` (build it with `cd share-android && sh build.sh`): copy it to the phone and open it, or `adb install` it.
+2. Open **NEKPLIX Share** and tap **Allow access to drives** (Android's *All files access* switch).
+3. On a phone, tap **Choose a USB drive** and pick the drive itself, once per drive: phones keep USB drives from apps otherwise.
+4. Tap **Start sharing**.
+
+It shares every drive with a Movies or Series folder at its top, each as its own source on the TV, and a **Nekplix** folder on the device's own storage.
+
+- **It goes on with the screen off and the phone asleep**, with a notification to stop it. On a Samsung, set *Settings → Apps → NEKPLIX Share → Battery* to **Unrestricted** for long evenings, and keep the phone charging.
+- **It stops by itself after two hours with no TV or browser using it.**
+- **Several people can watch at once**, each a different film: a phone sends about 10 MB/s in all, and a typical film needs 0.2 to 1 MB/s.
+- On a TV box without the *All files access* screen: `adb shell appops set com.knz.nekplix.share MANAGE_EXTERNAL_STORAGE allow`.
+
+## Watch in a browser
+
+While **NEKPLIX Share for Android** shares, it also serves NEKPLIX to **any browser on the same Wi-Fi**: phones, tablets, laptops. The app shows the address (like `http://192.168.1.20:8765`) with **Open**, **Copy** and **Share**, and a **QR code** to scan with a phone's camera.
+
+- The same rows, collections, search, details, seasons, related titles and subtitles as on the TV. *Continue watching* is kept in each browser.
+- **It shows only what that browser can play.** The phone reads each video's format once, in the background, and the page leaves out the rest:
+
+  | Browser | Plays |
+  |---|---|
+  | Chrome, Edge (Android, Windows, Mac) | MP4, and MKV with H.264 or H.265 video and AAC or MP3 sound |
+  | Safari (iPhone, iPad, Mac) | MP4 only |
+  | None | XviD or DivX video, AC3 or DTS sound: these play on the TV |
+
+- **No password:** anyone on the same Wi-Fi can open it, read-only, and see only the Movies and Series folders. Share on Wi-Fi you trust.
 
 ## On the TV
 
 | Where | Keys |
 |---|---|
-| The rows | Arrows to move, **OK** to open. |
+| The rows | Arrows to move, **OK** to open. **Up** from the first row reaches **Search**. |
+| Search | Arrows and **OK** on the letters, or type on a keyboard or the remote's number keys; **🎤** to speak. Right goes to the results. |
 | Details | **OK** on Play or Resume. Series: down to the seasons and episodes. |
-| Playing | **OK** pauses, **◀ ▶** skip 10 seconds (further while held), rewind and fast forward skip 30, **▼** goes through the subtitles (off, then each language; your choice is remembered for the next video), **Back** stops (and remembers where). |
+| Playing | **OK** pauses, **◀ ▶** skip 10 seconds (further while held), rewind and fast forward skip 30, **▼** goes through the subtitles (off, then each one; remembered for the next video), **Back** stops and remembers where. |
+
+## What plays
+
+NEKPLIX plays with the TV's own player, so it plays what the TV's hardware can: most **MP4** and **MKV** files with **H.264** or **H.265** video and AAC, AC3 or MP3 sound. If a file won't play, NEKPLIX says so.
+
+**AVI files** don't play on Android TVs, but what's inside them usually does. `avi2mkv.sh` copies every AVI on a drive into an MKV, without re-encoding (no loss of quality, a minute or two a film, limited by the drive's speed). It needs ffmpeg (`brew install ffmpeg` on a Mac):
+
+```sh
+./avi2mkv.sh /Volumes/Movies             # each AVI moved to "AVI originals" once its MKV checks out
+./avi2mkv.sh /Volumes/Movies --delete    # or deleted
+```
+
+Samples and ads are left alone, and running it again skips what's done.
+
+## When a drive doesn't show up
+
+If the TV (or a phone) doesn't show a drive at all, not even in its own file manager, it's the drive's format, not NEKPLIX:
+
+- **"Use as device storage" was chosen on the TV.** Android then encrypts the drive as part of the TV's storage: no other device can read it, and NEKPLIX can't use it as a movie drive. Erase it as removable storage: on the TV, *Settings → Storage →* the drive *→ Erase & format as removable storage*, or on a Mac, Disk Utility → *Erase*, **MS-DOS (FAT)** with **Master Boot Record**.
+- **A Mac hard disk with a "hybrid MBR".** macOS doesn't mind, but Android refuses the drive (its log says `sgdisk failed to scan`). It can be fixed without erasing anything. In Terminal, with `brew install gptfdisk`:
+
+  ```sh
+  sudo gdisk -l /dev/diskN | head -8                                 # "MBR: hybrid"? diskN from: diskutil list
+  sudo sgdisk --backup="$HOME/partition-backup.bin" /dev/diskN       # a backup, to undo it
+  diskutil unmountDisk diskN
+  printf 'x\nn\nw\nY\n' | sudo gdisk /dev/diskN                      # a protective MBR instead
+  sudo gdisk -l /dev/diskN | head -8                                 # now "MBR: protective"
+  ```
+
+  The partitions and files stay as they are. Undo: `sudo sgdisk --load-backup="$HOME/partition-backup.bin" /dev/diskN`.
+- **exFAT, NTFS, FAT32:** most Android TVs and phones read them. If one doesn't, share the drive from a computer or phone instead.
+
+If the drive shows but some films don't, check they're inside **Movies** or **Series**, one folder each: Telebisyon's **NEKPLIX library** page lists what needs fixing.
 
 ## Build it yourself
 
+Plain Java, no libraries, no Gradle: Java 17 and the Android SDK (platform 34, build-tools 34.0.0).
+
 ```sh
-sh build.sh        # out/nekplix.apk
+sh build.sh                         # out/nekplix.apk, the TV app
+cd share-android && sh build.sh     # out/nekplix-share.apk, NEKPLIX Share for Android
+cd share-app && sh make-mac-app.sh  # NEKPLIX Share.app, for a Mac
 ```
 
-Plain Java, no libraries, no Gradle: Java 17 and the Android SDK (platform 34, build-tools 34.0.0). `art.py` redraws the icon and banner.
+`art.py` redraws the icon and banner.
 
-**Signing:** inside the Telebisyon folder, it's signed with Telebisyon's `key.jks`; on its own, with a `key.jks` of its own made on the first build. Telebisyon's NEKPLIX page only works when both apps have the **same key**: set `KEYSTORE` and `KEYSTORE_PASS` to Telebisyon's to keep it working after moving this folder out.
+**Signing:** inside the Telebisyon folder, both apps are signed with Telebisyon's `key.jks`; on their own, with a `key.jks` made on the first build. Telebisyon's NEKPLIX library page only works when NEKPLIX and Telebisyon have the **same key**: set `KEYSTORE` and `KEYSTORE_PASS` to Telebisyon's if you move this folder out.
 
 ## Credits
 
