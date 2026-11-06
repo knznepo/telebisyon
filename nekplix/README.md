@@ -68,6 +68,8 @@ Open **NEKPLIX Share**, tap **Allow access to drives** (Android's *All files acc
 - On a TV box without the *All files access* screen, allow it from a computer: `adb shell appops set com.knz.nekplix.share MANAGE_EXTERNAL_STORAGE allow`.
 - Same ports, same code-protected, read-only sharing as `share.py`.
 
+**Watch in a browser, too.** While it shares, any phone, tablet or computer on the same Wi-Fi can open the address the app shows (like `http://192.168.1.20:8765`): NEKPLIX in a browser, with the same rows, collections, search, details, seasons, subtitles and *Continue watching* (kept in each browser). It **shows only what that browser can play**: the phone reads each video's codecs once, in the background. MP4 with H.264 video and AAC sound plays in every browser, and Chrome and Edge also play MKVs with H.264 or H.265 video; XviD video, or AC3 or DTS sound, play only on the TV. Anyone on the same Wi-Fi can open it, so share on Wi-Fi you trust (read-only, and only the Movies and Series folders).
+
 ## Arrange the drive
 
 A **Movies** and a **Series** folder at the top of the drive, one folder per movie or series:

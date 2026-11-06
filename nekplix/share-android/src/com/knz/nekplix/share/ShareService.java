@@ -25,6 +25,7 @@ public class ShareService extends Service implements Server.Listener {
     // For the app's screen.
     static volatile boolean running;
     static volatile String problem, nowPlaying;
+    static volatile int port;
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private Server server;
@@ -65,6 +66,8 @@ public class ShareService extends Service implements Server.Listener {
         }
         problem = null;
         nowPlaying = null;
+        port = server.port;
+        server.warm();
         running = true;
         lastUsed = System.currentTimeMillis();
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
@@ -90,7 +93,9 @@ public class ShareService extends Service implements Server.Listener {
     };
 
     private void update() {
-        String what = nowPlaying != null ? "Playing " + nowPlaying : "Open NEKPLIX on the TV: it finds this by itself.";
+        String web = Server.address(port);
+        String what = nowPlaying != null ? "Playing " + nowPlaying
+                : "On the TV, open NEKPLIX." + (web != null ? " In a browser: " + web : "");
         ((NotificationManager) getSystemService(NOTIFICATION_SERVICE)).notify(ID, notification(what));
     }
 

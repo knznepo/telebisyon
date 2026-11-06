@@ -142,7 +142,21 @@ final class Server {
         return places;
     }
 
+    // Asking the drives is slow for those chosen in the picker, and every request needs the list: kept
+    // for 15 seconds.
+    private volatile List<Drive> drivesKept;
+    private volatile long drivesAt;
+
     List<Drive> drives() {
+        List<Drive> kept = drivesKept;
+        if (kept != null && System.currentTimeMillis() - drivesAt < 15000) return kept;
+        List<Drive> out = fresh();
+        drivesKept = out;
+        drivesAt = System.currentTimeMillis();
+        return out;
+    }
+
+    private List<Drive> fresh() {
         List<Drive> out = new ArrayList<>();
         List<String> labels = new ArrayList<>();
         String device = deviceName(context);
@@ -150,7 +164,9 @@ final class Server {
             Drive d = new Drive();
             d.root = (Item) p[1];
             d.tops = tops(d.root);
-            if (d.tops.isEmpty()) continue;
+            boolean any = false; // a phone's own empty Movies folder isn't worth a source on the TV
+            for (Item t : d.tops.values()) for (Item i : t.list()) any |= !i.name.startsWith(".");
+            if (!any) continue;
             d.code = secret + "-" + hash((String) p[2]);
             d.name = device;
             out.add(d);
@@ -271,6 +287,7 @@ final class Server {
             if (q >= 0) { query = target.substring(q + 1); target = target.substring(0, q); }
             String code = "";
             for (String kv : query.split("&")) if (kv.startsWith("code=")) code = Uri.decode(kv.substring(5));
+            if (web(out, Uri.decode(target))) return;
             Drive drive = null;
             for (Drive d : drives()) if (MessageDigest.isEqual(d.code.getBytes(StandardCharsets.UTF_8), code.getBytes(StandardCharsets.UTF_8))) drive = d;
             if (drive == null) { status(out, 403, "Wrong code"); return; }
@@ -282,6 +299,63 @@ final class Server {
         } catch (Exception ignored) {} // the player skipped elsewhere, or stopped
     }
 
+    // The browser version, for any phone, tablet or computer on the Wi-Fi: the page, and the drives
+    // with their codes, open to anyone on the same Wi-Fi (read-only, and only the Movies and Series
+    // folders). The page then reads /tree and /file like the TV does.
+    private boolean web(OutputStream out, String path) throws Exception {
+        switch (path) {
+            case "/": case "/index.html":
+                send(out, 200, "text/html; charset=utf-8", raw("web"), null);
+                return true;
+            case "/logo.png": case "/icon.png":
+                send(out, 200, "image/png", raw(path.substring(1, path.length() - 4)), "Cache-Control: max-age=86400\r\n");
+                return true;
+            case "/api/drives": {
+                listener.used();
+                JSONArray a = new JSONArray();
+                for (Drive d : drives()) a.put(new JSONObject().put("name", d.name).put("code", d.code));
+                json(out, 200, new JSONObject().put("name", deviceName(context)).put("drives", a), null);
+                return true;
+            }
+            default:
+                return false;
+        }
+    }
+
+    private byte[] raw(String name) throws IOException {
+        String type = name.equals("web") ? "raw" : "drawable";
+        int id = context.getResources().getIdentifier(name, type, context.getPackageName()); // no R class
+        try (java.io.InputStream in = context.getResources().openRawResource(id)) {
+            java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[16384];
+            for (int n; (n = in.read(buf)) > 0; ) b.write(buf, 0, n);
+            return b.toByteArray();
+        }
+    }
+
+    private static void json(OutputStream out, int code, JSONObject j, String headers) throws IOException {
+        send(out, code, "application/json", j.toString().getBytes(StandardCharsets.UTF_8), headers);
+    }
+
+    private static void send(OutputStream out, int code, String type, byte[] body, String headers) throws IOException {
+        out.write(("HTTP/1.1 " + code + " " + (code == 200 ? "OK" : "Error") + "\r\nContent-Type: " + type + "\r\nContent-Length: " + body.length
+                + "\r\n" + (headers == null ? "" : headers) + (headers != null && headers.startsWith("Cache-Control") ? "" : "Cache-Control: no-store\r\n")
+                + "Connection: close\r\n\r\n").getBytes(StandardCharsets.ISO_8859_1));
+        out.write(body);
+    }
+
+    // This device's address on the Wi-Fi, for the link to type in a browser: "http://192.168.1.20:8765".
+    static String address(int port) {
+        try {
+            for (java.net.NetworkInterface n : java.util.Collections.list(java.net.NetworkInterface.getNetworkInterfaces())) {
+                if (!n.isUp() || n.isLoopback()) continue;
+                for (java.net.InetAddress a : java.util.Collections.list(n.getInetAddresses()))
+                    if (a instanceof java.net.Inet4Address && a.isSiteLocalAddress()) return "http://" + a.getHostAddress() + (port == 80 ? "" : ":" + port);
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
     private static void status(OutputStream out, int code, String text) throws IOException {
         byte[] b = text.getBytes(StandardCharsets.UTF_8);
         out.write(("HTTP/1.1 " + code + " " + text + "\r\nContent-Type: text/plain\r\nContent-Length: " + b.length
@@ -291,19 +365,146 @@ final class Server {
 
     // Every folder and file under Movies and Series (four levels down at most), with the small text
     // files' contents: the TV reads the whole library in this one request.
-    private void tree(OutputStream out, Drive d) throws Exception {
-        JSONArray entries = new JSONArray();
-        for (Map.Entry<String, Item> t : d.tops.entrySet()) {
-            entries.put(new JSONObject().put("path", t.getKey()).put("dir", true));
-            walk(t.getValue(), t.getKey(), 0, entries);
+    // Each drive's listing, kept: reading a drive chosen in the picker takes Android a minute or more,
+    // far longer than the TV waits. So it's read once in the background, answered from straight away,
+    // and read again in the background when it's five minutes old. It also finds files for /file.
+    private static final long STALE_MS = 5 * 60 * 1000L;
+    private static final class Listing {
+        byte[] body;
+        final Map<String, Item> items = new java.util.HashMap<>();
+        long at;
+    }
+    private final Map<String, Listing> listings = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, Object> reading = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private Listing listing(Drive d) throws Exception {
+        Listing l = listings.get(d.code);
+        if (l != null) {
+            if (System.currentTimeMillis() - l.at > STALE_MS && !reading.containsKey(d.code))
+                new Thread(() -> { try { read(d); } catch (Exception ignored) {} }, "share-reread").start();
+            return l;
         }
-        byte[] body = new JSONObject().put("name", d.name).put("entries", entries).toString().getBytes(StandardCharsets.UTF_8);
+        return read(d);
+    }
+
+    private Listing read(Drive d) throws Exception {
+        Object lock = new Object(), had = reading.putIfAbsent(d.code, lock);
+        if (had != null) { // already being read: wait for that
+            synchronized (had) { while (reading.get(d.code) == had) had.wait(1000); }
+            Listing l = listings.get(d.code);
+            if (l != null) return l;
+        }
+        try {
+            Listing l = new Listing();
+            JSONArray entries = new JSONArray();
+            for (Map.Entry<String, Item> t : d.tops.entrySet()) {
+                entries.put(new JSONObject().put("path", t.getKey()).put("dir", true));
+                walk(t.getValue(), t.getKey(), 0, entries, l.items);
+            }
+            l.body = new JSONObject().put("name", d.name).put("entries", entries).toString().getBytes(StandardCharsets.UTF_8);
+            l.at = System.currentTimeMillis();
+            listings.put(d.code, l);
+            probeLater(d, l);
+            return l;
+        } finally {
+            reading.remove(d.code);
+            synchronized (lock) { lock.notifyAll(); }
+        }
+    }
+
+    // Each video's codecs, for the browser version to show only what the browser can play: Android reads
+    // a video's first part once, in the background, and it's kept (in codecs.json) by path, size and
+    // date, so it's done once a file. "?" for what Android can't read (AVI, WMV…). The TV doesn't use it.
+    private static final Map<String, String[]> CODECS = new java.util.concurrent.ConcurrentHashMap<>();
+    private static volatile boolean codecsLoaded;
+    private final java.util.Set<String> probing = java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
+
+    private static String codecKey(String path, Item f) { return path + "|" + f.size + "|" + f.mtime; }
+
+    private void loadCodecs() {
+        if (codecsLoaded) return;
+        codecsLoaded = true;
+        File saved = new File(context.getFilesDir(), "codecs.json");
+        if (!saved.isFile()) return;
+        try {
+            JSONObject j = new JSONObject(new String(Item.read(new Item.Path(saved), 8 * 1024 * 1024), StandardCharsets.UTF_8));
+            for (java.util.Iterator<String> it = j.keys(); it.hasNext(); ) {
+                String k = it.next();
+                JSONArray a = j.getJSONArray(k);
+                CODECS.put(k, new String[]{a.getString(0), a.getString(1)});
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private void saveCodecs() {
+        try {
+            JSONObject j = new JSONObject();
+            for (Map.Entry<String, String[]> e : CODECS.entrySet()) j.put(e.getKey(), new JSONArray().put(e.getValue()[0]).put(e.getValue()[1]));
+            try (java.io.FileOutputStream out = new java.io.FileOutputStream(new File(context.getFilesDir(), "codecs.json"))) {
+                out.write(j.toString().getBytes(StandardCharsets.UTF_8));
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private void probeLater(Drive d, Listing l) {
+        List<Map.Entry<String, Item>> missing = new ArrayList<>();
+        for (Map.Entry<String, Item> e : l.items.entrySet()) {
+            String n = e.getValue().name, ext = n.contains(".") ? n.substring(n.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT) : "";
+            if (VIDEO.contains(ext) && !CODECS.containsKey(codecKey(e.getKey(), e.getValue()))) missing.add(e);
+        }
+        if (missing.isEmpty() || !probing.add(d.code)) return;
+        new Thread(() -> {
+            java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(4);
+            try {
+                List<java.util.concurrent.Future<?>> jobs = new ArrayList<>();
+                for (Map.Entry<String, Item> e : missing)
+                    jobs.add(pool.submit(() -> CODECS.put(codecKey(e.getKey(), e.getValue()), probe(e.getValue()))));
+                for (java.util.concurrent.Future<?> j : jobs) try { j.get(); } catch (Exception ignored) {}
+                saveCodecs();
+                listings.remove(d.code);
+                read(d); // the listing again, with them
+            } catch (Exception ignored) {
+            } finally {
+                pool.shutdown();
+                probing.remove(d.code);
+            }
+        }, "share-probe").start();
+    }
+
+    // The first video and audio track's types: "video/avc", "audio/mp4a-latm"… ("" for no audio).
+    static String[] probe(Item f) {
+        android.media.MediaExtractor x = new android.media.MediaExtractor();
+        try (FileInputStream in = f.open()) {
+            x.setDataSource(in.getFD());
+            String v = "", a = "";
+            for (int i = 0; i < x.getTrackCount(); i++) {
+                String m = x.getTrackFormat(i).getString(android.media.MediaFormat.KEY_MIME);
+                if (m == null) continue;
+                if (m.startsWith("video/") && v.isEmpty()) v = m;
+                else if (m.startsWith("audio/") && a.isEmpty()) a = m;
+            }
+            return new String[]{v.isEmpty() ? "?" : v, a};
+        } catch (Throwable e) {
+            return new String[]{"?", "?"};
+        } finally {
+            x.release();
+        }
+    }
+
+    // Reads every drive now, so the first TV or browser to ask doesn't wait.
+    void warm() {
+        new Thread(() -> {
+            loadCodecs(); for (Drive d : drives()) try { listing(d); } catch (Exception ignored) {} }, "share-warm").start();
+    }
+
+    private void tree(OutputStream out, Drive d) throws Exception {
+        byte[] body = listing(d).body;
         out.write(("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " + body.length
                 + "\r\nConnection: close\r\n\r\n").getBytes(StandardCharsets.ISO_8859_1));
         out.write(body);
     }
 
-    private static void walk(Item dir, String prefix, int depth, JSONArray entries) throws Exception {
+    private static void walk(Item dir, String prefix, int depth, JSONArray entries, Map<String, Item> items) throws Exception {
         List<Item> dirs = new ArrayList<>();
         for (Item f : dir.list()) {
             if (f.name.startsWith(".")) continue; // hidden, and the ._ files a Mac leaves on exFAT drives
@@ -311,16 +512,43 @@ final class Server {
                 if (depth < 3) dirs.add(f);
                 continue;
             }
+            items.put(prefix + "/" + f.name, f);
             JSONObject e = new JSONObject().put("path", prefix + "/" + f.name).put("size", f.size).put("mtime", f.mtime / 1000);
             String ext = f.name.contains(".") ? f.name.substring(f.name.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT) : "";
+            String[] c = VIDEO.contains(ext) ? CODECS.get(codecKey(prefix + "/" + f.name, f)) : null;
+            if (c != null) e.put("v", c[0]).put("a", c[1]);
             if (TEXT.contains(ext) && f.size <= 1024 * 1024) {
                 try { e.put("b64", Base64.encodeToString(Item.read(f, 1024 * 1024), Base64.NO_WRAP)); } catch (IOException ignored) {}
             }
             entries.put(e);
         }
+        if (depth == 0 && dirs.size() > 1) { // the films or series: several at once, then in order
+            java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(8);
+            try {
+                List<java.util.concurrent.Future<Object[]>> parts = new ArrayList<>();
+                for (Item f : dirs) parts.add(pool.submit(() -> {
+                    JSONArray e = new JSONArray();
+                    Map<String, Item> i = new java.util.HashMap<>();
+                    walk(f, prefix + "/" + f.name, depth + 1, e, i);
+                    return new Object[]{e, i};
+                }));
+                for (int k = 0; k < dirs.size(); k++) {
+                    Item f = dirs.get(k);
+                    entries.put(new JSONObject().put("path", prefix + "/" + f.name).put("dir", true).put("mtime", f.mtime / 1000));
+                    Object[] r = parts.get(k).get();
+                    JSONArray e = (JSONArray) r[0];
+                    for (int j = 0; j < e.length(); j++) entries.put(e.get(j));
+                    @SuppressWarnings("unchecked") Map<String, Item> i = (Map<String, Item>) r[1];
+                    items.putAll(i);
+                }
+            } finally {
+                pool.shutdown();
+            }
+            return;
+        }
         for (Item f : dirs) {
             entries.put(new JSONObject().put("path", prefix + "/" + f.name).put("dir", true).put("mtime", f.mtime / 1000));
-            walk(f, prefix + "/" + f.name, depth + 1, entries);
+            walk(f, prefix + "/" + f.name, depth + 1, entries, items);
         }
     }
 
@@ -339,7 +567,9 @@ final class Server {
 
     // A file, or the part of it asked for, so the player can skip around.
     private void file(OutputStream out, Drive d, String path, String range, boolean head, Socket sock) throws IOException {
-        Item f = real(d, path);
+        Listing l = listings.get(d.code);
+        Item f = l != null ? l.items.get(path) : null;
+        if (f == null && path.split("/").length > 0) f = real(d, path);
         if (f == null || f.dir) { status(out, 404, "Not found"); return; }
         long size = f.size, start = 0, end = size - 1;
         boolean partial = range != null && range.startsWith("bytes=");

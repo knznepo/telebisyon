@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e0a0c">
+<title>NEKPLIX</title>
+<link rel="icon" href="/icon.png">
+<style>
+  :root { --bg: #0e0a0c; --card: #2a2326; --red: #e50914; --text: #fff; --dim: rgba(255,255,255,.7); --faint: rgba(255,255,255,.45); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { overflow-x: hidden; }
+  button { font: inherit; cursor: pointer; }
+  a { color: inherit; }
+  .hidden { display: none !important; }
+
+  /* The bar along the top */
+  header { position: fixed; inset: 0 0 auto 0; z-index: 20; display: flex; align-items: center; gap: 28px; padding: 14px 4vw;
+           background: linear-gradient(rgba(0,0,0,.75), rgba(0,0,0,0)); transition: background .3s; }
+  header.solid { background: var(--bg); }
+  header .logo { height: 30px; cursor: pointer; }
+  nav { display: flex; gap: 18px; }
+  nav button { background: none; border: 0; color: var(--dim); padding: 4px 0; font-size: 15px; }
+  nav button.on { color: #fff; font-weight: 600; }
+  .search { margin-left: auto; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.5);
+            border-radius: 4px; padding: 6px 10px; }
+  .search input { background: none; border: 0; outline: 0; color: #fff; width: 200px; font-size: 15px; }
+  .search svg { flex: none; }
+
+  /* The featured title */
+  .hero { position: relative; height: 78vh; min-height: 420px; display: flex; align-items: flex-end; padding: 0 4vw 12vh;
+          background: #000 center 20% / cover no-repeat; }
+  .hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(14,10,12,.92) 0%, rgba(14,10,12,.5) 45%, rgba(14,10,12,0) 75%),
+                  linear-gradient(0deg, var(--bg) 0%, rgba(14,10,12,0) 40%); }
+  .hero > div { position: relative; max-width: 640px; }
+  .hero h1 { font-size: clamp(32px, 5vw, 64px); line-height: 1.05; margin: 0 0 12px; }
+  .meta { color: var(--dim); font-size: 15px; }
+  .hero p { color: var(--dim); font-size: clamp(14px, 1.4vw, 18px); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .buttons { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 4px; padding: 10px 22px; font-weight: 600; font-size: 16px; }
+  .btn.play { background: #fff; color: #000; }
+  .btn.play:hover { background: rgba(255,255,255,.8); }
+  .btn.more { background: rgba(109,109,110,.7); color: #fff; }
+  .btn.more:hover { background: rgba(109,109,110,.5); }
+
+  /* Rows of posters */
+  main { position: relative; margin-top: -9vh; padding-bottom: 60px; }
+  main.page { margin-top: 0; padding-top: 90px; }
+  .row { margin: 0 0 28px; }
+  .row h2 { font-size: clamp(16px, 1.5vw, 20px); margin: 0 4vw 10px; }
+  .strip { display: flex; gap: 8px; overflow-x: auto; padding: 6px 4vw 14px; scroll-snap-type: x proximity; scrollbar-width: none; }
+  .strip::-webkit-scrollbar { display: none; }
+  .card { position: relative; flex: none; width: clamp(110px, 13vw, 190px); aspect-ratio: 2 / 3; border-radius: 6px; overflow: hidden; background: var(--card);
+          cursor: pointer; scroll-snap-align: start; transition: transform .2s; border: 0; padding: 0; color: #fff; }
+  .card:hover, .card:focus-visible { transform: scale(1.06); z-index: 2; outline: 2px solid #fff; }
+  .card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .card .name { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px; font-weight: 600; font-size: 14px; }
+  .card .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,.35); }
+  .card .bar i { display: block; height: 100%; background: var(--red); }
+  .card .badge { position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,.75); border-radius: 4px; padding: 2px 6px; font-size: 12px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(110px, 13vw, 190px), 1fr)); gap: 14px 8px; padding: 0 4vw; }
+  .grid .card { width: auto; }
+  .page-title { margin: 0 4vw 16px; font-size: 26px; }
+  .empty { color: var(--dim); text-align: center; padding: 30vh 6vw 0; font-size: 18px; }
+
+  /* A title's details */
+  .modal { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.7); overflow-y: auto; padding: 4vh 0; }
+  .sheet { position: relative; width: min(900px, 94vw); margin: 0 auto; background: #181214; border-radius: 8px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
+  .sheet .top { position: relative; aspect-ratio: 16 / 8; background: #000 center 20% / cover no-repeat; display: flex; align-items: flex-end; padding: 0 4% 4%; }
+  .sheet .top::before { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, #181214 0%, rgba(24,18,20,0) 60%); }
+  .sheet .top > div { position: relative; }
+  .sheet h1 { font-size: clamp(24px, 4vw, 42px); margin: 0 0 10px; }
+  .close { position: absolute; top: 12px; right: 12px; z-index: 2; width: 38px; height: 38px; border-radius: 50%; border: 0; background: #181214; color: #fff; font-size: 22px; }
+  .body { padding: 8px 4% 30px; }
+  .body .tagline { color: var(--dim); font-style: italic; }
+  .body .people { color: var(--faint); font-size: 14px; margin-top: 10px; }
+  .body .people b { color: var(--dim); font-weight: 400; }
+  .body h3 { margin: 26px 0 10px; font-size: 20px; display: flex; align-items: center; gap: 14px; }
+  select { background: #2a2326; color: #fff; border: 1px solid rgba(255,255,255,.3); border-radius: 4px; padding: 6px 10px; font: inherit; font-size: 15px; }
+  .episode { display: flex; gap: 16px; align-items: center; padding: 14px 10px; border-bottom: 1px solid rgba(255,255,255,.1); cursor: pointer; border-radius: 4px; }
+  .episode:hover { background: rgba(255,255,255,.06); }
+  .episode .n { width: 28px; color: var(--dim); font-size: 22px; text-align: center; flex: none; }
+  .episode .t { font-weight: 600; }
+  .episode .d { color: var(--dim); font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .episode .bar { height: 3px; background: rgba(255,255,255,.25); margin-top: 6px; }
+  .episode .bar i { display: block; height: 100%; background: var(--red); }
+  .sheet .grid { padding: 0; }
+
+  /* The player */
+  .player { position: fixed; inset: 0; z-index: 60; background: #000; display: flex; align-items: center; justify-content: center; }
+  .player video { width: 100%; height: 100%; background: #000; }
+  .player .bar { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 14px; padding: 14px 18px;
+                 background: linear-gradient(rgba(0,0,0,.8), rgba(0,0,0,0)); transition: opacity .3s; }
+  .player.idle .bar { opacity: 0; }
+  .player .back { background: none; border: 0; color: #fff; font-size: 28px; line-height: 1; padding: 4px 8px; }
+  .player .what { font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .player .problem { position: absolute; max-width: 560px; padding: 24px; text-align: center; color: var(--dim); font-size: 17px; background: rgba(0,0,0,.8); border-radius: 8px; }
+  .next { position: absolute; right: 24px; bottom: 90px; }
+  video::cue { background: rgba(0,0,0,.6); font-size: 1.1em; }
+
+  .loading { color: var(--dim); text-align: center; padding-top: 40vh; }
+
+  @media (max-width: 640px) {
+    header { gap: 14px; flex-wrap: wrap; padding: 10px 16px; }
+    header .logo { height: 22px; }
+    nav { gap: 12px; }
+    .search { order: 3; width: 100%; margin: 0; }
+    .search input { width: 100%; }
+    .hero { height: 62vh; padding: 0 16px 10vh; }
+    .row h2 { margin: 0 16px 8px; }
+    .strip { padding: 6px 16px 12px; }
+    .grid, .page-title { padding: 0 16px; margin-left: 0; margin-right: 0; }
+    main.page { padding-top: 120px; }
+    .sheet { width: 100vw; border-radius: 0; }
+    .modal { padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div id="app" class="hidden">
+  <header id="header">
+    <img class="logo" src="/logo.png" alt="NEKPLIX" id="home">
+    <nav>
+      <button data-view="home" class="on">Home</button>
+      <button data-view="movies">Movies</button>
+      <button data-view="series">Series</button>
+    </nav>
+    <label class="search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
+      <input id="q" type="search" placeholder="Titles, genres, people" aria-label="Search">
+    </label>
+  </header>
+  <section id="hero" class="hero hidden"></section>
+  <main id="main"></main>
+</div>
+<div id="loading" class="loading">Loading…</div>
+<div id="modal" class="modal hidden"></div>
+<div id="player" class="player hidden"></div>
+
+<script>
+"use strict";
+// NEKPLIX in a browser: the same library as on the TV, from the drives NEKPLIX Share shares. The page
+// reads each drive's /tree (every folder and file, with info.json and .srt files in it) and works out
+// the movies, series and collections the way the TV app does (docs/library.md).
+
+const VIDEO = ["mp4","m4v","mkv","webm","avi","mov","ts","m2ts","mpg","mpeg","wmv","flv","3gp"];
+const IMAGE = ["jpg","jpeg","png","webp"];
+const POSTER = ["poster","thumbnail","thumb","cover","folder"];
+const BACKGROUND = ["background","backdrop","fanart","landscape"];
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+const natural = (a, b) => collator.compare(a, b);
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+let lib = { movies: [], series: [], name: "" };
+let view = "home";
+
+// ---- Reading the drives ----
+
+const ext = n => { const i = n.lastIndexOf("."); return i < 0 ? "" : n.slice(i + 1).toLowerCase(); };
+const base = n => { const i = n.lastIndexOf("."); return i < 0 ? n : n.slice(0, i); };
+const isVideo = f => !f.dir && !f.name.startsWith(".") && VIDEO.includes(ext(f.name));
+const list = d => d ? [...d.children.values()].sort((a, b) => natural(a.name, b.name)) : [];
+const text = f => {
+  if (!f || f.b64 == null) return null;
+  const s = new TextDecoder().decode(Uint8Array.from(atob(f.b64), c => c.charCodeAt(0)));
+  return s.charCodeAt(0) === 0xfeff ? s.slice(1) : s;
+};
+
+function tree(drive, entries) {
+  const root = { name: "", path: "", dir: true, children: new Map(), parent: null };
+  const folder = path => {
+    let at = root, so = "";
+    if (!path) return root;
+    for (const part of path.split("/")) {
+      so = so ? so + "/" + part : part;
+      let next = at.children.get(part);
+      if (!next) { next = { name: part, path: so, dir: true, children: new Map(), parent: at, mtime: 0 }; at.children.set(part, next); }
+      at = next;
+    }
+    return at;
+  };
+  for (const e of entries) {
+    const i = e.path.lastIndexOf("/");
+    const up = folder(i < 0 ? "" : e.path.slice(0, i));
+    const name = e.path.slice(i + 1);
+    let n = up.children.get(name);
+    if (!n) { n = { name, path: e.path, dir: !!e.dir, children: new Map(), parent: up }; up.children.set(name, n); }
+    n.size = e.size || 0; n.mtime = (e.mtime || 0) * 1000; n.drive = drive;
+    if (e.b64 != null) n.b64 = e.b64;
+    if (e.v != null) { n.v = e.v; n.a = e.a; }
+  }
+  return root;
+}
+
+function url(drive, path) {
+  return "/file/" + path.split("/").map(encodeURIComponent).join("/") + "?code=" + encodeURIComponent(drive.code);
+}
+
+function strings(o) {
+  if (Array.isArray(o)) return o.map(s => String(s).trim()).filter(Boolean);
+  if (typeof o === "string") return o.split(",").map(s => s.trim()).filter(Boolean);
+  return [];
+}
+
+function readInfo(t) {
+  const m = t.folder.name.match(/^(.*?)\s*[(\[](\d{4})[)\]]\s*$/);
+  t.title = m ? m[1] : t.folder.name;
+  t.year = m ? +m[2] : 0;
+  t.genres = []; t.cast = [];
+  for (const f of t.folder.children.values()) {
+    if (f.dir || !IMAGE.includes(ext(f.name))) continue;
+    const b = base(f.name).toLowerCase();
+    if (POSTER.includes(b) && !t.poster) t.poster = f;
+    else if (BACKGROUND.includes(b) && !t.background) t.background = f;
+  }
+  const info = t.folder.children.get("info.json");
+  if (!info || info.dir) return;
+  try {
+    const j = JSON.parse(text(info));
+    if (j.title && String(j.title).trim()) t.title = String(j.title).trim();
+    t.description = j.description || null;
+    t.tagline = j.tagline || null;
+    t.rating = j.rating || null;
+    t.director = j.director || null;
+    if (j.year) t.year = +j.year || t.year;
+    if (!t.year && /^\d{4}/.test(j.released || "")) t.year = +j.released.slice(0, 4);
+    t.runtime = +j.runtime || 0;
+    t.score = +j.score || 0;
+    t.genres = strings(j.genres);
+    t.cast = strings(j.cast);
+    t.collection = j.collection && String(j.collection).trim() || null;
+  } catch (e) { /* a broken info.json: the folder name will do */ }
+}
+
+// The language a subtitle's name says: "movie.en.srt" or "movie.English.srt".
+const languageNames = (() => { try { return new Intl.DisplayNames([navigator.language], { type: "language" }); } catch (e) { return null; } })();
+function language(f) {
+  const b = base(f.name), i = b.lastIndexOf(".");
+  if (i < 0) return null;
+  const tag = b.slice(i + 1).trim();
+  if (/^[A-Za-z]{2,3}([-_][A-Za-z]{2})?$/.test(tag) && languageNames) {
+    try { const n = languageNames.of(tag.replace("_", "-")); if (n && n.toLowerCase() !== tag.toLowerCase()) return n; } catch (e) {}
+  }
+  if (/^[A-Za-z]{4,}$/.test(tag)) return tag[0].toUpperCase() + tag.slice(1).toLowerCase();
+  return null;
+}
+
+function subtitles(video) {
+  const b = base(video.name).toLowerCase(), named = [], any = [];
+  let videos = 0;
+  for (const f of list(video.parent)) {
+    const n = f.name.toLowerCase();
+    if (isVideo(f)) videos++;
+    if (!n.endsWith(".srt") || n.startsWith(".")) continue;
+    any.push(f);
+    if (n.startsWith(b)) named.push(f);
+  }
+  const out = named.length || videos !== 1 ? named : any;
+  const mine = languageNames ? languageNames.of(navigator.language.split("-")[0]) : null;
+  return out.sort((x, y) => (language(y) === mine) - (language(x) === mine));
+}
+
+function cleanEpisode(b) {
+  const s = b.replace(/[._]/g, " ").trim();
+  const cut = s.replace(/^(s\d+\s*e\d+|\d+x\d+|e?p?\d{1,3}(?=[\s\-–:.)]))\s*[-–:.)]?\s*/i, "");
+  return cut || s;
+}
+
+function readMovie(f, drive, collection) {
+  const t = { folder: f, drive, series: false, key: drive.name + "|" + f.path };
+  readInfo(t);
+  if (!t.collection) t.collection = collection;
+  let video = null;
+  for (const x of list(f)) if (isVideo(x) && (!video || x.size > video.size)) video = x;
+  if (!video) return;
+  t.movie = { file: video, title: t.title, subtitles: subtitles(video), key: drive.name + "|" + video.path };
+  lib.movies.push(t);
+}
+
+function readMovies(dir, drive) {
+  for (const f of list(dir)) {
+    if (!f.dir || f.name.startsWith(".")) continue;
+    const kids = list(f);
+    const video = kids.some(isVideo), films = kids.some(x => x.dir && !x.name.startsWith("."));
+    if (!video && films) {
+      const name = f.name.replace(/\s*[-–:]?\s*(collection|saga|series|films|movies)\s*$/i, "").trim() || f.name;
+      for (const m of kids) if (m.dir && !m.name.startsWith(".")) readMovie(m, drive, name);
+    } else readMovie(f, drive, null);
+  }
+}
+
+function episodes(dir, name, number, drive) {
+  const videos = list(dir).filter(isVideo);
+  if (!videos.length) return null;
+  const s = { name, episodes: [] };
+  for (const file of videos) {
+    const b = base(file.name);
+    const v = { file, season: number, number: s.episodes.length + 1, title: cleanEpisode(b), subtitles: subtitles(file), key: drive.name + "|" + file.path };
+    const json = dir.children.get(b + ".json");
+    if (json) { try { const j = JSON.parse(text(json)); if (j.title) v.title = j.title; v.description = j.description || null; } catch (e) {} }
+    s.episodes.push(v);
+  }
+  return s;
+}
+
+function readSeries(dir, drive) {
+  for (const f of list(dir)) {
+    if (!f.dir || f.name.startsWith(".")) continue;
+    const t = { folder: f, drive, series: true, seasons: [], key: drive.name + "|" + f.path };
+    readInfo(t);
+    const loose = episodes(f, "Episodes", 1, drive);
+    if (loose) t.seasons.push(loose);
+    for (const s of list(f)) if (s.dir && !s.name.startsWith(".")) {
+      const season = episodes(s, s.name, t.seasons.length + 1, drive);
+      if (season) t.seasons.push(season);
+    }
+    if (t.seasons.length) lib.series.push(t);
+  }
+}
+
+// ---- What this browser can play ----
+// NEKPLIX Share reads each video's codecs on the phone (video/avc is H.264, audio/mp4a-latm is AAC…);
+// the page keeps only the videos this browser plays. Until a file's codecs are known, MP4 and WebM are
+// shown and the rest aren't.
+const chromium = !!window.chrome || /Edg\//.test(navigator.userAgent);
+const canPlay = (() => { const v = document.createElement("video"); return t => { try { return v.canPlayType(t) !== ""; } catch (e) { return false; } }; })();
+const VIDEO_OK = {
+  "video/avc": () => true,
+  "video/x-vnd.on2.vp8": () => true,
+  "video/x-vnd.on2.vp9": () => canPlay('video/webm; codecs="vp9"'),
+  "video/av01": () => canPlay('video/mp4; codecs="av01.0.05M.08"'),
+  "video/hevc": () => canPlay('video/mp4; codecs="hvc1.1.6.L93.B0"'),
+};
+const AUDIO_OK = ["", "audio/mp4a-latm", "audio/mpeg", "audio/opus", "audio/vorbis", "audio/flac"];
+function playable(f) {
+  const e = ext(f.name);
+  if (e === "mkv" && !chromium) return false; // only Chrome, Edge and the like open MKV
+  if (!["mp4", "m4v", "mov", "webm", "mkv"].includes(e)) return false;
+  if (f.v == null) return e !== "mkv"; // not read yet
+  return !!(VIDEO_OK[f.v] && VIDEO_OK[f.v]()) && AUDIO_OK.includes(f.a);
+}
+
+async function load() {
+  const d = await (await fetch("/api/drives", { cache: "no-store" })).json();
+  lib = { movies: [], series: [], name: d.name };
+  await Promise.all(d.drives.map(async drive => {
+    try {
+      const t = await (await fetch("/tree?code=" + encodeURIComponent(drive.code), { cache: "no-store" })).json();
+      const root = tree(drive, t.entries);
+      for (const top of root.children.values()) {
+        const n = top.name.toLowerCase();
+        if (n === "movies" || n === "films") readMovies(top, drive);
+        else if (n === "series" || n === "tv shows" || n === "shows") readSeries(top, drive);
+      }
+    } catch (e) { console.warn("Couldn't read", drive.name, e); }
+  }));
+  lib.hidden = lib.movies.filter(t => !playable(t.movie.file)).length;
+  lib.movies = lib.movies.filter(t => playable(t.movie.file));
+  for (const t of lib.series) {
+    for (const s of t.seasons) { const before = s.episodes.length; s.episodes = s.episodes.filter(v => playable(v.file)); lib.hidden += before - s.episodes.length; }
+    t.seasons = t.seasons.filter(s => s.episodes.length);
+  }
+  lib.series = lib.series.filter(t => t.seasons.length);
+  lib.movies.sort((a, b) => natural(a.title, b.title));
+  lib.series.sort((a, b) => natural(a.title, b.title));
+  lib.drives = d.drives;
+}
+
+// ---- What was watched (this browser only) ----
+
+const PROGRESS = "nekplix-progress";
+const progressAll = () => { try { return JSON.parse(localStorage.getItem(PROGRESS)) || {}; } catch (e) { return {}; } };
+const progress = key => progressAll()[key];
+function saveProgress(key, pos, dur) {
+  const all = progressAll();
+  if (dur && pos / dur > 0.95) delete all[key];
+  else all[key] = { pos, dur, at: Date.now() };
+  try { localStorage.setItem(PROGRESS, JSON.stringify(all)); } catch (e) {}
+}
+const resumable = p => p && p.pos > 60 && (!p.dur || p.pos < p.dur * 0.95);
+
+// ---- Library views ----
+
+const allTitles = () => lib.movies.concat(lib.series);
+const episodesOf = t => t.seasons.flatMap(s => s.episodes);
+
+function meta(t) {
+  const bits = [];
+  if (t.year) bits.push(t.year);
+  if (t.rating) bits.push(t.rating);
+  if (t.series) bits.push(t.seasons.length === 1 ? episodesOf(t).length + " episodes" : t.seasons.length + " seasons");
+  else if (t.runtime) bits.push(t.runtime >= 60 ? Math.floor(t.runtime / 60) + "h " + t.runtime % 60 + "m" : t.runtime + "m");
+  if (t.score) bits.push("★ " + t.score);
+  if (t.genres.length) bits.push(t.genres.slice(0, 3).join(", "));
+  if (lib.drives && lib.drives.length > 1) bits.push("on " + t.drive.name);
+  return bits.join("  ·  ");
+}
+
+function collections() {
+  const out = new Map();
+  for (const t of lib.movies) if (t.collection) {
+    const k = t.collection.toLowerCase();
+    if (!out.has(k)) out.set(k, { name: t.collection, titles: [] });
+    out.get(k).titles.push(t);
+  }
+  const byYear = (a, b) => (a.year || 9999) - (b.year || 9999) || natural(a.title, b.title);
+  return [...out.values()].filter(c => c.titles.length > 1).map(c => (c.titles.sort(byYear), c)).sort((a, b) => natural(a.name, b.name));
+}
+
+function related(t) {
+  if (t.collection) {
+    const c = collections().find(c => c.name.toLowerCase() === t.collection.toLowerCase());
+    if (c) return { label: "More in " + c.name, titles: c.titles.filter(x => x !== t) };
+  }
+  const shared = o => o.genres.filter(g => t.genres.some(h => h.toLowerCase() === g.toLowerCase())).length;
+  const out = allTitles().filter(o => o !== t && shared(o) > 0).sort((a, b) => shared(b) - shared(a) || b.score - a.score);
+  return { label: "More like this", titles: out.slice(0, 12) };
+}
+
+function continueWatching() {
+  const all = progressAll(), byKey = new Map();
+  for (const t of lib.movies) if (t.movie) byKey.set(t.movie.key, { t, v: t.movie });
+  for (const t of lib.series) for (const v of episodesOf(t)) byKey.set(v.key, { t, v, badge: "S" + v.season + ":E" + v.number });
+  const seen = new Set(), out = [];
+  for (const [k, p] of Object.entries(all).sort((a, b) => b[1].at - a[1].at)) {
+    const c = byKey.get(k);
+    if (!c || seen.has(c.t) || !resumable(p)) continue;
+    seen.add(c.t);
+    out.push(Object.assign({ p }, c));
+  }
+  return out;
+}
+
+function card(t, opts = {}) {
+  const b = document.createElement("button");
+  b.className = "card";
+  b.title = t.title;
+  b.innerHTML = `<span class="name">${esc(t.title)}</span>` +
+    (t.poster ? `<img loading="lazy" alt="" src="${esc(url(t.drive, t.poster.path))}" onerror="this.remove()">` : "") +
+    (opts.badge ? `<span class="badge">${esc(opts.badge)}</span>` : "") +
+    (opts.p && opts.p.dur ? `<span class="bar"><i style="width:${Math.min(100, opts.p.pos / opts.p.dur * 100)}%"></i></span>` : "");
+  b.onclick = () => opts.v ? play(t, opts.v, true) : details(t);
+  return b;
+}
+
+function row(label, items) {
+  if (!items.length) return null;
+  const r = document.createElement("section");
+  r.className = "row";
+  r.innerHTML = `<h2>${esc(label)}</h2><div class="strip"></div>`;
+  const strip = r.querySelector(".strip");
+  for (const i of items) strip.appendChild(i.t ? card(i.t, i) : card(i));
+  return r;
+}
+
+function hero(t) {
+  const h = $("#hero");
+  if (!t) { h.classList.add("hidden"); return; }
+  const art = t.background || t.poster;
+  h.style.backgroundImage = art ? `url("${url(t.drive, art.path)}")` : "";
+  h.innerHTML = `<div><h1>${esc(t.title)}</h1><div class="meta">${esc(meta(t))}</div><p>${esc(t.description || "")}</p>
+    <div class="buttons"><button class="btn play">▶ Play</button><button class="btn more">ⓘ More info</button></div></div>`;
+  h.querySelector(".play").onclick = () => playTitle(t);
+  h.querySelector(".more").onclick = () => details(t);
+  h.classList.remove("hidden");
+}
+
+function show() {
+  const q = $("#q").value.trim(), main = $("#main");
+  main.innerHTML = "";
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.view === view && !q));
+  if (!allTitles().length) {
+    hero(null);
+    main.className = "page";
+    main.innerHTML = lib.hidden
+      ? `<div class="empty">None of the ${lib.hidden} videos on ${esc(lib.name)} play in this browser.<br>
+         Try Chrome or Edge, or watch them in NEKPLIX on the TV.</div>`
+      : `<div class="empty">No movies or series found on ${esc(lib.name || "the shared drives")}.<br>
+         Put them in a <b>Movies</b> or <b>Series</b> folder at the top of the drive, one folder each.</div>`;
+    return;
+  }
+  if (q) return showSearch(q);
+  if (view === "home") {
+    const withArt = allTitles().filter(t => t.background);
+    const cw = continueWatching();
+    hero(cw.length ? cw[0].t : (withArt.length ? withArt[Math.floor(Math.random() * withArt.length)] : allTitles()[0]));
+    main.className = "";
+    const recent = allTitles().slice().sort((a, b) => (b.folder.mtime || 0) - (a.folder.mtime || 0)).slice(0, 15);
+    const rows = [
+      row("Continue watching", cw),
+      allTitles().length > 6 ? row("Recently added", recent) : null,
+      row("Movies", lib.movies),
+      row("Series", lib.series),
+    ];
+    for (const c of collections()) rows.push(row(c.name, c.titles));
+    const genres = new Map();
+    for (const t of allTitles()) for (const g of t.genres) { if (!genres.has(g)) genres.set(g, []); genres.get(g).push(t); }
+    [...genres.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 8)
+      .forEach(([g, ts]) => { if (ts.length > 1) rows.push(row(g, ts)); });
+    rows.filter(Boolean).forEach(r => main.appendChild(r));
+  } else {
+    hero(null);
+    main.className = "page";
+    const titles = view === "movies" ? lib.movies : lib.series;
+    main.innerHTML = `<h1 class="page-title">${view === "movies" ? "Movies" : "Series"}</h1><div class="grid"></div>`;
+    titles.forEach(t => main.querySelector(".grid").appendChild(card(t)));
+  }
+}
+
+// ---- Search, as on the TV ----
+
+const norm = s => (s || "").toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/&/g, " and ").replace(/'/g, "")
+  .replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+const startsWord = (text, start) => text.startsWith(start) || text.includes(" " + start);
+
+function search(query) {
+  const q = norm(query);
+  if (!q) return [];
+  const words = q.split(" "), scored = [];
+  for (const t of allTitles()) {
+    const name = norm(t.title), people = t.cast.concat(t.director ? [t.director] : []);
+    let best = name.startsWith(q) ? 100 : name.includes(" " + q) ? 90 : name.includes(q) ? 70 : 0;
+    if (t.collection && norm(t.collection).includes(q)) best = Math.max(best, 80);
+    if (people.some(p => startsWord(norm(p), q))) best = Math.max(best, 60);
+    if (t.genres.some(g => startsWord(norm(g), q))) best = Math.max(best, 50);
+    if (t.year && String(t.year).startsWith(q)) best = Math.max(best, 40);
+    if (!best) {
+      const hay = [name, norm(t.folder.name), norm(t.collection), ...people.map(norm), ...t.genres.map(norm), t.year || ""].join(" ");
+      if (words.every(w => startsWord(hay, w))) best = 20;
+    }
+    if (best) scored.push({ t, best });
+  }
+  return scored.sort((a, b) => b.best - a.best || (a.t.year || 9999) - (b.t.year || 9999) || natural(a.t.title, b.t.title)).map(s => s.t);
+}
+
+function showSearch(q) {
+  hero(null);
+  const main = $("#main"), found = search(q);
+  main.className = "page";
+  main.innerHTML = `<h1 class="page-title">${found.length ? "Results for “" + esc(q) + "”" : "Nothing matches “" + esc(q) + "”"}</h1><div class="grid"></div>`;
+  found.forEach(t => main.querySelector(".grid").appendChild(card(t)));
+}
+
+// ---- A title's details ----
+
+function playTitle(t) {
+  if (!t.series) return play(t, t.movie, true);
+  const eps = episodesOf(t);
+  // Where the series is at: the last episode started, or the one after the last finished.
+  let at = eps[0], when = 0;
+  for (const v of eps) { const p = progress(v.key); if (p && p.at > when) { when = p.at; at = v; } }
+  play(t, at, true);
+}
+
+function details(t) {
+  const m = $("#modal"), art = t.background || t.poster;
+  const p = t.movie ? progress(t.movie.key) : null;
+  const people = [t.cast.length ? `<div><b>Cast:</b> ${esc(t.cast.slice(0, 6).join(", "))}</div>` : "",
+                  t.director ? `<div><b>Director:</b> ${esc(t.director)}</div>` : ""].join("");
+  let buttons;
+  if (t.series) buttons = `<button class="btn play" data-a="go">▶ Play</button>`;
+  else if (resumable(p)) buttons = `<button class="btn play" data-a="resume">▶ Resume</button><button class="btn more" data-a="over">↺ Start over</button>`;
+  else buttons = `<button class="btn play" data-a="over">▶ Play</button>`;
+  m.innerHTML = `<div class="sheet" role="dialog" aria-label="${esc(t.title)}">
+    <button class="close" aria-label="Close">✕</button>
+    <div class="top" style="${art ? `background-image:url('${esc(url(t.drive, art.path))}')` : ""}"><div>
+      <h1>${esc(t.title)}</h1><div class="buttons">${buttons}</div></div></div>
+    <div class="body">
+      <div class="meta">${esc(meta(t))}</div>
+      ${t.tagline ? `<p class="tagline">${esc(t.tagline)}</p>` : ""}
+      <p>${esc(t.description || "")}</p>
+      <div class="people">${people}</div>
+      <div id="eps"></div>
+      <div id="rel"></div>
+    </div></div>`;
+  m.querySelector(".close").onclick = closeDetails;
+  m.onclick = e => { if (e.target === m) closeDetails(); };
+  m.querySelectorAll("[data-a]").forEach(b => b.onclick = () => {
+    if (b.dataset.a === "go") playTitle(t);
+    else play(t, t.movie, b.dataset.a === "resume");
+  });
+  if (t.series) seasons(t, m.querySelector("#eps"));
+  const r = related(t);
+  if (r.titles.length) {
+    const rel = m.querySelector("#rel");
+    rel.innerHTML = `<h3>${esc(r.label)}</h3><div class="grid"></div>`;
+    r.titles.forEach(o => rel.querySelector(".grid").appendChild(card(o)));
+  }
+  m.classList.remove("hidden");
+  m.scrollTop = 0;
+  document.body.style.overflow = "hidden";
+}
+
+function seasons(t, box) {
+  box.innerHTML = `<h3>Episodes ${t.seasons.length > 1 ? `<select>${t.seasons.map((s, i) => `<option value="${i}">${esc(s.name)}</option>`).join("")}</select>` : ""}</h3><div class="list"></div>`;
+  const draw = i => {
+    const l = box.querySelector(".list");
+    l.innerHTML = "";
+    for (const v of t.seasons[i].episodes) {
+      const p = progress(v.key), e = document.createElement("div");
+      e.className = "episode";
+      e.innerHTML = `<div class="n">${v.number}</div><div style="flex:1;min-width:0"><div class="t">${esc(v.title)}</div>
+        ${v.description ? `<div class="d">${esc(v.description)}</div>` : ""}
+        ${p && p.dur ? `<div class="bar"><i style="width:${Math.min(100, p.pos / p.dur * 100)}%"></i></div>` : ""}</div>`;
+      e.onclick = () => play(t, v, true);
+      l.appendChild(e);
+    }
+  };
+  const sel = box.querySelector("select");
+  let at = 0;
+  episodesOf(t).forEach(v => { const p = progress(v.key); if (p && (!at || p.at > at.at)) at = { at: p.at, s: v.season - 1 }; });
+  if (sel) { sel.value = at ? at.s : 0; sel.onchange = () => draw(+sel.value); }
+  draw(at && sel ? at.s : 0);
+}
+
+function closeDetails() {
+  $("#modal").classList.add("hidden");
+  $("#modal").innerHTML = "";
+  document.body.style.overflow = "";
+  show();
+}
+
+// ---- The player ----
+
+let idleTimer;
+function play(t, v, resume) {
+  const box = $("#player");
+  const p = progress(v.key);
+  const name = t.series ? `${t.title}  ·  S${v.season}:E${v.number} ${v.title}` : t.title;
+  box.innerHTML = `<video controls autoplay playsinline preload="auto"></video>
+    <div class="bar"><button class="back" aria-label="Back">←</button><div class="what">${esc(name)}</div></div>`;
+  const video = box.querySelector("video");
+  video.src = url(t.drive, v.file.path);
+  video.dataset.key = v.key;
+  v.subtitles.forEach((s, i) => {
+    const raw = text(s);
+    if (raw == null) return;
+    const vtt = "WEBVTT\n\n" + raw.replace(/\r/g, "").replace(/(\d+:\d+:\d+),(\d+)/g, "$1.$2");
+    const track = document.createElement("track");
+    track.kind = "subtitles";
+    track.label = language(s) || (v.subtitles.length > 1 ? "Subtitles " + (i + 1) : "Subtitles");
+    track.src = URL.createObjectURL(new Blob([vtt], { type: "text/vtt" }));
+    if (i === 0 && localStorage.getItem("nekplix-subtitles") !== "off") track.default = true;
+    video.appendChild(track);
+  });
+  video.textTracks.onchange = () => {
+    const on = [...video.textTracks].some(tr => tr.mode === "showing");
+    try { localStorage.setItem("nekplix-subtitles", on ? "on" : "off"); } catch (e) {}
+  };
+  video.addEventListener("loadedmetadata", () => { if (resume && resumable(p)) video.currentTime = p.pos; }, { once: true });
+  let last = 0;
+  video.ontimeupdate = () => {
+    if (Math.abs(video.currentTime - last) < 5) return;
+    last = video.currentTime;
+    saveProgress(v.key, video.currentTime, video.duration || 0);
+  };
+  video.onended = () => {
+    saveProgress(v.key, video.duration, video.duration);
+    if (!t.series) return stop();
+    const eps = episodesOf(t), i = eps.indexOf(v);
+    if (i >= 0 && i < eps.length - 1) play(t, eps[i + 1], false); else stop();
+  };
+  video.onerror = () => {
+    const kind = ext(v.file.name).toUpperCase();
+    const p = document.createElement("div");
+    p.className = "problem";
+    p.innerHTML = `This browser can't play this video (${esc(kind)}).<br><br>Browsers play MP4 and WebM with H.264 video and AAC sound.
+      ${kind === "MKV" ? "Chrome and Edge play many MKV files, but not with AC3 or DTS sound, or XviD video." : ""}
+      <br><br>It plays in NEKPLIX on the TV.`;
+    box.appendChild(p);
+  };
+  box.querySelector(".back").onclick = stop;
+  const wake = () => { box.classList.remove("idle"); clearTimeout(idleTimer); idleTimer = setTimeout(() => box.classList.add("idle"), 3000); };
+  box.onmousemove = wake; box.ontouchstart = wake; wake();
+  box.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+  history.pushState({ player: true }, "");
+}
+
+function stop(fromHistory) {
+  const box = $("#player"), video = box.querySelector("video");
+  if (video) {
+    if (video.currentTime && !video.ended && video.dataset.key) saveProgress(video.dataset.key, video.currentTime, video.duration || 0);
+    video.pause(); video.removeAttribute("src"); video.load();
+  }
+  box.classList.add("hidden");
+  box.innerHTML = "";
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  document.body.style.overflow = $("#modal").classList.contains("hidden") ? "" : "hidden";
+  if (fromHistory !== true && history.state && history.state.player) history.back();
+  if ($("#modal").classList.contains("hidden")) show();
+}
+window.onpopstate = () => { if (!$("#player").classList.contains("hidden")) stop(true); };
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (!$("#player").classList.contains("hidden")) stop();
+  else if (!$("#modal").classList.contains("hidden")) closeDetails();
+});
+
+// ---- Starting ----
+
+async function start() {
+  $("#loading").classList.remove("hidden");
+  try { await load(); }
+  catch (e) { $("#loading").textContent = "Can't reach NEKPLIX Share. Is it still sharing?"; return; }
+  $("#loading").classList.add("hidden");
+  $("#app").classList.remove("hidden");
+  document.title = "NEKPLIX · " + lib.name;
+  show();
+}
+
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => { view = b.dataset.view; $("#q").value = ""; show(); scrollTo(0, 0); });
+$("#home").onclick = () => { view = "home"; $("#q").value = ""; show(); scrollTo(0, 0); };
+let typing;
+$("#q").oninput = () => { clearTimeout(typing); typing = setTimeout(() => { show(); scrollTo(0, 0); }, 150); };
+addEventListener("scroll", () => $("#header").classList.toggle("solid", scrollY > 40), { passive: true });
+start();
+</script>
+</body>
+</html>

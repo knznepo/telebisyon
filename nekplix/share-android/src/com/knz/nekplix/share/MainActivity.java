@@ -29,7 +29,9 @@ public class MainActivity extends Activity {
     private static final int RED = 0xFFE50914, DIM = 0xB3FFFFFF, BG = 0xFF0E0A0C;
     private final Handler main = new Handler(Looper.getMainLooper());
     private static final int PICK = 3;
-    private TextView status, drives, button, access, choose, forget;
+    private TextView status, drives, button, access, choose, forget, link;
+    private LinearLayout webBox;
+    private ImageView qr;
     private Server peek;
     private volatile boolean looking;
 
@@ -62,6 +64,59 @@ public class MainActivity extends Activity {
         status = text(18, Color.WHITE, false);
         status.setLineSpacing(dp(4), 1f);
         col.addView(status);
+
+        // While sharing: the web version's address, big, with Open, Copy and Share.
+        webBox = new LinearLayout(this);
+        webBox.setOrientation(LinearLayout.VERTICAL);
+        webBox.setPadding(dp(18), dp(16), dp(18), dp(16));
+        GradientDrawable box = new GradientDrawable();
+        box.setCornerRadius(dp(12));
+        box.setColor(0xFF221A1D);
+        box.setStroke(dp(1), 0x40FFFFFF);
+        webBox.setBackground(box);
+        TextView label = text(13, DIM, true);
+        label.setText("WEB VERSION  ·  open in a browser on the same Wi-Fi");
+        webBox.addView(label);
+        link = text(26, Color.WHITE, true);
+        link.setTextIsSelectable(true);
+        link.setPadding(0, dp(6), 0, dp(14));
+        webBox.addView(link);
+        LinearLayout actions = new LinearLayout(this);
+        TextView open = small("Open"), copy = small("Copy"), share = small("Share");
+        open.setOnClickListener(v -> {
+            try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(link.getText().toString()))); } catch (Exception ignored) {}
+        });
+        copy.setOnClickListener(v -> {
+            android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("NEKPLIX", link.getText()));
+            android.widget.Toast.makeText(this, "Link copied", android.widget.Toast.LENGTH_SHORT).show();
+        });
+        share.setOnClickListener(v -> {
+            try {
+                startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType("text/plain")
+                        .putExtra(Intent.EXTRA_TEXT, "Watch our movies on NEKPLIX: " + link.getText()), "Share the link"));
+            } catch (Exception ignored) {}
+        });
+        for (TextView b : new TextView[]{open, copy, share}) {
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+            lp.rightMargin = dp(10);
+            actions.addView(b, lp);
+        }
+        webBox.addView(actions);
+        // The same link as a QR code, for others to scan with their phone's camera.
+        qr = new ImageView(this);
+        qr.setContentDescription("QR code for the web version");
+        LinearLayout.LayoutParams qp = new LinearLayout.LayoutParams(dp(200), dp(200));
+        qp.topMargin = dp(16);
+        webBox.addView(qr, qp);
+        TextView scan = text(13, DIM, false);
+        scan.setText("Scan with a phone's camera to open it.");
+        scan.setPadding(0, dp(8), 0, 0);
+        webBox.addView(scan);
+        LinearLayout.LayoutParams wp = new LinearLayout.LayoutParams(-1, -2);
+        wp.topMargin = dp(18);
+        webBox.setVisibility(LinearLayout.GONE);
+        col.addView(webBox, wp);
         drives = text(16, DIM, false);
         drives.setLineSpacing(dp(4), 1f);
         drives.setPadding(0, dp(16), 0, dp(24));
@@ -176,9 +231,15 @@ public class MainActivity extends Activity {
         if (ShareService.problem != null && !ShareService.running) status.setText(ShareService.problem);
         else if (ShareService.running) {
             String p = ShareService.nowPlaying;
+            String web = Server.address(ShareService.port);
             status.setText("Sharing as \"" + Server.deviceName(this) + "\". Open NEKPLIX on the TV: it finds this by itself."
                     + (p != null ? "\n\nPlaying: " + p : ""));
+            if (web != null && !web.contentEquals(link.getText())) {
+                link.setText(web);
+                qr.setImageBitmap(qrBitmap(web));
+            }
         } else status.setText("Not sharing.");
+        webBox.setVisibility(ShareService.running && Server.address(ShareService.port) != null ? LinearLayout.VISIBLE : LinearLayout.GONE);
 
         forget.setVisibility(Server.chosen(this).isEmpty() ? TextView.GONE : TextView.VISIBLE);
         if (looking) return;
@@ -219,6 +280,40 @@ public class MainActivity extends Activity {
         on.setCornerRadius(dp(999));
         on.setColor(RED);
         on.setStroke(dp(3), Color.WHITE);
+        b.setBackground(off);
+        b.setOnFocusChangeListener((v, has) -> b.setBackground(has ? on : off));
+        return b;
+    }
+
+    // Black on white with the quiet border scanners need, one pixel a module, drawn sharp when scaled.
+    private static android.graphics.Bitmap qrBitmap(String text) {
+        boolean[][] m = QrCode.encode(text);
+        int q = 4, n = m.length, w = n + 2 * q;
+        int[] px = new int[w * w];
+        for (int y = 0; y < w; y++)
+            for (int x = 0; x < w; x++) {
+                int mx = x - q, my = y - q;
+                px[y * w + x] = mx >= 0 && my >= 0 && mx < n && my < n && m[my][mx] ? Color.BLACK : Color.WHITE;
+            }
+        android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(px, w, w, android.graphics.Bitmap.Config.ARGB_8888);
+        return android.graphics.Bitmap.createScaledBitmap(b, w * 12, w * 12, false);
+    }
+
+    // A small grey pill button, for the link's actions.
+    private TextView small(String label) {
+        TextView b = text(15, Color.WHITE, true);
+        b.setText(label);
+        b.setGravity(Gravity.CENTER);
+        b.setFocusable(true);
+        b.setClickable(true);
+        b.setPadding(dp(18), dp(9), dp(18), dp(9));
+        GradientDrawable off = new GradientDrawable();
+        off.setCornerRadius(dp(999));
+        off.setColor(0x33FFFFFF);
+        GradientDrawable on = new GradientDrawable();
+        on.setCornerRadius(dp(999));
+        on.setColor(0x33FFFFFF);
+        on.setStroke(dp(2), Color.WHITE);
         b.setBackground(off);
         b.setOnFocusChangeListener((v, has) -> b.setBackground(has ? on : off));
         return b;
