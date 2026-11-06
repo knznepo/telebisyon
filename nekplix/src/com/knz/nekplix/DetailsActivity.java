@@ -57,7 +57,13 @@ public class DetailsActivity extends Activity {
         root.setBackgroundColor(Ui.BG);
         ImageView back = Ui.backdrop(this, root);
         Node art = t.background != null ? t.background : t.poster;
-        if (art != null) Images.into(back, art, getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
+        if (art != null) Images.loadFirst(art, getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels, b -> {
+            if (b == null || isFinishing()) return;
+            back.setAlpha(0f);
+            back.setImageBitmap(b);
+            back.animate().alpha(1f).setDuration(600).start();
+            Ui.drift(back, null); // slowly zooming out, as on the main screen
+        });
 
         ImageView brand = Ui.brand(this);
         FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(-2, Ui.px(this, 54));
@@ -67,24 +73,39 @@ public class DetailsActivity extends Activity {
 
         LinearLayout info = new LinearLayout(this);
         info.setOrientation(LinearLayout.VERTICAL);
-        TextView name = Ui.text(this, 76, Color.WHITE, true);
+        TextView name = Ui.title(this, 72);
         name.setText(t.title);
-        name.setMaxLines(2);
+        name.setMaxLines(1); // one line, to leave room for the row under it
         name.setEllipsize(TextUtils.TruncateAt.END);
         info.addView(name);
-        line(info, t.meta(), 26, Ui.DIM, 18, 1);
-        if (t.tagline != null) line(info, t.tagline, 28, 0xFFFF4D57, 22, 2); // a lighter red, to read on the dark
-        if (t.description != null) line(info, t.description, 28, Ui.DIM, 22, 3); // room for the row under it
-        if (!t.cast.isEmpty()) line(info, "Starring: " + TextUtils.join(", ", t.cast.subList(0, Math.min(5, t.cast.size()))), 24, Ui.FAINT, 22, 1);
-        if (t.director != null) line(info, "Director: " + t.director, 24, Ui.FAINT, 8, 1);
+        // Score in green, the rating and HD in boxes, as on the featured top and the web version.
+        LinearLayout facts = new LinearLayout(this);
+        facts.setGravity(Gravity.CENTER_VERTICAL);
+        facts.setPadding(0, Ui.px(this, 20), 0, 0);
+        Ui.facts(this, facts, t, null);
+        info.addView(facts);
+        // The tagline: a quiet aside in soft white italics, as a film poster has it.
+        if (t.tagline != null) {
+            TextView tag = Ui.text(this, 28, 0xD9FFFFFF, false);
+            tag.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.ITALIC));
+            tag.setText(t.tagline);
+            tag.setMaxLines(1);
+            tag.setEllipsize(TextUtils.TruncateAt.END);
+            tag.setShadowLayer(Ui.px(this, 8), 0, Ui.px(this, 1), 0x99000000);
+            tag.setPadding(0, Ui.px(this, 20), 0, 0);
+            info.addView(tag);
+        }
+        if (t.description != null) line(info, t.description, 28, Ui.DIM, 18, 3);
+        if (!t.cast.isEmpty()) people(info, "Starring  ", TextUtils.join(", ", t.cast.subList(0, Math.min(5, t.cast.size()))), 22);
+        if (t.director != null) people(info, "Director  ", t.director, 8);
 
         buttons = new LinearLayout(this);
-        buttons.setPadding(0, Ui.px(this, 40), 0, 0);
+        buttons.setPadding(0, Ui.px(this, 36), 0, 0);
         buttons.setClipChildren(false);
         info.addView(buttons);
-        FrameLayout.LayoutParams ip = new FrameLayout.LayoutParams(Ui.px(this, 1100), -2);
+        FrameLayout.LayoutParams ip = new FrameLayout.LayoutParams(Ui.px(this, 1240), -2);
         ip.leftMargin = Ui.px(this, 96);
-        ip.topMargin = Ui.px(this, 140);
+        ip.topMargin = Ui.px(this, 130);
         root.addView(info, ip);
 
         if (t.series && !t.seasons.isEmpty()) {
@@ -149,19 +170,32 @@ public class DetailsActivity extends Activity {
         h.setHorizontalScrollBarEnabled(false);
         h.setClipChildren(false);
         h.setClipToPadding(false);
-        h.setPadding(Ui.px(this, 96), Ui.px(this, 18), Ui.px(this, 96), Ui.px(this, 34));
+        h.setPadding(Ui.px(this, 96), Ui.px(this, 18), Ui.px(this, 96), Ui.px(this, 30));
         LinearLayout strip = new LinearLayout(this);
         strip.setClipChildren(false);
+        int pw = Ui.px(this, 186), ph = Ui.px(this, 279); // about eight and a half across
         for (Library.Title o : titles) {
-            View card = Ui.poster(this, o, Ui.px(this, 150), Ui.px(this, 225));
+            View card = Ui.poster(this, o, pw, ph);
             card.setOnClickListener(v -> startActivity(new android.content.Intent(this, DetailsActivity.class).putExtra("folder", o.folder.key())));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(Ui.px(this, 150), Ui.px(this, 225));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(pw, ph);
             lp.rightMargin = Ui.px(this, 24);
             strip.addView(card, lp);
         }
         h.addView(strip);
         box.addView(h);
         return box;
+    }
+
+    // "Starring" faint, the names brighter, as the web version's side column.
+    private void people(LinearLayout into, String label, String names, int top) {
+        TextView v = Ui.text(this, 24, Ui.DIM, false);
+        android.text.SpannableString s = new android.text.SpannableString(label + names);
+        s.setSpan(new android.text.style.ForegroundColorSpan(Ui.FAINT), 0, label.length(), 0);
+        v.setText(s);
+        v.setMaxLines(1);
+        v.setEllipsize(TextUtils.TruncateAt.END);
+        v.setPadding(0, Ui.px(this, top), 0, 0);
+        into.addView(v);
     }
 
     private void line(LinearLayout into, String text, float size, int color, int top, int lines) {
@@ -171,6 +205,7 @@ public class DetailsActivity extends Activity {
         v.setMaxLines(lines);
         v.setEllipsize(TextUtils.TruncateAt.END);
         v.setLineSpacing(Ui.px(this, 6), 1f);
+        v.setShadowLayer(Ui.px(this, 8), 0, Ui.px(this, 1), 0x99000000);
         v.setPadding(0, Ui.px(this, top), 0, 0);
         into.addView(v);
     }
@@ -184,19 +219,19 @@ public class DetailsActivity extends Activity {
             if (v == null) return;
             Progress.Entry p = Progress.get(this, v.file);
             boolean resume = p != null && p.resumable();
-            add((resume ? "Resume " : "Play ") + "S" + v.season + ":E" + v.number, () -> play(v, resume));
+            add((resume ? "Resume " : "Play ") + "S" + v.season + ":E" + v.number, Ui.Icon.PLAY, () -> play(v, resume));
         } else if (t.movie != null) {
             Progress.Entry p = Progress.get(this, t.movie.file);
             if (p != null && p.resumable()) {
-                add("Resume  " + Ui.time(p.position), () -> play(t.movie, true));
-                add("Start over", () -> play(t.movie, false));
-            } else add("Play", () -> play(t.movie, false));
+                add("Resume  " + Ui.time(p.position), Ui.Icon.PLAY, () -> play(t.movie, true));
+                add("Start over", Ui.Icon.RESTART, () -> play(t.movie, false));
+            } else add("Play", Ui.Icon.PLAY, () -> play(t.movie, false));
         }
         if (had != null && buttons.getChildCount() > 0) buttons.getChildAt(0).requestFocus();
     }
 
-    private void add(String label, Runnable r) {
-        TextView b = Ui.button(this, label);
+    private void add(String label, int icon, Runnable r) {
+        TextView b = Ui.bigButton(this, label, icon, null);
         b.setOnClickListener(v -> r.run());
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
         lp.rightMargin = Ui.px(this, 20);

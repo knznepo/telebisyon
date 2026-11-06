@@ -16,6 +16,8 @@ import java.util.concurrent.Executors;
 // size (the rows, search) share what's loaded.
 final class Images {
     private static final ExecutorService POOL = Executors.newFixedThreadPool(3);
+    // Backgrounds on their own, so the big picture at the top never waits behind a row of posters.
+    private static final ExecutorService FIRST = Executors.newSingleThreadExecutor();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final LruCache<String, Bitmap> CACHE = new LruCache<String, Bitmap>((int) (Runtime.getRuntime().maxMemory() / 6)) {
         @Override
@@ -43,12 +45,17 @@ final class Images {
         });
     }
 
-    static void load(Node f, int w0, int h0, Done done) {
+    static void load(Node f, int w0, int h0, Done done) { load(f, w0, h0, done, false); }
+
+    // A background: ahead of the posters.
+    static void loadFirst(Node f, int w0, int h0, Done done) { load(f, w0, h0, done, true); }
+
+    private static void load(Node f, int w0, int h0, Done done, boolean first) {
         int w = step(w0), h = h0 * w / Math.max(1, w0);
         String key = f.key() + "@" + w;
         Bitmap hit = CACHE.get(key);
         if (hit != null) { done.loaded(hit); return; }
-        POOL.execute(() -> {
+        (first ? FIRST : POOL).execute(() -> {
             Bitmap b = decode(f, w, h);
             if (b != null) CACHE.put(key, b);
             MAIN.post(() -> done.loaded(b));

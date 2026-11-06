@@ -52,7 +52,8 @@ public class MainActivity extends Activity {
             showPick((pickAt + 1) % picks.size());
         }
     };
-    private TextView title, meta, description, message, search;
+    private TextView title, description, message, search;
+    private LinearLayout meta; // score, year, rating, length, HD, genres: as on the web version
     private LinearLayout hero, rows;
     private ScrollView scroller;
     private String shown = ""; // what the rows were built from, so a rescan with no change keeps the focus
@@ -106,11 +107,16 @@ public class MainActivity extends Activity {
         hero = new LinearLayout(this);
         hero.setOrientation(LinearLayout.VERTICAL);
         title = Ui.text(this, 72, Color.WHITE, true);
+        title.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD));
+        title.setLetterSpacing(-0.02f);
+        title.setShadowLayer(Ui.px(this, 24), 0, Ui.px(this, 2), 0x73000000);
         title.setMaxLines(2);
         title.setEllipsize(TextUtils.TruncateAt.END);
-        meta = Ui.text(this, 26, Ui.DIM, false);
-        meta.setPadding(0, Ui.px(this, 18), 0, 0);
+        meta = new LinearLayout(this);
+        meta.setGravity(Gravity.CENTER_VERTICAL);
+        meta.setPadding(0, Ui.px(this, 20), 0, 0);
         description = Ui.text(this, 28, Ui.DIM, false);
+        description.setShadowLayer(Ui.px(this, 8), 0, Ui.px(this, 1), 0x99000000);
         description.setMaxLines(3);
         description.setEllipsize(TextUtils.TruncateAt.END);
         description.setLineSpacing(Ui.px(this, 6), 1f);
@@ -121,18 +127,20 @@ public class MainActivity extends Activity {
         // Play and More info, for the featured title. Down goes to the rows.
         heroButtons = new LinearLayout(this);
         heroButtons.setPadding(0, Ui.px(this, 34), 0, 0);
-        playButton = Ui.button(this, "▶   Play");
+        playButton = Ui.bigButton(this, "Play", Ui.Icon.PLAY, this::featureAgain);
         playButton.setId(View.generateViewId());
-        infoButton = Ui.button(this, "More info");
-        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(-2, -2);
+        infoButton = Ui.bigButton(this, "More info", Ui.Icon.INFO, this::featureAgain);
+        search.setId(View.generateViewId()); // right of More info, or up from either: Search
+        infoButton.setNextFocusRightId(search.getId());
+        infoButton.setNextFocusUpId(search.getId());
+        playButton.setNextFocusUpId(search.getId());
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(-2, Ui.px(this, 70));
         blp.rightMargin = Ui.px(this, 18);
         heroButtons.addView(playButton, blp);
-        heroButtons.addView(infoButton, new LinearLayout.LayoutParams(-2, -2));
+        heroButtons.addView(infoButton, new LinearLayout.LayoutParams(-2, Ui.px(this, 70)));
+        heroButtons.setClipChildren(false);
+        hero.setClipChildren(false);
         hero.addView(heroButtons);
-        for (TextView b : new TextView[]{playButton, infoButton}) {
-            View.OnFocusChangeListener look = b.getOnFocusChangeListener();
-            b.setOnFocusChangeListener((v, has) -> { look.onFocusChange(v, has); if (has) featureAgain(); });
-        }
         playButton.setOnClickListener(v -> { if (!picks.isEmpty()) playFeatured(picks.get(pickAt)); });
         infoButton.setOnClickListener(v -> { if (!picks.isEmpty()) details(picks.get(pickAt)); });
         FrameLayout.LayoutParams hp = new FrameLayout.LayoutParams(Ui.px(this, 1000), -2);
@@ -306,9 +314,16 @@ public class MainActivity extends Activity {
         if (picks.isEmpty()) picks.add(all.get(0));
         dots.removeAllViews();
         if (picks.size() > 1) for (int i = 0; i < picks.size(); i++) {
-            View d = new View(this);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(Ui.px(this, 30), Ui.px(this, 5));
-            lp.leftMargin = Ui.px(this, 8);
+            FrameLayout d = new FrameLayout(this);
+            d.setBackground(Ui.round(0x4DFFFFFF, Ui.px(this, 3)));
+            d.setClipToOutline(true);
+            View fill = new View(this);
+            fill.setBackground(Ui.round(Color.WHITE, Ui.px(this, 3)));
+            fill.setPivotX(0);
+            fill.setScaleX(0f);
+            d.addView(fill, new FrameLayout.LayoutParams(-1, -1));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(Ui.px(this, 38), Ui.px(this, 5));
+            lp.leftMargin = Ui.px(this, 10);
             dots.addView(d, lp);
         }
         pickAt = 0;
@@ -348,19 +363,23 @@ public class MainActivity extends Activity {
         hero.animate().alpha(0f).translationY(-Ui.px(this, 10)).setDuration(220)
                 .setInterpolator(new android.view.animation.AccelerateInterpolator()).withEndAction(() -> {
                     title.setText(t.title);
-                    String m = t.meta();
-                    meta.setText(m);
-                    meta.setVisibility(m.isEmpty() ? View.GONE : View.VISIBLE);
+                    Ui.facts(this, meta, t, null);
                     description.setText(t.description == null ? "" : t.description);
                     Progress.Entry p = t.movie != null ? Progress.get(this, t.movie.file) : null;
-                    playButton.setText(p != null && p.resumable() ? "▶   Resume" : "▶   Play");
+                    playButton.setText(p != null && p.resumable() ? "Resume" : "Play");
                     hero.setTranslationY(Ui.px(this, 18));
                     hero.animate().alpha(1f).translationY(0).setDuration(520)
                             .setInterpolator(new android.view.animation.DecelerateInterpolator(2f)).withEndAction(null).start();
                 }).start();
         backdrop(t.background != null ? t.background : t.poster, 0);
-        for (int k = 0; k < dots.getChildCount(); k++)
-            dots.getChildAt(k).setBackgroundColor(k == i ? Color.WHITE : 0x4DFFFFFF);
+        // The bar of the one showing fills up until the next one.
+        for (int k = 0; k < dots.getChildCount(); k++) {
+            View fill = ((FrameLayout) dots.getChildAt(k)).getChildAt(0);
+            fill.animate().cancel();
+            fill.setScaleX(k < i ? 1f : 0f);
+            if (k == i) fill.animate().scaleX(1f).setDuration(FEATURE_MS)
+                    .setInterpolator(new android.view.animation.LinearInterpolator()).start();
+        }
         main.removeCallbacks(rotate);
         if (picks.size() > 1) main.postDelayed(rotate, FEATURE_MS);
     }
@@ -537,10 +556,7 @@ public class MainActivity extends Activity {
     private void feature(Card c) {
         Library.Title t = c.title;
         title.setText(t.title);
-        String m = t.meta();
-        if (c.video != null && t.series) m = "S" + c.video.season + ":E" + c.video.number + "  " + c.video.title + (m.isEmpty() ? "" : "  ·  " + m);
-        meta.setText(m);
-        meta.setVisibility(m.isEmpty() ? View.GONE : View.VISIBLE);
+        Ui.facts(this, meta, t, c.video != null && t.series ? "S" + c.video.season + ":E" + c.video.number + "  " + c.video.title : null);
         description.setText(t.description == null ? "" : t.description);
         hero.animate().cancel();
         hero.setTranslationY(0);
@@ -562,35 +578,24 @@ public class MainActivity extends Activity {
                 return;
             }
             int sw = getResources().getDisplayMetrics().widthPixels, sh = getResources().getDisplayMetrics().heightPixels;
-            Images.load(art, sw, sh, b -> {
+            Images.loadFirst(art, sw, sh, b -> {
                 if (!art.equals(backdropNow) || b == null) return;
                 if (topShowing) { // the new one goes underneath, and the top one fades away
                     under.animate().cancel();
                     under.setImageBitmap(b);
                     under.setAlpha(1f);
-                    driftUnder = drift(under, driftUnder);
+                    driftUnder = Ui.drift(under, driftUnder);
                     back.animate().alpha(0f).setDuration(700).start();
                 } else { // the new one fades in on top
                     under.setAlpha(1f);
                     back.setImageBitmap(b);
                     back.setAlpha(0f);
-                    drift = drift(back, drift);
+                    drift = Ui.drift(back, drift);
                     back.animate().alpha(1f).setDuration(700).start();
                 }
                 topShowing = !topShowing;
             });
         }, back, android.os.SystemClock.uptimeMillis() + delay);
-    }
-
-    private static android.animation.Animator drift(View v, android.animation.Animator old) {
-        if (old != null) old.cancel();
-        android.animation.ObjectAnimator a = android.animation.ObjectAnimator.ofPropertyValuesHolder(v,
-                android.animation.PropertyValuesHolder.ofFloat(View.SCALE_X, 1.08f, 1f),
-                android.animation.PropertyValuesHolder.ofFloat(View.SCALE_Y, 1.08f, 1f));
-        a.setDuration(14000);
-        a.setInterpolator(new android.view.animation.LinearInterpolator());
-        a.start();
-        return a;
     }
 
     private void open(Card c) {

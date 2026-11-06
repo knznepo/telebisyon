@@ -87,7 +87,7 @@
   .row { position: relative; margin-bottom: 3.2vw; animation: rise .7s var(--ease) both; animation-delay: calc(var(--i, 0) * 60ms); }
   .row h2 { margin: 0 var(--pad) 10px; font-size: clamp(17px, 1.45vw, 22px); font-weight: 650; letter-spacing: -.01em; }
   .track { position: relative; }
-  .strip { display: flex; gap: .5vw; overflow-x: auto; overflow-y: hidden; padding: 6px var(--pad) 10px; scroll-behavior: smooth;
+  .strip { display: flex; gap: .5vw; overflow-x: auto; overflow-y: hidden; padding: 20px var(--pad) 24px; margin: -14px 0 -14px; scroll-behavior: smooth;
            scroll-padding-inline: var(--pad); scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; }
   .strip::-webkit-scrollbar { display: none; }
   .arrow { position: absolute; top: 6px; bottom: 10px; z-index: 4; width: calc(var(--pad) - .3vw); min-width: 36px; border: 0;
@@ -116,6 +116,23 @@
   .card.has-bar .name { padding-bottom: 18px; }
   @media (hover: none), (pointer: coarse) { .card:active { transform: scale(.96); } }
   .card:focus-visible { transform: scale(1.05); outline-offset: 2px; z-index: 2; }
+
+  /* A poster on hover: it lifts a little, and Play, More info and a few facts rise over its bottom.
+     (Wide cards open the bigger preview instead.) */
+  .card.poster { transition: transform .35s var(--ease), box-shadow .35s var(--ease); }
+  .card .over { position: absolute; inset: auto 0 0 0; z-index: 2; padding: 46% 10px 12px; display: flex; flex-direction: column; gap: 8px;
+                background: linear-gradient(0deg, rgba(0,0,0,.92) 0%, rgba(0,0,0,.75) 40%, rgba(0,0,0,0) 100%);
+                opacity: 0; transform: translate3d(0, 10px, 0); transition: opacity .3s var(--ease), transform .35s var(--ease); pointer-events: none; }
+  .card .over .ctl { display: flex; gap: 6px; }
+  .card .over .circle { width: 34px; height: 34px; }
+  .card .over .circle svg { width: 16px; height: 16px; }
+  .card .over .facts { font-size: 12.5px; gap: 3px 8px; }
+  .card .over .facts .rating { font-size: 11px; line-height: 15px; padding: 0 4px; }
+  @media (hover: hover) and (pointer: fine) {
+    .card.poster:hover { transform: translate3d(0, -6px, 0) scale(1.05); box-shadow: 0 16px 34px rgba(0,0,0,.6); z-index: 2; }
+    .card.poster:hover .over { opacity: 1; transform: none; pointer-events: auto; }
+  }
+  .card.poster:focus-visible .over { opacity: 1; transform: none; pointer-events: auto; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-w), 1fr)); gap: 3.2vw .5vw; padding: 0 var(--pad); }
   .grid .card { width: auto; animation: rise .6s var(--ease) both; animation-delay: calc(min(var(--i, 0), 18) * 25ms); }
@@ -600,14 +617,23 @@ function card(t, opts = {}, i = 0) {
   b.innerHTML = (pic ? `<img loading="lazy" decoding="async" alt="" src="${esc(img(t.drive, pic, portrait ? 240 : 400))}">` : "") +
     (portrait && pic ? "" : `<span class="name">${esc(t.title)}</span>`) +
     (opts.badge ? `<span class="badge">${esc(opts.badge)}</span>` : "") +
-    (opts.p && opts.p.dur ? `<span class="bar"><i style="width:${Math.min(100, opts.p.pos / opts.p.dur * 100)}%"></i></span>` : "");
+    (opts.p && opts.p.dur ? `<span class="bar"><i style="width:${Math.min(100, opts.p.pos / opts.p.dur * 100)}%"></i></span>` : "") +
+    (portrait ? `<div class="over"><div class="ctl">
+        <span class="circle white" role="button" data-a="play" aria-label="Play">${ICON.play}</span>
+        <span class="circle" role="button" data-a="info" aria-label="More info">${ICON.down}</span></div>${facts(t)}</div>` : "");
+  b.querySelectorAll(".over [data-a]").forEach(x => x.onclick = e => {
+    e.stopPropagation();
+    if (x.dataset.a === "info") details(t);
+    else if (opts.v) play(t, opts.v, true);
+    else playTitle(t);
+  });
   const im = b.querySelector("img");
   if (im) {
     im.onload = () => im.classList.add("in");
     im.onerror = () => { im.remove(); b.classList.add("bare"); if (!b.querySelector(".name")) b.insertAdjacentHTML("beforeend", `<span class="name">${esc(t.title)}</span>`); };
   }
   b.onclick = () => { closePeek(true); opts.v ? play(t, opts.v, true) : details(t); };
-  b.onmouseenter = () => { if (hoverable.matches) peekSoon(b, t, opts); };
+  b.onmouseenter = () => { if (hoverable.matches && !portrait) peekSoon(b, t, opts); };
   b.onmouseleave = () => clearTimeout(peekTimer);
   return b;
 }

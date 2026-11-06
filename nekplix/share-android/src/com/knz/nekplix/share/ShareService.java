@@ -40,6 +40,15 @@ public class ShareService extends Service implements Server.Listener {
         else c.startService(i);
     }
 
+    // Whether it's sharing, kept so an update of this app (which stops it) starts it again: see Updated.
+    static void remember(Context c, boolean on) {
+        c.getSharedPreferences("share", Context.MODE_PRIVATE).edit().putBoolean("sharing", on).apply();
+    }
+
+    static boolean wasSharing(Context c) {
+        return c.getSharedPreferences("share", Context.MODE_PRIVATE).getBoolean("sharing", false);
+    }
+
     static void stop(Context c) {
         c.startService(new Intent(c, ShareService.class).setAction(STOP));
     }
@@ -47,6 +56,7 @@ public class ShareService extends Service implements Server.Listener {
     @Override
     public int onStartCommand(Intent intent, int flags, int id) {
         if (intent != null && STOP.equals(intent.getAction())) {
+            remember(this, false);
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -67,6 +77,7 @@ public class ShareService extends Service implements Server.Listener {
         problem = null;
         nowPlaying = null;
         port = server.port;
+        remember(this, true);
         server.warm();
         running = true;
         lastUsed = System.currentTimeMillis();
@@ -86,7 +97,7 @@ public class ShareService extends Service implements Server.Listener {
     private final Runnable idle = new Runnable() {
         @Override
         public void run() {
-            if (System.currentTimeMillis() - lastUsed > IDLE_MS) { stopSelf(); return; }
+            if (System.currentTimeMillis() - lastUsed > IDLE_MS) { remember(ShareService.this, false); stopSelf(); return; }
             update();
             main.postDelayed(this, 60000);
         }

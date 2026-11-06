@@ -20,9 +20,10 @@ It comes in three parts, all in this folder:
 
 ## What it does
 
-- **Rows:** Continue watching, Recently added, Movies, Series, a row per collection (all the Fast & Furious films together, in order), and a row per genre.
-- **Search:** at the top right. Type on an on-screen keyboard made for the remote (or speak, if the TV has voice input); the titles that match show as you type, by name, collection, genre, actor, director or year.
-- **Details:** the background, title, year, rating, runtime, score, description, cast and director. Movies have **Play**, or **Resume** and **Start over**; series pick up where you were, with seasons and episodes underneath. At the bottom: the rest of the collection, or *More like this*.
+- **Featured at the top:** a few films take turns every 9 seconds (what you're watching first, then some at random), each with its background slowly zooming out, the score in green, the rating and HD in boxes, and **Play** and **More info**. Go down to the rows and the top follows the poster you're on instead.
+- **Rows:** Continue watching and Recently added as wide pictures with the title on them; Movies, Series, a row per collection (all the Fast & Furious films together, in order) and a row per genre as posters.
+- **Search:** at the top right. Type on an on-screen keyboard made for the remote (or speak, if the TV has voice input); the titles that match show as you pause typing, by name, collection, genre, actor, director or year.
+- **Details:** the background, title, score, year, rating, length, the tagline in italics, the description, cast and director. Movies have **Play**, or **Resume** and **Start over**; series pick up where you were, with seasons and episodes underneath. At the bottom: the rest of the collection, or *More like this*.
 - **The player:** resumes where you stopped, plays the next episode by itself, and shows subtitles from `.srt` files or from inside the video, in every language you have.
 - **On Telebisyon:** NEKPLIX joins the apps row on the home screen, and Telebisyon's web page gets a **NEKPLIX library** tile listing everything found, and what needs fixing (no poster, a broken `info.json`…).
 
@@ -98,7 +99,9 @@ Plug the drive into an Android phone (with a USB OTG adapter), tablet or TV box,
 It shares every drive with a Movies or Series folder at its top, each as its own source on the TV, and a **Nekplix** folder on the device's own storage.
 
 - **It goes on with the screen off and the phone asleep**, with a notification to stop it. On a Samsung, set *Settings → Apps → NEKPLIX Share → Battery* to **Unrestricted** for long evenings, and keep the phone charging.
-- **It stops by itself after two hours with no TV or browser using it.**
+- **It stops by itself after two hours with no TV or browser using it.** Updating the app doesn't stop it: if it was sharing, it starts again by itself.
+- **The TV finds it even when the phone is asleep.** A sleeping phone doesn't hear the TV asking the Wi-Fi who's sharing, so NEKPLIX remembers the phones and computers it has found and asks them directly too. The very first time, wake the phone's screen.
+- **Pictures come small:** the phone resizes posters and backgrounds for the TV and browsers and keeps them, so rows and search fill in quickly.
 - **Several people can watch at once**, each a different film: a phone sends about 10 MB/s in all, and a typical film needs 0.2 to 1 MB/s.
 - On a TV box without the *All files access* screen: `adb shell appops set com.knz.nekplix.share MANAGE_EXTERNAL_STORAGE allow`.
 
@@ -106,7 +109,8 @@ It shares every drive with a Movies or Series folder at its top, each as its own
 
 While **NEKPLIX Share for Android** shares, it also serves NEKPLIX to **any browser on the same Wi-Fi**: phones, tablets, laptops. The app shows the address (like `http://192.168.1.20:8765`) with **Open**, **Copy** and **Share**, and a **QR code** to scan with a phone's camera.
 
-- The same rows, collections, search, details, seasons, related titles and subtitles as on the TV. *Continue watching* is kept in each browser.
+- The same rows, collections, search, details, seasons, related titles and subtitles as on the TV, in a streaming-app style: a featured film at the top that changes every few seconds, Continue watching and Recently added as wide pictures, posters for the rest. *Continue watching* is kept in each browser.
+- **On a computer, hovering** a wide picture opens a bigger preview with Play, More info and the details; a poster lifts a little and shows Play, More info, the score and year. **/** jumps to search, **Esc** closes.
 - **It shows only what that browser can play.** The phone reads each video's format once, in the background, and the page leaves out the rest:
 
   | Browser | Plays |
@@ -121,7 +125,8 @@ While **NEKPLIX Share for Android** shares, it also serves NEKPLIX to **any brow
 
 | Where | Keys |
 |---|---|
-| The rows | Arrows to move, **OK** to open. **Up** from the first row reaches **Search**. |
+| The top | **Play** or **More info** for the featured film; **Down** to the rows; **Up**, or **Right** from More info, reaches **Search**. |
+| The rows | Arrows to move, **OK** to open. **Up** from the first row goes back to the featured films. |
 | Search | Arrows and **OK** on the letters, or type on a keyboard or the remote's number keys; **🎤** to speak. Right goes to the results. |
 | Details | **OK** on Play or Resume. Series: down to the seasons and episodes. |
 | Playing | **OK** pauses, **◀ ▶** skip 10 seconds (further while held), rewind and fast forward skip 30, **▼** goes through the subtitles (off, then each one; remembered for the next video), **Back** stops and remembers where. |
