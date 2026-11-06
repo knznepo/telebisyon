@@ -1,6 +1,6 @@
 #!/bin/sh
 # Builds "NEKPLIX Share.app" (a Mac app: double-click, choose the movies folder, and it shares until
-# "Stop sharing"), with share.py and NEKPLIX's icon inside. Needs a Mac (osacompile, sips, iconutil).
+# "Stop sharing"), with share.py, the browser version and NEKPLIX's icon inside. Needs a Mac (osacompile, sips, iconutil).
 #   sh make-mac-app.sh        makes ./NEKPLIX Share.app (drag it to Applications if you like)
 set -e
 cd "$(dirname "$0")"
@@ -8,6 +8,11 @@ APP="NEKPLIX Share.app"
 rm -rf "$APP"
 osacompile -o "$APP" "NEKPLIX Share.applescript"
 cp ../share.py "$APP/Contents/Resources/share.py"
+# The browser version: its page and pictures, next to share.py.
+mkdir -p "$APP/Contents/Resources/web"
+cp ../share-android/res/raw/web.html "$APP/Contents/Resources/web/web.html"
+cp ../res/drawable-xhdpi/logo.png "$APP/Contents/Resources/web/logo.png"
+cp ../res/drawable-xxxhdpi/icon.png "$APP/Contents/Resources/web/icon.png"
 
 # NEKPLIX's red F as the app's icon (icon.png, 1024x1024, from art.py), in every size macOS wants.
 ICONSET=$(mktemp -d)/icon.iconset

@@ -71,8 +71,8 @@ Plug it in; it shows within seconds. The TV must be able to mount it: see [When 
 
 Movies can stay on a laptop, or on a hard disk plugged into it.
 
-- **Mac:** build the app once, in `share-app/`: `sh make-mac-app.sh` makes **NEKPLIX Share.app**. Double-click it, choose the folder or drive (a hard disk is under **Locations**), and it shares in the background. Open it again to **Stop sharing**; next time it offers the same folder.
-- **Windows:** double-click **NEKPLIX Share.bat** in `share-app/`, choose the folder, and it shares until you close its window. It needs [Python 3](https://www.python.org/downloads/) (tick *Add python.exe to PATH*); allow *Private networks* when Windows asks.
+- **Mac:** build the app once, in `share-app/`: `sh make-mac-app.sh` makes **NEKPLIX Share.app**. Double-click it, choose the folder or drive (a hard disk is under **Locations**), and it shares in the background, showing the [browser](#watch-in-a-browser) link with **Copy link** and **Show QR code**. Open it again for the link and QR code, or to **Stop sharing**; next time it offers the same folder.
+- **Windows:** double-click **NEKPLIX Share.bat** in `share-app/`, choose the folder, and it shares until you close its window, which shows the browser link. It needs [Python 3](https://www.python.org/downloads/) (tick *Add python.exe to PATH*); allow *Private networks* when Windows asks.
 - **Any computer, from a terminal:**
 
   ```sh
@@ -82,7 +82,9 @@ Movies can stay on a laptop, or on a hard disk plugged into it.
 
 Choose the folder **holding** Movies and Series (the drive itself, usually), not Movies. Good to know:
 
-- **Read-only**, only Movies and Series, and every request needs a code only NEKPLIX is told.
+- **Read-only**, only Movies and Series.
+- **Pictures come small**, as from a phone: made with macOS's `sips`, or [Pillow](https://pypi.org/project/Pillow/) elsewhere if it's installed (else full size), and kept in a cache folder.
+- **With `ffprobe`** (part of ffmpeg: `brew install ffmpeg` on a Mac) it reads each video's codecs in the background, so the browser version shows each browser exactly what it can play. Without it, browsers see MP4s, and MKVs in Chrome and Edge.
 - **A Mac stays awake while a video plays**, and sleeps otherwise. Elsewhere, keep the computer from sleeping yourself.
 - If macOS asks to **allow incoming connections** for Python, click **Allow**.
 - Ports 8765 (files) and 8766 (finding it).
@@ -107,11 +109,15 @@ It shares every drive with a Movies or Series folder at its top, each as its own
 
 ## Watch in a browser
 
-While **NEKPLIX Share for Android** shares, it also serves NEKPLIX to **any browser on the same Wi-Fi**: phones, tablets, laptops. The app shows the address (like `http://192.168.1.20:8765`) with **Open**, **Copy** and **Share**, and a **QR code** to scan with a phone's camera.
+While **NEKPLIX Share** shares, from a computer or a phone, it also serves NEKPLIX to **any browser on the same Wi-Fi**: phones, tablets, laptops. Open the address it shows (like `http://192.168.1.20:8765`):
+
+- **On Android**, the app shows it with **Open**, **Copy** and **Share**, and a **QR code** to scan with a phone's camera.
+- **On a Mac**, the app shows it with **Copy link** and **Show QR code**, when it starts and whenever you open it again. **Show QR code** opens a page in your browser with the link big and a QR code, for others to scan off your screen.
+- **On Windows or in a terminal**, `share.py` prints it, and the address of that QR page (the link with `/qr` on the end).
 
 - The same rows, collections, search, details, seasons, related titles and subtitles as on the TV, in a streaming-app style: a featured film at the top that changes every few seconds, Continue watching and Recently added as wide pictures, posters for the rest. *Continue watching* is kept in each browser.
 - **On a computer, hovering** a wide picture opens a bigger preview with Play, More info and the details; a poster lifts a little and shows Play, More info, the score and year. **/** jumps to search, **Esc** closes.
-- **It shows only what that browser can play.** The phone reads each video's format once, in the background, and the page leaves out the rest:
+- **It shows only what that browser can play.** The phone (or the computer, with `ffprobe`) reads each video's format once, in the background, and the page leaves out the rest:
 
   | Browser | Plays |
   |---|---|

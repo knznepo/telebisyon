@@ -1,7 +1,8 @@
 -- NEKPLIX Share: shares a folder of movies with NEKPLIX on the TV. Opening it starts sharing (in the
 -- background, and the app closes); opening it again offers to stop. It never stays open, since an app
 -- like this can't be quit while it shows a window.
--- make-mac-app.sh builds it into NEKPLIX Share.app, with share.py inside it.
+-- It also shows the link for watching in a browser on the same Wi-Fi (the browser version).
+-- make-mac-app.sh builds it into NEKPLIX Share.app, with share.py and the browser version inside it.
 
 on run
 	set pidFile to POSIX path of (path to home folder) & ".nekplix-share.pid"
@@ -17,7 +18,9 @@ on run
 		try
 			set sharedFolder to do shell script "defaults read com.knz.nekplix-share folder"
 		end try
-		set answer to button returned of (display dialog "NEKPLIX is sharing:" & return & sharedFolder buttons {"Keep sharing", "Stop sharing"} default button "Stop sharing" with title "NEKPLIX Share" with icon note)
+		set web to webLink()
+		set answer to button returned of (display dialog "NEKPLIX is sharing:" & return & sharedFolder & return & return & "Watch in a browser on the same Wi-Fi:" & return & web buttons {"Show QR code", "Keep sharing", "Stop sharing"} default button "Keep sharing" with title "NEKPLIX Share" with icon note)
+		if answer is "Show QR code" and web is not "" then open location web & "/qr"
 		if answer is "Stop sharing" then
 			do shell script "kill " & sharingPid & "; rm -f " & quoted form of pidFile
 			display notification "Stopped sharing with NEKPLIX." with title "NEKPLIX Share"
@@ -66,8 +69,20 @@ on run
 	end try
 	do shell script "echo " & pid & " > " & quoted form of pidFile
 
-	display dialog "Sharing with NEKPLIX:" & return & shareFolder & return & return & "Open NEKPLIX on the TV: this computer shows up there within 30 seconds." & return & return & "To stop sharing, open NEKPLIX Share again." buttons {"OK"} default button 1 with title "NEKPLIX Share" with icon note giving up after 20
+	set web to webLink()
+	set answer to button returned of (display dialog "Sharing with NEKPLIX:" & return & shareFolder & return & return & "Open NEKPLIX on the TV: this computer shows up there within 30 seconds." & return & return & "Or watch in a browser on the same Wi-Fi:" & return & web & return & return & "To stop sharing, open NEKPLIX Share again." buttons {"Copy link", "Show QR code", "OK"} default button "OK" with title "NEKPLIX Share" with icon note giving up after 30)
+	if answer is "Copy link" then set the clipboard to web
+	-- The QR code opens in the browser, big, with the link and a button to open NEKPLIX there.
+	if answer is "Show QR code" and web is not "" then open location web & "/qr"
 end run
+
+-- The browser version's address, as share.py wrote it when it started.
+on webLink()
+	try
+		return do shell script "cat ~/.nekplix-share.web"
+	end try
+	return ""
+end webLink
 
 -- Python 3: Homebrew's, or Apple's once the Command Line Tools are in (without them, /usr/bin/python3
 -- is only a stand-in that offers to install them).
