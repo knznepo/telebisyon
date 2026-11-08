@@ -22,7 +22,7 @@ It comes in three parts, all in this folder:
 
 - **The intro:** opening NEKPLIK shows its logo growing out of the dark on plain black, coming slowly closer, then rushing towards you into the main screen, while it looks for your films. Any button skips it. For a sound with it, put a short AAC file at `res/raw/intro.m4a` before building (it isn't included).
 - **Featured at the top:** a few films take turns every 9 seconds (what you're watching first, then some at random), each with its background slowly zooming out, the score in green, the rating and HD in boxes, and **Play** and **More info**. Go down to the rows and the top follows the poster you're on instead.
-- **Rows:** Continue watching and Recently added as wide pictures with the title on them; Movies, Series, a row per collection (all the Fast & Furious films together, in order) and a row per genre as posters.
+- **Rows:** Continue watching and Recently added as wide pictures with the title on them; Movies, Series, a row per collection (all the Fast & Furious films together, in order) and genre rows as posters: a different few genres, in a random order, each time NEKPLIK or the page opens.
 - **Search:** at the top right. Type on an on-screen keyboard made for the remote (or speak, if the TV has voice input); the titles that match show as you pause typing, by name, collection, genre, actor, director or year.
 - **Details:** the background, title, score, year, rating, length, the tagline in italics, the description, cast and director. Movies have **Play**, or **Resume** and **Start over**; series pick up where you were, with seasons and episodes underneath. At the bottom: the rest of the collection, or *More like this*.
 - **The player:** resumes where you stopped, plays the next episode by itself, and shows subtitles from `.srt` files or from inside the video, in every language you have.
@@ -52,11 +52,13 @@ Movies/
 Series/
   The Office/                poster.jpg, background.jpg, info.json
     Season 1/                01 Pilot.mp4, 02 Diversity Day.mp4
+    Season 2/
+      Episode 1/             or a folder per episode: video.mkv, info.json, background.jpg, .srt
 ```
 
 - Only what's inside **Movies** and **Series** shows: films anywhere else on the drive don't.
 - `info.json` needs only a **title** and a **description**. Year, rating, score, runtime, genres, cast, director, tagline and `"collection": "Fast & Furious"` are optional. Without one, the folder's name is the title.
-- Episodes go in a folder per season, straight inside the series' folder, not deeper.
+- Episodes go in a folder per season, straight inside the series' folder: as files, or a folder each (`Season 1/Episode 1/`) with the episode's own `info.json` and picture. They go by the number in their name (`Episode 2`, `S01E02`, `02 Pilot`).
 
 Everything, with examples: **[docs/library.md](docs/library.md)**.
 
@@ -85,7 +87,7 @@ Choose the folder **holding** Movies and Series (the drive itself, usually), not
 
 - **Read-only**, only Movies and Series.
 - **Pictures come small**, as from a phone: made with macOS's `sips`, or [Pillow](https://pypi.org/project/Pillow/) elsewhere if it's installed (else full size), and kept in a cache folder.
-- **With `ffprobe`** (part of ffmpeg: `brew install ffmpeg` on a Mac) it reads each video's codecs in the background, so the browser version shows each browser exactly what it can play. Without it, browsers see MP4s, and MKVs in Chrome and Edge.
+- **With `ffprobe`** (part of ffmpeg: `brew install ffmpeg` on a Mac) it reads each video's codecs in the background, so the browser version knows which films each browser can play and marks the rest "TV only". Without it, MP4s count as playable everywhere, and MKVs nowhere.
 - **A Mac stays awake while a video plays**, and sleeps otherwise. Elsewhere, keep the computer from sleeping yourself.
 - If macOS asks to **allow incoming connections** for Python, click **Allow**.
 - Ports 8765 (files) and 8766 (finding it).
@@ -118,7 +120,7 @@ While **NEKPLIK Share** shares, from a computer or a phone, it also serves NEKPL
 
 - The same rows, collections, search, details, seasons, related titles and subtitles as on the TV, in a streaming-app style: a featured film at the top that changes every few seconds, Continue watching and Recently added as wide pictures, posters for the rest. *Continue watching* is kept in each browser.
 - **On a computer, hovering** a wide picture opens a bigger preview with Play, More info and the details; a poster lifts a little and shows Play, More info, the score and year. **/** jumps to search, **Esc** closes.
-- **It shows only what that browser can play.** The phone (or the computer, with `ffprobe`) reads each video's format once, in the background, and the page leaves out the rest:
+- **It shows everything, and marks what that browser can't play "TV only".** The phone (or the computer, with `ffprobe`) reads each video's format once, in the background. Playing a "TV only" film says why (an MKV in Safari, AC3 or DTS sound, XviD video…), with **Try anyway**:
 
   | Browser | Plays |
   |---|---|

@@ -313,10 +313,10 @@ final class Server {
                 send(out, 200, "text/html; charset=utf-8", raw("web"), null);
                 return true;
             case "/favicon.ico":
-                send(out, 200, "image/png", raw("icon"), "Cache-Control: max-age=86400\r\n");
+                send(out, 200, "image/png", raw("icon"), "Cache-Control: no-cache\r\n");
                 return true;
             case "/logo.png": case "/icon.png":
-                send(out, 200, "image/png", raw(path.substring(1, path.length() - 4)), "Cache-Control: max-age=86400\r\n");
+                send(out, 200, "image/png", raw(path.substring(1, path.length() - 4)), "Cache-Control: no-cache\r\n");
                 return true;
             case "/api/drives": {
                 listener.used();
@@ -465,7 +465,7 @@ final class Server {
         }
     }
 
-    // Each video's codecs, for the browser version to show only what the browser can play: Android reads
+    // Each video's codecs, for the browser version to mark what the browser can't play: Android reads
     // a video's first part once, in the background, and it's kept (in codecs.json) by path, size and
     // date, so it's done once a file. "?" for what Android can't read (AVI, WMV…). The TV doesn't use it.
     private static final Map<String, String[]> CODECS = new java.util.concurrent.ConcurrentHashMap<>();

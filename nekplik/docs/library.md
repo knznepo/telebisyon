@@ -24,7 +24,13 @@ Series/
       01 Pilot.en.srt    subtitles (optional)
       02 Diversity Day.mkv
     Season 2/
-      ...
+      Episode 1/         or a folder per episode, with its own files:
+        video.mkv          the episode (any name)
+        info.json          its title and description (optional)
+        background.jpg     its picture (optional)
+        video.en.srt       subtitles (optional)
+      Episode 2/
+        ...
 ```
 
 Movies on a computer? Share the folder with `share.py` (see the [README](../README.md#share-from-a-computer)): the same layout, played over the Wi-Fi.
@@ -62,9 +68,13 @@ An episode's name is its file name, without a number in front (`01 Pilot` and `S
 
 and a `.jpg` with the same name for its picture (else the series' background).
 
+**Or a folder per episode**, inside the season's folder: `Season 1/Episode 1/`, with the video (any name), and, if you like, an `info.json` with the same `title` and `description`, a picture (`background.jpg`, `thumb.jpg` or `poster.jpg`; a wide one looks best) and `.srt` subtitles. Without an `info.json`, the folder's name is the episode's (`02 - The Blind Banker` reads *The Blind Banker*), unless it's only `Episode 2`: then the video's name is. Both ways can be mixed in a season.
+
+Episodes go by the number in their name, however it's written: `Episode 2`, `E02`, `S01E02`, `1x02` or `02 Pilot`.
+
 ## info.json
 
-Only **title** and **description** are needed. The rest makes the screens richer: the year, rating, runtime and score show under the title, and **genres** gives each genre its own row.
+Only **title** and **description** are needed. The rest makes the screens richer: the year, rating, runtime and score show under the title, and **genres** gives the main screen its genre rows.
 
 ```json
 {
@@ -92,7 +102,7 @@ Only **title** and **description** are needed. The rest makes the screens richer
 | `rating` | optional | The age rating: `PG-13`, `TV-MA`, `18`… |
 | `score` | optional | Shown as ★ 8.8. |
 | `runtime` | optional | In minutes: shown as 2h 28m. For movies. |
-| `genres` | optional | A list, or one string with commas. A row per genre with two or more titles. |
+| `genres` | optional | A list, or one string with commas. Genres with three titles or more get a row: up to 10 of them, picked and ordered at random (and their titles shuffled) each time NEKPLIK or the page opens. |
 | `cast` | optional | A list. The first five show as *Starring*. |
 | `director` | optional | Shown on the details. |
 | `language` | optional | For your own reference. |

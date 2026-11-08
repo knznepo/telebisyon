@@ -110,6 +110,11 @@
                 background: linear-gradient(0deg, rgba(0,0,0,.85), rgba(0,0,0,0)); text-shadow: 0 1px 6px rgba(0,0,0,.7);
                 display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .card.bare .name { inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; background: none; padding: 12px; }
+  .card .tvonly { position: absolute; top: 7px; right: 7px; z-index: 1; background: rgba(0,0,0,.72); border: 1px solid rgba(255,255,255,.35);
+                  border-radius: 4px; padding: 1px 6px; font-size: 11px; font-weight: 700; letter-spacing: .02em; color: rgba(255,255,255,.85); }
+  .player .problem .try { margin-top: 18px; background: none; border: 1px solid rgba(255,255,255,.5); color: #fff; border-radius: 4px;
+                          padding: 8px 18px; font: inherit; font-size: 15px; cursor: pointer; }
+  .player .problem .try:hover { background: rgba(255,255,255,.12); }
   .card .badge { position: absolute; top: 8px; left: 8px; z-index: 1; background: rgba(0,0,0,.72); border-radius: 4px; padding: 2px 7px; font-size: 12px; font-weight: 700; }
   .card .bar, .ep .bar, .peek .bar { position: absolute; left: 10px; right: 10px; bottom: 8px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.3); overflow: hidden; }
   .card .bar i, .ep .bar i, .peek .bar i { display: block; height: 100%; background: var(--red); }
@@ -459,19 +464,50 @@ function readMovies(dir, drive) {
   }
 }
 
-function episodes(dir, name, number, drive) {
-  const videos = list(dir).filter(isVideo);
-  if (!videos.length) return null;
+// A season: its video files, and (in a season's folder) a folder per episode, all in name order.
+function episodes(dir, name, number, drive, folders) {
   const s = { name, episodes: [] };
-  for (const file of videos) {
-    const b = base(file.name);
-    const v = { file, season: number, number: s.episodes.length + 1, title: cleanEpisode(b), subtitles: subtitles(file), key: drive.name + "|" + file.path };
-    const json = dir.children.get(b + ".json");
-    if (json) { try { const j = JSON.parse(text(json)); if (j.title) v.title = j.title; v.description = j.description || null; } catch (e) {} }
-    for (const e of IMAGE) { const p = dir.children.get(b + "." + e) || dir.children.get(b + "." + e.toUpperCase()); if (p) { v.thumb = p; break; } }
+  for (const x of list(dir).sort((a, b) => natural(episodeOrder(a.name), episodeOrder(b.name)))) {
+    if (x.name.startsWith(".")) continue;
+    const v = isVideo(x) ? episode(x, drive) : folders && x.dir ? episodeFolder(x, drive) : null;
+    if (!v) continue;
+    v.season = number; v.number = s.episodes.length + 1;
     s.episodes.push(v);
   }
-  return s;
+  return s.episodes.length ? s : null;
+}
+
+// Episodes go by their number, however it's written: "Episode 2", "E02", "S01E02", "1x02", "02 Pilot".
+function episodeOrder(n) {
+  const m = n.match(/^(?:episode|ep|e)?\s*(\d+)/i) || n.match(/s\d+\s*e(\d+)/i) || n.match(/\d+x(\d+)/i);
+  return m ? String(+m[1]).padStart(5, "0") + " " + n : n;
+}
+
+function episode(file, drive) {
+  const dir = file.parent, b = base(file.name);
+  const v = { file, title: cleanEpisode(b), subtitles: subtitles(file), key: drive.name + "|" + file.path };
+  const json = dir.children.get(b + ".json");
+  if (json) { try { const j = JSON.parse(text(json)); if (j.title) v.title = j.title; v.description = j.description || null; } catch (e) {} }
+  for (const e of IMAGE) { const p = dir.children.get(b + "." + e) || dir.children.get(b + "." + e.toUpperCase()); if (p) { v.thumb = p; break; } }
+  return v;
+}
+
+// An episode in a folder of its own: "Episode 1/" with the video, info.json (title, description) and a
+// picture (background.jpg, thumb.jpg or poster.jpg). Without info.json, the folder's name is the
+// episode's, unless it's only "Episode 1": then the video's name is.
+function episodeFolder(dir, drive) {
+  const file = list(dir).filter(isVideo).reduce((a, x) => !a || x.size > a.size ? x : a, null);
+  if (!file) return null;
+  const v = episode(file, drive);
+  if (!/^(episode|ep|e)?\s*\d+$/i.test(dir.name.trim())) v.title = cleanEpisode(dir.name);
+  const info = dir.children.get("info.json");
+  if (info && !info.dir) { try { const j = JSON.parse(text(info)); if (j.title && String(j.title).trim()) v.title = String(j.title).trim(); if (j.description) v.description = j.description; } catch (e) {} }
+  if (!v.thumb) {
+    const pics = list(dir).filter(x => !x.dir && !x.name.startsWith(".") && IMAGE.includes(ext(x.name)));
+    const named = n => pics.find(x => n.includes(base(x.name).toLowerCase()));
+    v.thumb = named([...BACKGROUND, "thumb", "thumbnail", "still"]) || named(POSTER) || pics[0] || null;
+  }
+  return v;
 }
 
 function readSeries(dir, drive) {
@@ -479,10 +515,10 @@ function readSeries(dir, drive) {
     if (!f.dir || f.name.startsWith(".")) continue;
     const t = { folder: f, drive, series: true, seasons: [], key: drive.name + "|" + f.path };
     readInfo(t);
-    const loose = episodes(f, "Episodes", 1, drive);
+    const loose = episodes(f, "Episodes", 1, drive, false);
     if (loose) t.seasons.push(loose);
     for (const s of list(f)) if (s.dir && !s.name.startsWith(".")) {
-      const season = episodes(s, s.name, t.seasons.length + 1, drive);
+      const season = episodes(s, s.name, t.seasons.length + 1, drive, true);
       if (season) t.seasons.push(season);
     }
     if (t.seasons.length) lib.series.push(t);
@@ -491,8 +527,8 @@ function readSeries(dir, drive) {
 
 // ---- What this browser can play ----
 // NEKPLIK Share reads each video's codecs on the phone (video/avc is H.264, audio/mp4a-latm is AAC…);
-// the page keeps only the videos this browser plays. Until a file's codecs are known, MP4 and WebM are
-// shown and the rest aren't.
+// every video is shown, and the ones this browser can't play are marked "TV only". Until a file's codecs
+// are known, MP4 and WebM count as playable and the rest don't.
 const chromium = !!window.chrome || /Edg\//.test(navigator.userAgent);
 const canPlay = (() => { const v = document.createElement("video"); return t => { try { return v.canPlayType(t) !== ""; } catch (e) { return false; } }; })();
 const VIDEO_OK = {
@@ -511,6 +547,17 @@ function playable(f) {
   return !!(VIDEO_OK[f.v] && VIDEO_OK[f.v]()) && AUDIO_OK.includes(f.a);
 }
 
+// Why this browser can't play a video, in a few words.
+const SOUND = { "audio/ac3": "Dolby Digital (AC3)", "audio/eac3": "Dolby Digital Plus", "audio/vnd.dts": "DTS", "audio/dts": "DTS", "audio/vnd.dts.hd": "DTS-HD", "audio/true-hd": "Dolby TrueHD" };
+function whyNot(f) {
+  const e = ext(f.name);
+  if (e === "mkv" && !chromium) return "This browser can't open MKV files. Chrome or Edge can.";
+  if (!["mp4", "m4v", "mov", "webm", "mkv"].includes(e)) return `Browsers can't open ${e.toUpperCase()} files.`;
+  if (f.v != null && !(VIDEO_OK[f.v] && VIDEO_OK[f.v]())) return f.v === "video/hevc" ? "This browser can't play its H.265 video. Safari or Edge can." : "Browsers can't play its video format.";
+  if (f.a != null && !AUDIO_OK.includes(f.a)) return `Its sound is ${SOUND[f.a] || "a kind"} browsers can't play: the picture would have no sound.`;
+  return "This browser may not play it.";
+}
+
 async function load() {
   const d = await (await fetch("/api/drives", { cache: "no-store" })).json();
   lib = { movies: [], series: [], name: d.name };
@@ -525,13 +572,13 @@ async function load() {
       }
     } catch (e) { console.warn("Couldn't read", drive.name, e); }
   }));
-  lib.hidden = lib.movies.filter(t => !playable(t.movie.file)).length;
-  lib.movies = lib.movies.filter(t => playable(t.movie.file));
+  // Everything is shown. What this browser can't play is marked "TV only", and says why when played.
+  for (const t of lib.movies) t.tvOnly = t.movie.tvOnly = !playable(t.movie.file);
   for (const t of lib.series) {
-    for (const s of t.seasons) { const before = s.episodes.length; s.episodes = s.episodes.filter(v => playable(v.file)); lib.hidden += before - s.episodes.length; }
-    t.seasons = t.seasons.filter(s => s.episodes.length);
+    for (const s of t.seasons) for (const v of s.episodes) v.tvOnly = !playable(v.file);
+    t.tvOnly = t.seasons.every(s => s.episodes.every(v => v.tvOnly));
   }
-  lib.series = lib.series.filter(t => t.seasons.length);
+  lib.series = lib.series.filter(t => t.seasons.some(s => s.episodes.length));
   lib.movies.sort((a, b) => natural(a.title, b.title));
   lib.series.sort((a, b) => natural(a.title, b.title));
   lib.drives = d.drives;
@@ -567,6 +614,11 @@ function facts(t, opts = {}) {
   if (opts.genres && t.genres.length) bits.push(`<span>${esc(t.genres.slice(0, 3).join(", "))}</span>`);
   return `<div class="facts">${bits.join("")}</div>`;
 }
+
+// A random number per name, the same one all visit long: rows stay put while browsing, and are
+// shuffled again next time the page opens.
+const lucks = new Map();
+function luck(k) { if (!lucks.has(k)) lucks.set(k, Math.random()); return lucks.get(k); }
 
 function collections() {
   const out = new Map();
@@ -617,6 +669,7 @@ function card(t, opts = {}, i = 0) {
   b.innerHTML = (pic ? `<img loading="lazy" decoding="async" alt="" src="${esc(img(t.drive, pic, portrait ? 240 : 400))}">` : "") +
     (portrait && pic ? "" : `<span class="name">${esc(t.title)}</span>`) +
     (opts.badge ? `<span class="badge">${esc(opts.badge)}</span>` : "") +
+    (t.tvOnly ? `<span class="tvonly" title="Plays in NEKPLIK on the TV">TV only</span>` : "") +
     (opts.p && opts.p.dur ? `<span class="bar"><i style="width:${Math.min(100, opts.p.pos / opts.p.dur * 100)}%"></i></span>` : "") +
     (portrait ? `<div class="over"><div class="ctl">
         <span class="circle white" role="button" data-a="play" aria-label="Play">${ICON.play}</span>
@@ -803,10 +856,11 @@ function show() {
     if (allTitles().length > 6) rows.push(["Recently added", recent]);
     rows.push(["Movies", lib.movies], ["Series", lib.series]);
     for (const c of collections()) rows.push([c.name, c.titles]);
+    // Genres: a different few on each visit, in a random order, their titles shuffled too.
     const genres = new Map();
     for (const t of allTitles()) for (const g of t.genres) { if (!genres.has(g)) genres.set(g, []); genres.get(g).push(t); }
-    [...genres.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 8)
-      .forEach(([g, ts]) => { if (ts.length > 1) rows.push([g, ts]); });
+    [...genres.entries()].filter(([g, ts]) => ts.length >= 3).sort((a, b) => luck("genre " + a[0]) - luck("genre " + b[0])).slice(0, 10)
+      .forEach(([g, ts]) => rows.push([g, ts.slice().sort((a, b) => luck(g + " " + a.title + a.year) - luck(g + " " + b.title + b.year))]));
     let i = 0;
     for (const [label, items] of rows) { const r = row(label, items, i); if (r) { main.appendChild(r); i++; } }
     note(main);
@@ -982,11 +1036,21 @@ function refreshContinue() {
 // ---- The player ----
 
 let idleTimer;
-function play(t, v, resume) {
+function play(t, v, resume, anyway) {
   closePeek(true);
   const box = $("#player");
   const p = progress(v.key);
   const name = t.series ? `${t.title}  ·  S${v.season}:E${v.number} ${v.title}` : t.title;
+  if (v.tvOnly && !anyway) {
+    box.innerHTML = `<div class="top"><button class="back" aria-label="Back">${ICON.back}</button><div class="what">${esc(name)}</div></div>
+      <div class="problem">${esc(whyNot(v.file))}<br><br>It plays in NEKPLIK on the TV.<br><button class="try">Try anyway</button></div>`;
+    box.querySelector(".back").onclick = () => stop();
+    box.querySelector(".try").onclick = () => play(t, v, resume, true);
+    box.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+    if (!history.state || !history.state.player) history.pushState({ player: true }, "");
+    return;
+  }
   box.innerHTML = `<video controls autoplay playsinline preload="auto"></video>
     <div class="top"><button class="back" aria-label="Back">${ICON.back}</button><div class="what">${esc(name)}</div></div>`;
   const video = box.querySelector("video");

@@ -23,6 +23,7 @@ import java.util.regex.Pattern;
 //
 //   Movies/Inception/movie.mkv, poster.jpg, background.jpg, info.json, movie.en.srt
 //   Series/The Office/poster.jpg, background.jpg, info.json, Season 1/01 Pilot.mp4, 01 Pilot.json
+//   (or an episode per folder: Season 1/Episode 1/video.mp4, info.json, background.jpg)
 //
 // info.json needs only a title and a description; the rest is optional. Without one, the folder's name
 // is the title. Whatever looks wrong goes in a title's problems, for the web page to show.
@@ -348,10 +349,10 @@ final class Library {
             // A folder per season, or the episodes straight in the series' folder for just one.
             List<Node> seasonDirs = new ArrayList<>();
             for (Node x : list(f)) if (x.isDirectory() && !x.name().startsWith(".")) seasonDirs.add(x);
-            Season loose = episodes(f, "Episodes", 1);
+            Season loose = episodes(f, "Episodes", 1, false);
             if (loose != null) t.seasons.add(loose);
             for (Node s : seasonDirs) {
-                Season season = episodes(s, s.name(), t.seasons.size() + 1);
+                Season season = episodes(s, s.name(), t.seasons.size() + 1, true);
                 if (season != null) t.seasons.add(season);
             }
             if (t.seasons.isEmpty()) t.problems.add("No episodes: put video files in a folder per season");
@@ -359,32 +360,82 @@ final class Library {
         }
     }
 
-    private static Season episodes(Node dir, String name, int number) {
-        List<Node> videos = new ArrayList<>();
-        for (Node x : list(dir)) if (isVideo(x)) videos.add(x);
-        if (videos.isEmpty()) return null;
+    // A season: its video files, and (in a season's folder) a folder per episode, all in name order.
+    private static Season episodes(Node dir, String name, int number, boolean folders) {
         Season s = new Season();
         s.name = name;
-        for (Node file : videos) {
-            Video v = new Video();
-            v.file = file;
+        List<Node> all = list(dir);
+        Collections.sort(all, (a, b) -> natural(episodeOrder(a.name()), episodeOrder(b.name())));
+        for (Node x : all) {
+            if (x.name().startsWith(".")) continue;
+            Video v = isVideo(x) ? episode(x) : folders && x.isDirectory() ? episodeFolder(x) : null;
+            if (v == null) continue;
             v.season = number;
             v.number = s.episodes.size() + 1;
-            String base = base(file);
-            v.title = cleanEpisode(base);
-            Node json = sibling(file, base, Collections.singletonList("json"));
-            if (json != null) {
-                try {
-                    JSONObject j = new JSONObject(read(json));
-                    if (!j.optString("title").trim().isEmpty()) v.title = j.optString("title").trim();
-                    v.description = emptyToNull(j.optString("description"));
-                } catch (Exception ignored) {}
-            }
-            v.thumb = sibling(file, base, IMAGE);
-            v.subtitles = subtitles(file);
             s.episodes.add(v);
         }
-        return s;
+        return s.episodes.isEmpty() ? null : s;
+    }
+
+    // An episode in a folder of its own: "Episode 1/" with the video, info.json (title, description) and a
+    // picture (background.jpg, thumb.jpg or poster.jpg). Without info.json, the folder's name is the
+    // episode's, unless it's only "Episode 1": then the video's name is.
+    private static Video episodeFolder(Node dir) {
+        Node file = null;
+        for (Node x : list(dir)) if (isVideo(x) && (file == null || x.length() > file.length())) file = x;
+        if (file == null) return null;
+        Video v = episode(file);
+        if (!dir.name().trim().matches("(?i)(episode|ep|e)?\\s*\\d+")) v.title = cleanEpisode(dir.name());
+        Node info = dir.child("info.json");
+        if (info != null && info.isFile()) {
+            try {
+                JSONObject j = new JSONObject(read(info));
+                if (!j.optString("title").trim().isEmpty()) v.title = j.optString("title").trim();
+                String d = emptyToNull(j.optString("description"));
+                if (d != null) v.description = d;
+            } catch (Exception ignored) {}
+        }
+        if (v.thumb == null) {
+            Node poster = null, any = null;
+            for (Node x : list(dir)) {
+                if (!x.isFile() || !IMAGE.contains(ext(x)) || x.name().startsWith(".")) continue;
+                String b = base(x).toLowerCase(Locale.ROOT);
+                if (BACKGROUND.contains(b) || b.equals("thumb") || b.equals("thumbnail") || b.equals("still")) { v.thumb = x; break; }
+                if (POSTER.contains(b) && poster == null) poster = x;
+                if (any == null) any = x;
+            }
+            if (v.thumb == null) v.thumb = poster != null ? poster : any;
+        }
+        return v;
+    }
+
+    // Episodes go by their number, however it's written: "Episode 2", "E02", "S01E02", "1x02", "02 Pilot".
+    private static final Pattern[] EPISODE_NUMBER = {
+        Pattern.compile("(?i)^(?:episode|ep|e)?\\s*(\\d+)"), Pattern.compile("(?i)s\\d+\\s*e(\\d+)"), Pattern.compile("(?i)\\d+x(\\d+)")};
+    private static String episodeOrder(String n) {
+        for (Pattern p : EPISODE_NUMBER) {
+            Matcher m = p.matcher(n);
+            if (m.find()) return String.format(Locale.ROOT, "%05d %s", Integer.parseInt(m.group(1)), n);
+        }
+        return n;
+    }
+
+    private static Video episode(Node file) {
+        Video v = new Video();
+        v.file = file;
+        String base = base(file);
+        v.title = cleanEpisode(base);
+        Node json = sibling(file, base, Collections.singletonList("json"));
+        if (json != null) {
+            try {
+                JSONObject j = new JSONObject(read(json));
+                if (!j.optString("title").trim().isEmpty()) v.title = j.optString("title").trim();
+                v.description = emptyToNull(j.optString("description"));
+            } catch (Exception ignored) {}
+        }
+        v.thumb = sibling(file, base, IMAGE);
+        v.subtitles = subtitles(file);
+        return v;
     }
 
     // info.json, the poster and the background. The folder's name is the title until info.json says

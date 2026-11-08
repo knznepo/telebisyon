@@ -27,6 +27,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.TreeMap;
 
 // The browsing screen: a title big at the top (its background, title, year, rating and description),
 // and rows of posters under it: Continue watching, Recently added, Movies, Series, a row per collection
@@ -53,6 +55,7 @@ public class MainActivity extends Activity {
         }
     };
     private TextView title, description, message, search;
+    private final long shuffleSeed = new Random().nextLong(); // the genre rows' order, this visit
     private LinearLayout meta; // score, year, rating, length, HD, genres: as on the web version
     private LinearLayout hero, rows;
     private ScrollView scroller;
@@ -276,17 +279,24 @@ public class MainActivity extends Activity {
         // A row per collection ("Fast & Furious"), its films in release order.
         for (Map.Entry<String, List<Library.Title>> c : lib.collections().entrySet())
             if (!lists.containsKey(c.getKey())) lists.put(c.getKey(), cards(c.getValue()));
-        // A row per genre with two or more titles, the biggest first.
-        Map<String, List<Library.Title>> genres = new HashMap<>();
+        // Genres: a different few each time the app opens, in a random order, their titles shuffled too.
+        // The same seed all visit long, so the rows stay put while browsing.
+        Map<String, List<Library.Title>> genres = new TreeMap<>();
         for (Library.Title t : all) for (String g : t.genres) {
             List<Library.Title> l = genres.get(g);
             if (l == null) genres.put(g, l = new ArrayList<>());
             l.add(t);
         }
-        List<Map.Entry<String, List<Library.Title>>> g = new ArrayList<>(genres.entrySet());
-        Collections.sort(g, (a, b) -> b.getValue().size() - a.getValue().size());
-        for (Map.Entry<String, List<Library.Title>> e : g.subList(0, Math.min(8, g.size())))
-            if (e.getValue().size() >= 2) lists.put(e.getKey(), cards(e.getValue()));
+        List<String> g = new ArrayList<>();
+        for (Map.Entry<String, List<Library.Title>> e : genres.entrySet()) if (e.getValue().size() >= 3) g.add(e.getKey());
+        Collections.shuffle(g, new Random(shuffleSeed));
+        for (String name : g.subList(0, Math.min(10, g.size()))) {
+            if (lists.containsKey(name)) continue;
+            List<Library.Title> ts = genres.get(name);
+            Collections.sort(ts, (a, b) -> a.folder.name().compareTo(b.folder.name()));
+            Collections.shuffle(ts, new Random(shuffleSeed ^ name.hashCode()));
+            lists.put(name, cards(ts));
+        }
 
         // Nothing changed since last time: leave the screen (and the focus) as it is.
         StringBuilder sig = new StringBuilder();

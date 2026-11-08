@@ -120,7 +120,7 @@ def find_tool(name):
 
 class Codecs:
     """Each video's first video and audio track, as Android names them ("video/avc", "audio/mp4a-latm"),
-    for the browser version to show only what a browser can play. Read once per file with ffprobe, in
+    for the browser version to mark what a browser can't play. Read once per file with ffprobe, in
     the background, and kept in ~/.nekplik-share-codecs.json. Without ffprobe, nothing: the page then
     goes by the file's type."""
     VIDEO = {"h264": "video/avc", "hevc": "video/hevc", "mpeg4": "video/mp4v-es", "vp8": "video/x-vnd.on2.vp8",
@@ -507,7 +507,8 @@ class Share(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", kind)
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "max-age=86400" if cache else "no-store")
+        # The logo and icons: checked again each time (no-cache), so a new logo shows straight away.
+        self.send_header("Cache-Control", "no-cache" if cache else "no-store")
         self.end_headers()
         self.wfile.write(body)
 
