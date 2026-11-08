@@ -45,6 +45,7 @@ final class Library {
         // Its picture: its own background.jpg, else its season's, else the series'. Its poster is the series'.
         Node poster, background;
         Node ownBackground; // in the episode's folder, or "01 Pilot.jpg" beside the video
+        boolean pictured; // its season has pictures of its own: else the episode list shows only words
         List<Node> subtitles = new ArrayList<>();
         int season, number; // for episodes: which season (from 1) and which episode in it (from 1)
     }
@@ -362,6 +363,11 @@ final class Library {
                 }
             }
             if (t.seasons.isEmpty()) t.problems.add("No episodes: put video files in a folder per season");
+            for (Season s : t.seasons) {
+                boolean pictured = s.background != null;
+                for (Video v : s.episodes) if (v.ownBackground != null) pictured = true;
+                for (Video v : s.episodes) v.pictured = pictured;
+            }
             for (Season s : t.seasons) for (Video v : s.episodes) {
                 v.background = v.ownBackground != null ? v.ownBackground : s.background != null ? s.background
                         : t.background != null ? t.background : t.poster;

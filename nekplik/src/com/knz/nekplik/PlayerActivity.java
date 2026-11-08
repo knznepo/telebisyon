@@ -318,7 +318,8 @@ public class PlayerActivity extends Activity {
     private void showNext() {
         Library.Video n = list.get(index + 1);
         nextName.setText("S" + n.season + ":E" + n.number + "  " + n.title);
-        Images.into(nextPic, n.background, Ui.px(this, 336), Ui.px(this, 189));
+        nextPic.setVisibility(n.pictured ? View.VISIBLE : View.GONE); // a season without pictures: only the words
+        if (n.pictured) Images.into(nextPic, n.background, Ui.px(this, 336), Ui.px(this, 189));
         next.setAlpha(0f);
         next.setTranslationX(Ui.px(this, 60));
         next.setVisibility(View.VISIBLE);

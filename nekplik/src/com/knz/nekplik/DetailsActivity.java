@@ -263,7 +263,7 @@ public class DetailsActivity extends Activity {
     }
 
     // An episode: its picture (or the series' background), number and name, a line about it, and how
-    // much of it was watched.
+    // much of it was watched. In a season without pictures of its own: a card with only the words.
     private View episode(Library.Video v) {
         int w = Ui.px(this, 360), h = Ui.px(this, 203), r = Ui.px(this, 12);
         LinearLayout box = new LinearLayout(this);
@@ -282,11 +282,34 @@ public class DetailsActivity extends Activity {
             public void getOutline(View view, Outline o) { o.setRoundRect(0, 0, view.getWidth(), view.getHeight(), r); }
         });
         pic.setClipToOutline(true);
-        ImageView img = new ImageView(this);
-        img.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        pic.addView(img, new FrameLayout.LayoutParams(-1, -1));
-        Node art = v.background;
-        Images.into(img, art, w, h);
+        if (v.pictured) {
+            ImageView img = new ImageView(this);
+            img.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            pic.addView(img, new FrameLayout.LayoutParams(-1, -1));
+            Images.into(img, v.background, w, h);
+        } else {
+            LinearLayout words = new LinearLayout(this);
+            words.setOrientation(LinearLayout.VERTICAL);
+            words.setPadding(Ui.px(this, 26), Ui.px(this, 20), Ui.px(this, 26), Ui.px(this, 20));
+            TextView num = Ui.text(this, 44, Ui.FAINT, true);
+            num.setText(String.valueOf(v.number));
+            TextView title = Ui.text(this, 24, Color.WHITE, true);
+            title.setText(v.title);
+            title.setMaxLines(v.description != null ? 1 : 3);
+            title.setEllipsize(TextUtils.TruncateAt.END);
+            title.setPadding(0, Ui.px(this, 4), 0, 0);
+            words.addView(num);
+            words.addView(title);
+            if (v.description != null) {
+                TextView d = Ui.text(this, 19, Ui.DIM, false);
+                d.setText(v.description);
+                d.setMaxLines(3);
+                d.setEllipsize(TextUtils.TruncateAt.END);
+                d.setPadding(0, Ui.px(this, 6), 0, 0);
+                words.addView(d);
+            }
+            pic.addView(words, new FrameLayout.LayoutParams(-1, -1));
+        }
         Progress.Entry p = Progress.get(this, v.file);
         if (p != null) {
             View track = new View(this);
@@ -297,6 +320,7 @@ public class DetailsActivity extends Activity {
             pic.addView(done, new FrameLayout.LayoutParams(Math.max(1, Math.round(w * p.fraction())), Ui.px(this, 7), Gravity.BOTTOM));
         }
         box.addView(pic, new LinearLayout.LayoutParams(w, h));
+        if (!v.pictured) return focusable(box, pic, r, v, p);
 
         TextView name = Ui.text(this, 24, Color.WHITE, true);
         name.setText(v.number + ".  " + v.title);
@@ -313,6 +337,11 @@ public class DetailsActivity extends Activity {
             box.addView(d, new LinearLayout.LayoutParams(w, -2));
         }
 
+        return focusable(box, pic, r, v, p);
+    }
+
+    // The white edge and the grow on focus; OK plays.
+    private View focusable(LinearLayout box, FrameLayout pic, int r, Library.Video v, Progress.Entry p) {
         GradientDrawable edge = new GradientDrawable();
         edge.setCornerRadius(r);
         edge.setStroke(Ui.px(this, 5), Color.WHITE);

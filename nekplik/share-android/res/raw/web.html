@@ -200,6 +200,9 @@
         border-bottom: 1px solid var(--line); border-radius: 6px; cursor: pointer; transition: background .2s; }
   .ep:hover { background: rgba(255,255,255,.06); }
   .ep .n { color: var(--dim); font-size: 22px; text-align: center; }
+  .ep.plain { grid-template-columns: 34px 1fr; padding: 18px 12px; }
+  .ep.plain .bar { position: relative; display: block; left: 0; right: 0; bottom: 0; max-width: 240px; margin-top: 10px; }
+  .ep.plain:hover .t { text-decoration: underline; text-underline-offset: 3px; }
   .ep .shot { position: relative; aspect-ratio: 16 / 9; border-radius: 4px; overflow: hidden; background: var(--raised) center / cover no-repeat; }
   .ep .shot::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.35)
                      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='11' fill='none' stroke='white' stroke-width='1.5'/%3E%3Cpath d='M9.5 7.5v9l7-4.5z' fill='white'/%3E%3C/svg%3E") center / 38px no-repeat;
@@ -561,6 +564,11 @@ function readSeries(dir, drive) {
       if (season) { season.background = background(s); t.seasons.push(season); }
     }
     // Each episode's picture: its own background, else its season's, else the series'. Its poster is the series'.
+    for (const s of t.seasons) {
+      // A season with no pictures of its own: the episode list shows only the words.
+      const pictured = !!s.background || s.episodes.some(v => v.ownBackground);
+      for (const v of s.episodes) v.pictured = pictured;
+    }
     for (const s of t.seasons) for (const v of s.episodes) {
       v.background = v.ownBackground || s.background || t.background || t.poster || null;
       v.poster = t.poster || v.background;
@@ -1035,11 +1043,12 @@ function seasons(t, box) {
     for (const v of t.seasons[i].episodes) {
       const p = progress(v.key), e = document.createElement("div");
       const shot = v.background || back;
-      e.className = "ep";
+      const bar = p && p.dur ? `<span class="bar"><i style="width:${Math.min(100, p.pos / p.dur * 100)}%"></i></span>` : "";
+      e.className = "ep" + (v.pictured ? "" : " plain");
       e.tabIndex = 0;
-      e.innerHTML = `<div class="n">${v.number}</div>
-        <div class="shot" style="${shot ? `background-image:url('${esc(img(t.drive, shot, 300))}')` : ""}">${p && p.dur ? `<span class="bar"><i style="width:${Math.min(100, p.pos / p.dur * 100)}%"></i></span>` : ""}</div>
-        <div><div class="t">${esc(v.title)}</div>${v.description ? `<div class="d">${esc(v.description)}</div>` : ""}</div>`;
+      e.innerHTML = `<div class="n">${v.number}</div>` +
+        (v.pictured ? `<div class="shot" style="${shot ? `background-image:url('${esc(img(t.drive, shot, 300))}')` : ""}">${bar}</div>` : "") +
+        `<div><div class="t">${esc(v.title)}</div>${v.description ? `<div class="d">${esc(v.description)}</div>` : ""}${v.pictured ? "" : bar}</div>`;
       e.onclick = () => play(t, v, true);
       e.onkeydown = ev => { if (ev.key === "Enter") play(t, v, true); };
       l.appendChild(e);
@@ -1161,7 +1170,9 @@ function play(t, v, resume, anyway) {
   up.classList.add("hidden");
   const showUp = () => {
     if (!up.classList.contains("hidden")) return;
-    up.querySelector(".shot").style.backgroundImage = nextV.background ? `url('${img(t.drive, nextV.background, 400)}')` : "";
+    const sh = up.querySelector(".shot");
+    sh.style.display = nextV.pictured ? "" : "none";
+    sh.style.backgroundImage = nextV.pictured && nextV.background ? `url('${img(t.drive, nextV.background, 400)}')` : "";
     up.querySelector(".ename").textContent = `S${nextV.season}:E${nextV.number}  ${nextV.title}`;
     other.textContent = afterEnd ? "Cancel" : "Watch credits";
     up.classList.remove("hidden");
