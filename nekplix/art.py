@@ -5,6 +5,7 @@
 #   python3 art.py res
 #
 # A tall, condensed, heavy red wordmark on black, with a darker red edge underneath.
+import os
 import sys
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
@@ -46,6 +47,9 @@ def on_black(size, word, center):
 
 on_black((640, 360), wordmark("NEKPLIX", 150, 6), (320, 180)).save(out + "/drawable-xhdpi/banner.png", optimize=True)
 wordmark("NEKPLIX", 110, 4).save(out + "/drawable-xhdpi/logo.png", optimize=True)
+# The intro's logo, large, so it stays sharp as it zooms towards you (drawable-nodpi: never resized).
+os.makedirs(out + "/drawable-nodpi", exist_ok=True)
+wordmark("NEKPLIX", 520, 19).save(out + "/drawable-nodpi/intro_logo.png", optimize=True)
 
 icon = on_black((192, 192), wordmark("N", 170, 0), (96, 100))
 rounded = Image.new("RGBA", (192, 192), (0, 0, 0, 0))

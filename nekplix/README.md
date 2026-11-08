@@ -20,7 +20,7 @@ It comes in three parts, all in this folder:
 
 ## What it does
 
-- **The intro:** opening NEKPLIX shows its logo growing out of the dark with a red glow, then zooming into the main screen, while it looks for your films. Any button skips it. For a sound with it, put a short AAC file at `res/raw/intro.m4a` before building (it isn't included).
+- **The intro:** opening NEKPLIX shows its logo growing out of the dark on plain black, coming slowly closer, then rushing towards you into the main screen, while it looks for your films. Any button skips it. For a sound with it, put a short AAC file at `res/raw/intro.m4a` before building (it isn't included).
 - **Featured at the top:** a few films take turns every 9 seconds (what you're watching first, then some at random), each with its background slowly zooming out, the score in green, the rating and HD in boxes, and **Play** and **More info**. Go down to the rows and the top follows the poster you're on instead.
 - **Rows:** Continue watching and Recently added as wide pictures with the title on them; Movies, Series, a row per collection (all the Fast & Furious films together, in order) and a row per genre as posters.
 - **Search:** at the top right. Type on an on-screen keyboard made for the remote (or speak, if the TV has voice input); the titles that match show as you pause typing, by name, collection, genre, actor, director or year.
