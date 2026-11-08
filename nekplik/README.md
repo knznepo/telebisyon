@@ -25,7 +25,7 @@ It comes in three parts, all in this folder:
 - **Rows:** Continue watching and Recently added as wide pictures with the title on them; Movies, Series, a row per collection (all the Fast & Furious films together, in order) and genre rows as posters: a different few genres, in a random order, each time NEKPLIK or the page opens.
 - **Search:** at the top right. Type on an on-screen keyboard made for the remote (or speak, if the TV has voice input); the titles that match show as you pause typing, by name, collection, genre, actor, director or year.
 - **Details:** the background, title, score, year, rating, length, the tagline in italics, the description, cast and director. Movies have **Play**, or **Resume** and **Start over**; series pick up where you were, with seasons and episodes underneath. At the bottom: the rest of the collection, or *More like this*.
-- **The player:** resumes where you stopped, plays the next episode by itself, and shows subtitles from `.srt` files or from inside the video, in every language you have.
+- **The player:** resumes where you stopped, shows the video's picture and name with a spinner while it loads, and in an episode's last 20 seconds shows **Up next**: the next episode, with a button that fills up until the end, when it starts by itself (**Next episode** now, or **Watch credits** to hide it). It shows subtitles from `.srt` files or from inside the video, in every language you have.
 - **On Telebisyon:** NEKPLIK joins the apps row on the home screen, and Telebisyon's web page gets a **NEKPLIK library** tile listing everything found, and what needs fixing (no poster, a broken `info.json`…).
 
 It's a separate app from Telebisyon, and works without it.
@@ -139,6 +139,7 @@ While **NEKPLIK Share** shares, from a computer or a phone, it also serves NEKPL
 | Search | Arrows and **OK** on the letters, or type on a keyboard or the remote's number keys; **🎤** to speak. Right goes to the results. |
 | Details | **OK** on Play or Resume. Series: down to the seasons and episodes. |
 | Playing | **OK** pauses, **◀ ▶** skip 10 seconds (further while held), rewind and fast forward skip 30, **▼** goes through the subtitles (off, then each one; remembered for the next video), **Back** stops and remembers where. |
+| Up next | **OK** plays the next episode now; **Back** hides the card and watches the end (then 5 seconds to press Back again to stop). |
 
 ## What plays
 

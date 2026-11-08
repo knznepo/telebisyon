@@ -33,11 +33,18 @@ import java.util.regex.Pattern;
 // forward 30. Down goes through the subtitles (off, then each language), up shows where it is. Back
 // stops, and it remembers where. The subtitle choice is remembered too: off stays off, and the language
 // last picked comes first next time.
-// After an episode, the next one starts in 5 seconds (OK: now, Back: not at all).
+// Up next, as on streaming apps: in an episode's last 20 seconds a card shows the next one, its button
+// filling up until the end, when the next one starts (OK: now; Back: hide it, and after the end there are
+// 5 seconds to stop). While a video loads: its picture, its name and a spinner.
 public class PlayerActivity extends Activity {
     private final Handler main = new Handler(Looper.getMainLooper());
     private VideoView video;
-    private TextView subtitle, heading, sub, clock, hint, next, problem;
+    private TextView subtitle, heading, sub, clock, hint, problem, nextName;
+    private View next, nextFill; // the Up next card, and its button filling up
+    private android.widget.ImageView nextPic, loadingPic;
+    private FrameLayout loading;
+    private TextView loadingName, loadingTitle;
+    private boolean nextHidden, afterEnd; // Back on the card; the video ended and the 5 seconds run
     private View controls, top;
     private Bar bar;
     private List<Library.Video> list = new ArrayList<>();
@@ -55,7 +62,6 @@ public class PlayerActivity extends Activity {
     private Library.Title t;
     private List<Cue> cues = Collections.emptyList();
     private long lastSaved, hideAt;
-    private int countdown;
     private float subtitleLift = 1; // where the subtitles were last moved to (1: not yet)
 
     static Intent intent(Context c, Library.Title t, Library.Video v, boolean resume) {
@@ -119,17 +125,79 @@ public class PlayerActivity extends Activity {
         controls = foot;
         root.addView(foot, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
 
-        next = Ui.text(this, 30, Color.WHITE, true);
-        next.setPadding(Ui.px(this, 36), Ui.px(this, 26), Ui.px(this, 36), Ui.px(this, 26));
-        GradientDrawable card = new GradientDrawable();
-        card.setCornerRadius(Ui.px(this, 18));
-        card.setColor(0xE6201A1D);
-        next.setBackground(card);
+        // Up next: the next episode's picture, its name, and a Next episode button that fills up.
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(Ui.px(this, 18), Ui.px(this, 18), Ui.px(this, 34), Ui.px(this, 18));
+        card.setBackground(Ui.round(0xF2181416, Ui.px(this, 14)));
+        card.setElevation(Ui.px(this, 12));
+        nextPic = new android.widget.ImageView(this);
+        nextPic.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+        nextPic.setBackground(Ui.round(0xFF2A2326, Ui.px(this, 8)));
+        nextPic.setClipToOutline(true);
+        card.addView(nextPic, new LinearLayout.LayoutParams(Ui.px(this, 336), Ui.px(this, 189)));
+        LinearLayout words = new LinearLayout(this);
+        words.setOrientation(LinearLayout.VERTICAL);
+        words.setPadding(Ui.px(this, 28), 0, 0, 0);
+        TextView label = Ui.text(this, 20, Ui.FAINT, true);
+        label.setText("NEXT EPISODE");
+        label.setLetterSpacing(0.12f);
+        nextName = Ui.text(this, 28, Color.WHITE, true);
+        nextName.setMaxLines(2);
+        nextName.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        nextName.setPadding(0, Ui.px(this, 8), 0, Ui.px(this, 18));
+        FrameLayout button = new FrameLayout(this);
+        button.setBackground(Ui.round(Color.WHITE, Ui.px(this, 6)));
+        button.setClipToOutline(true);
+        nextFill = new View(this);
+        nextFill.setBackgroundColor(0xFFB8B8B8);
+        nextFill.setPivotX(0);
+        nextFill.setScaleX(0);
+        button.addView(nextFill, new FrameLayout.LayoutParams(-1, -1));
+        TextView go = Ui.text(this, 26, 0xFF111111, true);
+        go.setText("▶   Next episode");
+        go.setGravity(Gravity.CENTER);
+        button.addView(go, new FrameLayout.LayoutParams(-1, Ui.px(this, 64)));
+        TextView keys = Ui.text(this, 19, Ui.FAINT, false);
+        keys.setText("OK  play now      BACK  hide");
+        keys.setPadding(0, Ui.px(this, 12), 0, 0);
+        words.addView(label);
+        words.addView(nextName);
+        words.addView(button, new LinearLayout.LayoutParams(Ui.px(this, 400), -2));
+        words.addView(keys);
+        card.addView(words, new LinearLayout.LayoutParams(Ui.px(this, 440), -2));
+        next = card;
         next.setVisibility(View.GONE);
         FrameLayout.LayoutParams nl = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.END);
         nl.rightMargin = Ui.px(this, 96);
         nl.bottomMargin = Ui.px(this, 200); // above the bar and the clock
         root.addView(next, nl);
+
+        // Loading: the video's picture, dimmed, its name, and a spinner.
+        loading = new FrameLayout(this);
+        loading.setBackgroundColor(Color.BLACK);
+        loadingPic = new android.widget.ImageView(this);
+        loadingPic.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+        loading.addView(loadingPic, new FrameLayout.LayoutParams(-1, -1));
+        View shade = new View(this);
+        shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, new int[]{0xF2000000, 0xA6000000}));
+        loading.addView(shade, new FrameLayout.LayoutParams(-1, -1));
+        LinearLayout middle = new LinearLayout(this);
+        middle.setOrientation(LinearLayout.VERTICAL);
+        middle.setGravity(Gravity.CENTER_HORIZONTAL);
+        loadingName = Ui.text(this, 26, Ui.DIM, true);
+        loadingName.setGravity(Gravity.CENTER);
+        loadingTitle = Ui.title(this, 52);
+        loadingTitle.setGravity(Gravity.CENTER);
+        loadingTitle.setPadding(Ui.px(this, 120), Ui.px(this, 10), Ui.px(this, 120), Ui.px(this, 44));
+        android.widget.ProgressBar spin = new android.widget.ProgressBar(this);
+        spin.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(0xFFE50914));
+        middle.addView(loadingName);
+        middle.addView(loadingTitle);
+        middle.addView(spin, new LinearLayout.LayoutParams(Ui.px(this, 84), Ui.px(this, 84)));
+        loading.addView(middle, new FrameLayout.LayoutParams(-1, -2, Gravity.CENTER));
+        root.addView(loading, new FrameLayout.LayoutParams(-1, -1));
 
         problem = Ui.text(this, 34, Color.WHITE, false);
         problem.setGravity(Gravity.CENTER);
@@ -145,6 +213,7 @@ public class PlayerActivity extends Activity {
             if (resume && p != null && p.resumable()) video.seekTo((int) p.position);
             video.start();
             showControls();
+            loading.animate().alpha(0f).setDuration(400).withEndAction(() -> loading.setVisibility(View.GONE)).start();
         });
         video.setOnCompletionListener(mp -> ended());
         video.setOnErrorListener((mp, what, extra) -> {
@@ -154,6 +223,7 @@ public class PlayerActivity extends Activity {
                     : "This TV can't play this video (" + ext.toUpperCase(java.util.Locale.ROOT) + ").\n"
                     + "Try an MP4 or MKV with H.264 or H.265 video.");
             problem.setVisibility(View.VISIBLE);
+            loading.setVisibility(View.GONE);
             main.postDelayed(this::finish, 6000);
             return true;
         });
@@ -166,6 +236,16 @@ public class PlayerActivity extends Activity {
     private void load() {
         prepared = false;
         Library.Video v = current();
+        next.setVisibility(View.GONE);
+        nextHidden = afterEnd = false;
+        loading.animate().cancel();
+        loading.setAlpha(1f);
+        loading.setVisibility(View.VISIBLE);
+        loadingName.setText(t.series ? t.title : "");
+        loadingName.setVisibility(t.series ? View.VISIBLE : View.GONE);
+        loadingTitle.setText(t.series ? "S" + v.season + ":E" + v.number + "  " + v.title : t.title);
+        Images.into(loadingPic, t.series && v.background != null ? v.background : t.background != null ? t.background : t.poster,
+                getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
         heading.setText(t.title);
         sub.setText(t.series ? "S" + v.season + ":E" + v.number + "  " + v.title : t.meta());
         keysHint();
@@ -201,6 +281,15 @@ public class PlayerActivity extends Activity {
                 bar.set(dur > 0 ? (float) pos / dur : 0);
                 clock.setText(Ui.time(pos) + "  /  " + Ui.time(Math.max(0, dur)));
                 if (System.currentTimeMillis() - lastSaved > 5000 && video.isPlaying()) save();
+                // Up next, in the last 20 seconds of an episode with one after it.
+                if (!afterEnd) {
+                    long left = dur - pos;
+                    boolean due = index + 1 < list.size() && dur > 120000 && left <= 20000 && left > 0 && !nextHidden;
+                    if (due && next.getVisibility() != View.VISIBLE) showNext();
+                    else if (!due && next.getVisibility() == View.VISIBLE) next.setVisibility(View.GONE);
+                    if (due) nextFill.setScaleX(Math.min(1f, (20000 - left) / 20000f));
+                    if (left > 20000) nextHidden = false;
+                }
             }
             boolean show = !prepared || !video.isPlaying() || System.currentTimeMillis() < hideAt;
             float a = show ? 1f : 0f;
@@ -226,27 +315,31 @@ public class PlayerActivity extends Activity {
         Progress.save(this, current().file, video.getCurrentPosition(), video.getDuration());
     }
 
-    // The end: watched. The next episode in 5 seconds, or back to where this was opened from.
+    private void showNext() {
+        Library.Video n = list.get(index + 1);
+        nextName.setText("S" + n.season + ":E" + n.number + "  " + n.title);
+        Images.into(nextPic, n.background, Ui.px(this, 336), Ui.px(this, 189));
+        next.setAlpha(0f);
+        next.setTranslationX(Ui.px(this, 60));
+        next.setVisibility(View.VISIBLE);
+        next.animate().alpha(1f).translationX(0).setDuration(350).setInterpolator(new android.view.animation.DecelerateInterpolator(2f)).start();
+    }
+
+    // The end: watched. Up next was showing: the next episode now. Hidden (or the episode was short): the
+    // card, and the next one in 5 seconds. The last one: back to where it was opened from.
     private void ended() {
         Progress.save(this, current().file, video.getDuration(), video.getDuration());
         if (index + 1 >= list.size()) { finish(); return; }
-        countdown = 5;
-        Library.Video n = list.get(index + 1);
-        next.setVisibility(View.VISIBLE);
-        Runnable count = new Runnable() {
-            @Override
-            public void run() {
-                if (next.getVisibility() != View.VISIBLE) return;
-                if (countdown <= 0) { playNext(); return; }
-                next.setText("Next:  S" + n.season + ":E" + n.number + "  " + n.title + "\nStarting in " + countdown + "  ·  OK to start now");
-                countdown--;
-                main.postDelayed(this, 1000);
-            }
-        };
-        main.post(count);
+        if (next.getVisibility() == View.VISIBLE) { playNext(); return; }
+        afterEnd = true;
+        showNext();
+        nextFill.setScaleX(0);
+        nextFill.animate().scaleX(1f).setDuration(5000).setInterpolator(new android.view.animation.LinearInterpolator())
+                .withEndAction(() -> { if (afterEnd && next.getVisibility() == View.VISIBLE) playNext(); }).start();
     }
 
     private void playNext() {
+        nextFill.animate().cancel();
         next.setVisibility(View.GONE);
         index++;
         resume = true;
@@ -263,9 +356,14 @@ public class PlayerActivity extends Activity {
     @Override
     public boolean onKeyDown(int code, KeyEvent e) {
         if (next.getVisibility() == View.VISIBLE) {
-            if (code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER) { playNext(); return true; }
-            if (code == KeyEvent.KEYCODE_BACK) { finish(); return true; }
-            return true;
+            if (code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER) { save(); playNext(); return true; }
+            if (code == KeyEvent.KEYCODE_BACK) {
+                if (afterEnd) { finish(); return true; }
+                nextHidden = true; // watch the end: the next one still starts after it, with 5 seconds to stop
+                next.animate().alpha(0f).setDuration(200).withEndAction(() -> next.setVisibility(View.GONE)).start();
+                return true;
+            }
+            if (afterEnd) return true;
         }
         int held = e.getRepeatCount();
         switch (code) {

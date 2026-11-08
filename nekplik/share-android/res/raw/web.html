@@ -222,7 +222,7 @@
   .player { position: fixed; inset: 0; z-index: 60; background: #000; display: flex; align-items: center; justify-content: center;
             animation: fadein .35s var(--ease) both; }
   .player video { width: 100%; height: 100%; background: #000; }
-  .player .top { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 14px; padding: 18px 22px 40px;
+  .player .top { position: absolute; z-index: 4; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 14px; padding: 18px 22px 40px;
                  background: linear-gradient(rgba(0,0,0,.8), rgba(0,0,0,0)); transition: opacity .4s var(--ease); }
   .player.idle .top { opacity: 0; }
   .player.idle { cursor: none; }
@@ -234,6 +234,41 @@
                      background: rgba(22,17,19,.92); border-radius: 10px; animation: rise .4s var(--ease) both; }
   video::cue { background: rgba(0,0,0,.55); font-size: 1.15em; }
   @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  /* Loading a video: its picture, dimmed, its name and a spinner. */
+  .player .loading { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; background: #000; transition: opacity .5s var(--ease); }
+  .player .loading.gone { opacity: 0; pointer-events: none; }
+  .player .loading .pic { position: absolute; inset: 0; background: center / cover no-repeat; opacity: .32; transform: scale(1.04); }
+  .player .loading::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(0,0,0,.15), rgba(0,0,0,.85)); }
+  .player .loading .mid { position: relative; z-index: 1; text-align: center; padding: 0 24px; animation: rise .6s var(--ease) both; }
+  .player .loading .series { color: var(--dim); font-weight: 600; font-size: clamp(15px, 1.4vw, 20px); }
+  .player .loading .name { font-weight: 800; font-size: clamp(24px, 3.2vw, 46px); letter-spacing: -.01em; margin: 6px 0 34px; text-shadow: 0 2px 20px rgba(0,0,0,.6); }
+  .spin { width: 54px; height: 54px; margin: 0 auto; border-radius: 50%; border: 4px solid rgba(255,255,255,.14); border-top-color: var(--red); animation: spin .85s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .player .wait { position: absolute; z-index: 1; pointer-events: none; opacity: 0; transition: opacity .3s; }
+  .player.buffering .wait { opacity: 1; }
+  .player .full { background: none; border: 0; padding: 4px; display: grid; place-items: center; transition: transform .2s var(--ease); }
+  .player .full:hover { transform: scale(1.12); }
+  .player .full svg { width: 26px; height: 26px; }
+  /* Up next: the next episode, with a button filling up until it starts. */
+  .player .upnext { position: absolute; right: 3vw; bottom: 92px; z-index: 3; display: flex; gap: 18px; align-items: center; padding: 14px 22px 14px 14px;
+                    background: rgba(24,20,22,.95); border-radius: 12px; box-shadow: 0 18px 50px rgba(0,0,0,.6); animation: slidein .45s var(--ease) both; }
+  @keyframes slidein { from { opacity: 0; transform: translate3d(40px, 0, 0); } to { opacity: 1; transform: none; } }
+  .player .upnext .shot { width: 224px; aspect-ratio: 16 / 9; flex: none; border-radius: 6px; background: var(--raised) center / cover no-repeat; }
+  .player .upnext .label { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+  .player .upnext .ename { font-weight: 700; font-size: 17px; margin: 6px 0 14px; max-width: 290px;
+                           display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .player .upnext .buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+  .player .upnext button { border: 0; border-radius: 4px; padding: 9px 18px; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .player .upnext .go { position: relative; overflow: hidden; background: #fff; color: #111; }
+  .player .upnext .go i { position: absolute; inset: 0; background: #b9b9b9; transform-origin: left; transform: scaleX(0); transition: transform .3s linear; }
+  .player .upnext .go span { position: relative; display: flex; gap: 8px; align-items: center; }
+  .player .upnext .go svg { width: 17px; height: 17px; }
+  .player .upnext .credits { background: rgba(255,255,255,.14); color: #fff; }
+  .player .upnext .credits:hover { background: rgba(255,255,255,.24); }
+  @media (max-width: 640px) {
+    .player .upnext { left: 16px; right: 16px; bottom: 76px; padding: 14px 16px; }
+    .player .upnext .shot { width: 112px; }
+  }
 
   /* ---- While it loads: grey shapes where things will be ---- */
   .skeleton { padding: 120px var(--pad) 0; }
@@ -314,6 +349,7 @@ const natural = (a, b) => collator.compare(a, b);
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const ICON = {
+  full: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
   play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L7.5 3.64A1 1 0 0 0 6 4.5z"/></svg>',
   info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.5" stroke-linecap="round"/></svg>',
   down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg>',
@@ -1045,7 +1081,7 @@ function refreshContinue() {
 
 // ---- The player ----
 
-let idleTimer;
+let idleTimer, nextTimer;
 function play(t, v, resume, anyway) {
   closePeek(true);
   const box = $("#player");
@@ -1061,9 +1097,42 @@ function play(t, v, resume, anyway) {
     if (!history.state || !history.state.player) history.pushState({ player: true }, "");
     return;
   }
-  box.innerHTML = `<video controls autoplay playsinline preload="auto"></video>
-    <div class="top"><button class="back" aria-label="Back">${ICON.back}</button><div class="what">${esc(name)}</div></div>`;
-  const video = box.querySelector("video");
+  // The player is made once, and kept from one episode to the next (so full screen stays on).
+  clearTimeout(nextTimer);
+  let video = box.querySelector("video");
+  if (!video) {
+    box.innerHTML = `<video controls autoplay playsinline preload="auto" controlslist="nofullscreen"></video>
+      <div class="spin wait"></div>
+      <div class="loading"><div class="pic"></div><div class="mid"><div class="series"></div><div class="name"></div><div class="spin"></div></div></div>
+      <div class="upnext hidden"><div class="shot"></div><div>
+        <div class="label">Next episode</div><div class="ename"></div>
+        <div class="buttons"><button class="go"><i></i><span>${ICON.play}Next episode</span></button><button class="credits"></button></div></div></div>
+      <div class="top"><button class="back" aria-label="Back">${ICON.back}</button><div class="what"></div>
+        <button class="full" aria-label="Full screen">${ICON.full}</button></div>`;
+    video = box.querySelector("video");
+    const full = () => {
+      if (document.fullscreenElement) return document.exitFullscreen().catch(() => {});
+      if (box.requestFullscreen) box.requestFullscreen().catch(() => {});
+      else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen(); // iPhone: only the video itself
+    };
+    box.querySelector(".full").onclick = full;
+    video.ondblclick = full;
+  }
+  box.querySelectorAll(".problem").forEach(x => x.remove());
+  video.querySelectorAll("track").forEach(x => x.remove());
+  box.querySelector(".what").textContent = name;
+  box.classList.remove("buffering");
+
+  // Loading: until it plays.
+  const ld = box.querySelector(".loading");
+  const pic = t.series ? v.background || t.background || t.poster : t.background || t.poster;
+  ld.querySelector(".pic").style.backgroundImage = pic ? `url('${img(t.drive, pic, 1280)}')` : "";
+  ld.querySelector(".series").textContent = t.series ? t.title : "";
+  ld.querySelector(".name").textContent = t.series ? `S${v.season}:E${v.number}  ${v.title}` : t.title;
+  ld.classList.remove("gone");
+  video.onplaying = () => { ld.classList.add("gone"); box.classList.remove("buffering"); };
+  video.onwaiting = () => box.classList.add("buffering");
+
   video.src = url(t.drive, v.file.path);
   video.dataset.key = v.key;
   v.subtitles.forEach((s, i) => {
@@ -1081,20 +1150,61 @@ function play(t, v, resume, anyway) {
     const on = [...video.textTracks].some(tr => tr.mode === "showing");
     try { localStorage.setItem("nekplik-subtitles", on ? "on" : "off"); } catch (e) {}
   };
-  video.addEventListener("loadedmetadata", () => { if (resume && resumable(p)) video.currentTime = p.pos; }, { once: true });
+  video.onloadedmetadata = () => { if (resume && resumable(p)) video.currentTime = p.pos; };
+  video.play().catch(() => {});
+
+  // Up next: in an episode's last 20 seconds, the next one, its button filling up until the end, when
+  // it starts. "Watch credits" hides it; after the end there are then 5 seconds to stop.
+  const eps = t.series ? episodesOf(t) : [], nextV = eps[eps.indexOf(v) + 1];
+  const up = box.querySelector(".upnext"), fill = up.querySelector(".go i"), other = up.querySelector(".credits");
+  let hidden = false, afterEnd = false;
+  up.classList.add("hidden");
+  const showUp = () => {
+    if (!up.classList.contains("hidden")) return;
+    up.querySelector(".shot").style.backgroundImage = nextV.background ? `url('${img(t.drive, nextV.background, 400)}')` : "";
+    up.querySelector(".ename").textContent = `S${nextV.season}:E${nextV.number}  ${nextV.title}`;
+    other.textContent = afterEnd ? "Cancel" : "Watch credits";
+    up.classList.remove("hidden");
+  };
+  const goNext = () => {
+    clearTimeout(nextTimer);
+    saveProgress(v.key, video.duration || 0, video.duration || 0); // watched
+    play(t, nextV, true);
+  };
+  up.querySelector(".go").onclick = goNext;
+  other.onclick = () => {
+    if (afterEnd) { clearTimeout(nextTimer); return stop(); }
+    hidden = true;
+    up.classList.add("hidden");
+  };
   let last = 0;
   video.ontimeupdate = () => {
+    if (nextV && !afterEnd) {
+      const d = video.duration, left = d - video.currentTime;
+      const due = d > 120 && left <= 20 && left > 0 && !hidden;
+      if (due) { showUp(); fill.style.transition = ""; fill.style.transform = `scaleX(${Math.min(1, (20 - left) / 20)})`; }
+      else up.classList.add("hidden");
+      if (left > 20) hidden = false;
+    }
     if (Math.abs(video.currentTime - last) < 5) return;
     last = video.currentTime;
     saveProgress(v.key, video.currentTime, video.duration || 0);
   };
   video.onended = () => {
     saveProgress(v.key, video.duration, video.duration);
-    if (!t.series) return stop();
-    const eps = episodesOf(t), i = eps.indexOf(v);
-    if (i >= 0 && i < eps.length - 1) play(t, eps[i + 1], false); else stop();
+    if (!nextV) return stop();
+    if (!up.classList.contains("hidden")) return goNext();
+    afterEnd = true;
+    showUp();
+    fill.style.transition = "none";
+    fill.style.transform = "scaleX(0)";
+    void fill.offsetWidth;
+    fill.style.transition = "transform 5s linear";
+    fill.style.transform = "scaleX(1)";
+    nextTimer = setTimeout(goNext, 5000);
   };
   video.onerror = () => {
+    ld.classList.add("gone");
     const p2 = document.createElement("div");
     p2.className = "problem";
     p2.innerHTML = `This browser can't play this video (${esc(ext(v.file.name).toUpperCase())}).<br><br>It plays in NEKPLIK on the TV.`;
@@ -1109,6 +1219,7 @@ function play(t, v, resume, anyway) {
 }
 
 function stop(fromHistory) {
+  clearTimeout(nextTimer);
   const box = $("#player"), video = box.querySelector("video");
   if (video) {
     if (video.currentTime && !video.ended && video.dataset.key) saveProgress(video.dataset.key, video.currentTime, video.duration || 0);
