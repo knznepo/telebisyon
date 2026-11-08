@@ -42,13 +42,16 @@ final class Library {
     static final class Video {
         Node file;
         String title, description;
-        Node thumb;
+        // Its picture: its own background.jpg, else its season's, else the series'. Its poster is the series'.
+        Node poster, background;
+        Node ownBackground; // in the episode's folder, or "01 Pilot.jpg" beside the video
         List<Node> subtitles = new ArrayList<>();
         int season, number; // for episodes: which season (from 1) and which episode in it (from 1)
     }
 
     static final class Season {
         String name;
+        Node background; // the season folder's background.jpg, if it has one
         List<Video> episodes = new ArrayList<>();
     }
 
@@ -353,9 +356,17 @@ final class Library {
             if (loose != null) t.seasons.add(loose);
             for (Node s : seasonDirs) {
                 Season season = episodes(s, s.name(), t.seasons.size() + 1, true);
-                if (season != null) t.seasons.add(season);
+                if (season != null) {
+                    season.background = background(s);
+                    t.seasons.add(season);
+                }
             }
             if (t.seasons.isEmpty()) t.problems.add("No episodes: put video files in a folder per season");
+            for (Season s : t.seasons) for (Video v : s.episodes) {
+                v.background = v.ownBackground != null ? v.ownBackground : s.background != null ? s.background
+                        : t.background != null ? t.background : t.poster;
+                v.poster = t.poster != null ? t.poster : v.background;
+            }
             series.add(t);
         }
     }
@@ -377,8 +388,8 @@ final class Library {
         return s.episodes.isEmpty() ? null : s;
     }
 
-    // An episode in a folder of its own: "Episode 1/" with the video, info.json (title, description) and a
-    // picture (background.jpg, thumb.jpg or poster.jpg). Without info.json, the folder's name is the
+    // An episode in a folder of its own: "Episode 1/" with the video (any name), info.json (title,
+    // description), background.jpg and subtitles. Without info.json, the folder's name is the
     // episode's, unless it's only "Episode 1": then the video's name is.
     private static Video episodeFolder(Node dir) {
         Node file = null;
@@ -395,18 +406,19 @@ final class Library {
                 if (d != null) v.description = d;
             } catch (Exception ignored) {}
         }
-        if (v.thumb == null) {
-            Node poster = null, any = null;
-            for (Node x : list(dir)) {
-                if (!x.isFile() || !IMAGE.contains(ext(x)) || x.name().startsWith(".")) continue;
-                String b = base(x).toLowerCase(Locale.ROOT);
-                if (BACKGROUND.contains(b) || b.equals("thumb") || b.equals("thumbnail") || b.equals("still")) { v.thumb = x; break; }
-                if (POSTER.contains(b) && poster == null) poster = x;
-                if (any == null) any = x;
-            }
-            if (v.thumb == null) v.thumb = poster != null ? poster : any;
-        }
+        Node own = background(dir);
+        if (own != null) v.ownBackground = own;
         return v;
+    }
+
+    // A season's or episode's background.jpg (or fanart.jpg, still.jpg, thumb.jpg and the like), or null.
+    private static Node background(Node dir) {
+        for (Node x : list(dir)) {
+            if (!x.isFile() || x.name().startsWith(".") || !IMAGE.contains(ext(x))) continue;
+            String b = base(x).toLowerCase(Locale.ROOT);
+            if (BACKGROUND.contains(b) || b.equals("still") || b.equals("thumb") || b.equals("thumbnail")) return x;
+        }
+        return null;
     }
 
     // Episodes go by their number, however it's written: "Episode 2", "E02", "S01E02", "1x02", "02 Pilot".
@@ -433,7 +445,7 @@ final class Library {
                 v.description = emptyToNull(j.optString("description"));
             } catch (Exception ignored) {}
         }
-        v.thumb = sibling(file, base, IMAGE);
+        v.ownBackground = sibling(file, base, IMAGE); // "01 Pilot.jpg": a picture from the episode
         v.subtitles = subtitles(file);
         return v;
     }

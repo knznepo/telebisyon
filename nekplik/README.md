@@ -52,13 +52,13 @@ Movies/
 Series/
   The Office/                poster.jpg, background.jpg, info.json
     Season 1/                01 Pilot.mp4, 02 Diversity Day.mp4
-    Season 2/
+    Season 2/                background.jpg (optional: for its episodes)
       Episode 1/             or a folder per episode: video.mkv, info.json, background.jpg, .srt
 ```
 
 - Only what's inside **Movies** and **Series** shows: films anywhere else on the drive don't.
 - `info.json` needs only a **title** and a **description**. Year, rating, score, runtime, genres, cast, director, tagline and `"collection": "Fast & Furious"` are optional. Without one, the folder's name is the title.
-- Episodes go in a folder per season, straight inside the series' folder: as files, or a folder each (`Season 1/Episode 1/`) with the episode's own `info.json` and picture. They go by the number in their name (`Episode 2`, `S01E02`, `02 Pilot`).
+- Episodes go in a folder per season, straight inside the series' folder: as files, or a folder each (`Season 1/Episode 1/`) with the video (any name), `info.json`, `background.jpg` and `.srt` subtitles (any name). Only the series' folder needs a poster; an episode without a background uses its season's, and failing that the series'. They go by the number in their name (`Episode 2`, `S01E02`, `02 Pilot`).
 
 Everything, with examples: **[docs/library.md](docs/library.md)**.
 

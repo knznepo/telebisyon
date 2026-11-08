@@ -32,7 +32,7 @@ import java.util.TreeMap;
 
 // The browsing screen: a title big at the top (its background, title, year, rating and description),
 // and rows of posters under it: Continue watching, Recently added, Movies, Series, a row per collection
-// (Fast & Furious), and a row per genre, with Search at the top right. At the top, a few featured
+// (Fast & Furious), and genre rows (a random few each visit), with Search at the top right. At the top, a few featured
 // titles take turns, with Play and More info, until you go down to the rows; then it shows the focused
 // one. With no drive it says so; plugging one in or taking it out rescans by itself.
 public class MainActivity extends Activity {
@@ -494,7 +494,9 @@ public class MainActivity extends Activity {
 
     private View card(Card c, LinearLayout row, boolean wide) {
         int w = Ui.px(this, wide ? 400 : 200), h = Ui.px(this, wide ? 225 : 300), r = Ui.px(this, 14);
-        Node pic = wide ? (c.title.background != null ? c.title.background : c.title.poster) : c.title.poster;
+        // An episode to go on with: its own pictures (or its season's), else the series'.
+        Node pic = c.video != null && c.title.series ? (wide ? c.video.background : c.video.poster)
+                : wide ? (c.title.background != null ? c.title.background : c.title.poster) : c.title.poster;
         FrameLayout card = new FrameLayout(this);
         card.setFocusable(true);
         card.setClickable(true);
@@ -586,7 +588,7 @@ public class MainActivity extends Activity {
         hero.setAlpha(0.35f);
         hero.animate().alpha(1f).setDuration(260).start();
         // Only once the focus rests, so going along a row quickly doesn't load every background.
-        backdrop(t.background != null ? t.background : t.poster, 250);
+        backdrop(c.video != null && t.series && c.video.background != null ? c.video.background : t.background != null ? t.background : t.poster, 250);
     }
 
     // The picture behind the top of the screen: the new one fades in over the old, then slowly zooms out.

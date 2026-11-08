@@ -285,7 +285,7 @@ public class DetailsActivity extends Activity {
         ImageView img = new ImageView(this);
         img.setScaleType(ImageView.ScaleType.CENTER_CROP);
         pic.addView(img, new FrameLayout.LayoutParams(-1, -1));
-        Node art = v.thumb != null ? v.thumb : t.background != null ? t.background : t.poster;
+        Node art = v.background;
         Images.into(img, art, w, h);
         Progress.Entry p = Progress.get(this, v.file);
         if (p != null) {

@@ -488,12 +488,12 @@ function episode(file, drive) {
   const v = { file, title: cleanEpisode(b), subtitles: subtitles(file), key: drive.name + "|" + file.path };
   const json = dir.children.get(b + ".json");
   if (json) { try { const j = JSON.parse(text(json)); if (j.title) v.title = j.title; v.description = j.description || null; } catch (e) {} }
-  for (const e of IMAGE) { const p = dir.children.get(b + "." + e) || dir.children.get(b + "." + e.toUpperCase()); if (p) { v.thumb = p; break; } }
+  for (const e of IMAGE) { const p = dir.children.get(b + "." + e) || dir.children.get(b + "." + e.toUpperCase()); if (p) { v.ownBackground = p; break; } } // "01 Pilot.jpg"
   return v;
 }
 
-// An episode in a folder of its own: "Episode 1/" with the video, info.json (title, description) and a
-// picture (background.jpg, thumb.jpg or poster.jpg). Without info.json, the folder's name is the
+// An episode in a folder of its own: "Episode 1/" with the video (any name), info.json (title,
+// description), background.jpg and subtitles. Without info.json, the folder's name is the
 // episode's, unless it's only "Episode 1": then the video's name is.
 function episodeFolder(dir, drive) {
   const file = list(dir).filter(isVideo).reduce((a, x) => !a || x.size > a.size ? x : a, null);
@@ -502,12 +502,15 @@ function episodeFolder(dir, drive) {
   if (!/^(episode|ep|e)?\s*\d+$/i.test(dir.name.trim())) v.title = cleanEpisode(dir.name);
   const info = dir.children.get("info.json");
   if (info && !info.dir) { try { const j = JSON.parse(text(info)); if (j.title && String(j.title).trim()) v.title = String(j.title).trim(); if (j.description) v.description = j.description; } catch (e) {} }
-  if (!v.thumb) {
-    const pics = list(dir).filter(x => !x.dir && !x.name.startsWith(".") && IMAGE.includes(ext(x.name)));
-    const named = n => pics.find(x => n.includes(base(x.name).toLowerCase()));
-    v.thumb = named([...BACKGROUND, "thumb", "thumbnail", "still"]) || named(POSTER) || pics[0] || null;
-  }
+  const own = background(dir);
+  if (own) v.ownBackground = own;
   return v;
+}
+
+// A season's or episode's background.jpg (or fanart.jpg, still.jpg, thumb.jpg and the like), or null.
+function background(dir) {
+  return list(dir).find(x => !x.dir && !x.name.startsWith(".") && IMAGE.includes(ext(x.name)) &&
+    [...BACKGROUND, "still", "thumb", "thumbnail"].includes(base(x.name).toLowerCase())) || null;
 }
 
 function readSeries(dir, drive) {
@@ -519,7 +522,12 @@ function readSeries(dir, drive) {
     if (loose) t.seasons.push(loose);
     for (const s of list(f)) if (s.dir && !s.name.startsWith(".")) {
       const season = episodes(s, s.name, t.seasons.length + 1, drive, true);
-      if (season) t.seasons.push(season);
+      if (season) { season.background = background(s); t.seasons.push(season); }
+    }
+    // Each episode's picture: its own background, else its season's, else the series'. Its poster is the series'.
+    for (const s of t.seasons) for (const v of s.episodes) {
+      v.background = v.ownBackground || s.background || t.background || t.poster || null;
+      v.poster = t.poster || v.background;
     }
     if (t.seasons.length) lib.series.push(t);
   }
@@ -661,7 +669,9 @@ function continueWatching() {
 // added; posters everywhere else.
 function card(t, opts = {}, i = 0) {
   const portrait = !opts.wide; // a title without a poster still gets a poster-shaped card, with its name
-  const pic = portrait ? t.poster : (t.background || t.poster);
+  // An episode to go on with: its own pictures (or its season's), else the series'.
+  const ep = t.series && opts.v;
+  const pic = portrait ? (ep && opts.v.poster || t.poster) : (ep && opts.v.background || t.background || t.poster);
   const b = document.createElement("button");
   b.className = "card" + (portrait ? " poster" : "") + (pic ? "" : " bare") + (opts.p && opts.p.dur ? " has-bar" : "");
   b.style.setProperty("--i", i);
@@ -988,7 +998,7 @@ function seasons(t, box) {
     l.innerHTML = "";
     for (const v of t.seasons[i].episodes) {
       const p = progress(v.key), e = document.createElement("div");
-      const shot = v.thumb || back;
+      const shot = v.background || back;
       e.className = "ep";
       e.tabIndex = 0;
       e.innerHTML = `<div class="n">${v.number}</div>

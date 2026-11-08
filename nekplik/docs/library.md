@@ -24,11 +24,12 @@ Series/
       01 Pilot.en.srt    subtitles (optional)
       02 Diversity Day.mkv
     Season 2/
-      Episode 1/         or a folder per episode, with its own files:
+      background.jpg     the season's picture, for its episodes without their own (optional)
+      Episode 1/         or a folder per episode:
         video.mkv          the episode (any name)
         info.json          its title and description (optional)
         background.jpg     its picture (optional)
-        video.en.srt       subtitles (optional)
+        English.srt        subtitles (optional, any name: the episode is the folder's only video)
       Episode 2/
         ...
 ```
@@ -58,7 +59,7 @@ A collection with two films or more gets its own row on the main screen, in rele
 
 ## Series
 
-The same files in the series' folder (`poster.jpg`, `background.jpg`, `info.json`), and a **folder per season** with the episodes in it. Seasons and episodes go in name order, with numbers read as numbers (`Season 2` before `Season 10`), so start names with the number: `01 Pilot.mp4`, `02 Diversity Day.mkv`. If a series has just one season, the episodes can go straight in the series' folder.
+The same files in the series' folder (`poster.jpg`, `background.jpg`, `info.json`), and a **folder per season** with the episodes in it. Seasons go in name order, with numbers read as numbers (`Season 2` before `Season 10`); episodes go by the number in their name (below), so start names with the number: `01 Pilot.mp4`, `02 Diversity Day.mkv`. If a series has just one season, the episodes can go straight in the series' folder.
 
 An episode's name is its file name, without a number in front (`01 Pilot` and `S01E01 - Pilot` read *Pilot*). For more, put a `.json` with the same name next to it:
 
@@ -68,7 +69,9 @@ An episode's name is its file name, without a number in front (`01 Pilot` and `S
 
 and a `.jpg` with the same name for its picture (else the series' background).
 
-**Or a folder per episode**, inside the season's folder: `Season 1/Episode 1/`, with the video (any name), and, if you like, an `info.json` with the same `title` and `description`, a picture (`background.jpg`, `thumb.jpg` or `poster.jpg`; a wide one looks best) and `.srt` subtitles. Without an `info.json`, the folder's name is the episode's (`02 - The Blind Banker` reads *The Blind Banker*), unless it's only `Episode 2`: then the video's name is. Both ways can be mixed in a season.
+**Or a folder per episode**, inside the season's folder: `Season 1/Episode 1/`, with the video (any name), and, if you like, an `info.json` with the same `title` and `description`, a `background.jpg` and `.srt` subtitles. Any `.srt` in the folder is the episode's, whatever its name (`English.srt`, `video.en.srt`); a language in the name (`.en.srt`, `.English.srt`) is what the subtitles menu shows. Without an `info.json`, the folder's name is the episode's (`02 - The Blind Banker` reads *The Blind Banker*), unless it's only `Episode 2`: then the video's name is. Both ways can be mixed in a season.
+
+**Only the series' folder needs a poster.** Seasons and episodes only have a wide `background.jpg`: an episode's picture is its own (in its folder, or `01 Pilot.jpg` beside the video), else its **season's** (`Season 1/background.jpg`), else the **series'**. It shows in the episode list and on *Continue watching*.
 
 Episodes go by the number in their name, however it's written: `Episode 2`, `E02`, `S01E02`, `1x02` or `02 Pilot`.
 
