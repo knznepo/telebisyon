@@ -78,6 +78,7 @@ public class MainActivity extends Activity {
         }
     };
     private volatile boolean scanning;
+    private Intro intro;
 
     @Override
     protected void onCreate(Bundle saved) {
@@ -173,6 +174,7 @@ public class MainActivity extends Activity {
         root.addView(message, new FrameLayout.LayoutParams(-1, -1));
         setContentView(root);
         say("Looking for movies…");
+        if (saved == null) intro = Intro.show(this, root); // opening NEKPLIX: the logo and its sound, once
     }
 
     @Override
@@ -191,8 +193,19 @@ public class MainActivity extends Activity {
         if (featuring && picks.size() > 1) { main.removeCallbacks(rotate); main.postDelayed(rotate, FEATURE_MS); }
     }
 
+    // While the intro shows, a key skips it (Back too, to the screen rather than out of the app).
+    @Override
+    public boolean dispatchKeyEvent(android.view.KeyEvent e) {
+        if (intro != null && intro.showing()) {
+            if (e.getAction() == android.view.KeyEvent.ACTION_UP) intro.finish();
+            return true;
+        }
+        return super.dispatchKeyEvent(e);
+    }
+
     @Override
     protected void onPause() {
+        if (intro != null) intro.stop();
         super.onPause();
         unregisterReceiver(drives);
         main.removeCallbacks(rescan);

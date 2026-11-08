@@ -4,3 +4,5 @@ key.jks
 .DS_Store
 NEKPLIX Share.app/
 __pycache__/
+# The intro's sound: kept on this computer only (see README, "The intro").
+res/raw/intro.m4a
