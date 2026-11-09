@@ -353,15 +353,25 @@ final class Server {
     }
 
     // This device's address on the Wi-Fi, for the link to type in a browser: "http://192.168.1.20:8765".
+    // With the phone's own hotspot on, that's the hotspot's address. Mobile data can have a private
+    // address too (10.x on many networks), which nothing on the Wi-Fi can reach, so it comes last.
     static String address(int port) {
+        String best = null;
+        int bestRank = Integer.MAX_VALUE;
         try {
             for (java.net.NetworkInterface n : java.util.Collections.list(java.net.NetworkInterface.getNetworkInterfaces())) {
                 if (!n.isUp() || n.isLoopback()) continue;
+                String name = n.getName() == null ? "" : n.getName().toLowerCase(java.util.Locale.ROOT);
+                int rank = name.matches("(s?wlan|ap|softap|wigig|eth|swlan)\\d*.*") ? 0
+                        : name.matches("(rmnet|ccmni|v4-|clat|tun|ppp|dummy|p2p|seth|rev_rmnet|epdg).*") ? 2 : 1;
                 for (java.net.InetAddress a : java.util.Collections.list(n.getInetAddresses()))
-                    if (a instanceof java.net.Inet4Address && a.isSiteLocalAddress()) return "http://" + a.getHostAddress() + (port == 80 ? "" : ":" + port);
+                    if (a instanceof java.net.Inet4Address && a.isSiteLocalAddress() && rank < bestRank) {
+                        best = a.getHostAddress();
+                        bestRank = rank;
+                    }
             }
         } catch (Exception ignored) {}
-        return null;
+        return best == null ? null : "http://" + best + (port == 80 ? "" : ":" + port);
     }
 
     // A poster or background made small for the browser version's cards: a full-size background is
