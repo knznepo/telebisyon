@@ -71,12 +71,12 @@ cd <Telebisyon folder>
 sh setup.sh 192.168.1.50
 ```
 
-This downloads the home screen, installs it, turns on the phone pages, sets the TV's clock, and copies any photos.
+It asks what to do: **1** installs everything (the home screen, phone pages, Files page, remote, clock, photos and NEKPLIK, plus a PIN if you type one), **2** lets you tick and untick each part; anything already on the TV that you untick is removed. It lists what it will change and asks before it starts. Run it again later to add or remove parts.
 
 - The first time, the TV asks **"Allow USB debugging?"**. Tick **Always allow**, press **OK**, and run the command again if it stopped.
 - If it asks to turn off the TV's own home screen, answer **y** so the Home button opens the new one. `sh undo.sh 192.168.1.50` puts everything back.
 - **TVs with Google TV** (Sony BRAVIA from 2021, TCL, Hisense and others with the "For you" screen): Home keeps opening Google TV. If you're connected over USB or Network debugging (port 5555), run `GOOGLE_TV=1 YES_SETUP=1 sh setup.sh 192.168.1.50` to turn Google TV's home off, then restart the TV once. On a **Chromecast with Google TV** don't: open Telebisyon from the apps row instead. See [step 5 in the README](README.md#download-and-install) for the details.
-- **Optional, recommended:** add a PIN for the phone pages, and turn on the Files page and the remote: `PIN=123456 FILES=1 REMOTE=1 sh setup.sh 192.168.1.50`.
+- **Recommended:** give the phone pages a PIN when it asks. Without the questions: `PIN=123456 FILES=1 REMOTE=1 sh setup.sh 192.168.1.50`, or `ALL=1` for everything.
 - **Optional:** put photos in the `wallpapers` folder inside the Telebisyon folder first, and they're copied to the TV. You can also add them later from your phone.
 
 ## Use it

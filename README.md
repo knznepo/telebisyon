@@ -30,7 +30,7 @@ Looking for the **TV cleanup** (turning off bloatware, ads and sponsored rows) o
 - **Banners for phone apps** that don't come with one, so every tile matches.
 - **An account avatar** next to the network icon.
 - **A clock that keeps itself right**: internet time and your time zone.
-- **One-step setup** with `setup.sh`, and no build tools needed.
+- **One-step setup** with `setup.sh`: install everything, or choose what to add and remove. No build tools needed.
 
 <table>
 <tr>
@@ -67,10 +67,26 @@ You need a computer on the same Wi-Fi as the TV, only for setup. After that, eve
 sh setup.sh 192.168.1.50
 ```
 
-This downloads the home screen, installs it, turns on the phone pages, sets the TV's clock and copies any photos in the `wallpapers` folder.
+It asks what to do:
+
+- **1 Install everything:** the home screen, the phone pages, the Files page, the remote, the TV's clock, the photos in the `wallpapers` folder and [NEKPLIK](nekplik/README.md). It asks for a PIN for the phone pages (recommended; Enter for none).
+- **2 Choose:** a list to tick and untick. What's on the TV already is ticked; untick it to remove it. It shows what it will add and remove, and asks before it changes anything.
+
+```
+  [x] 1  Home screen       Telebisyon itself; everything but the clock and NEKPLIK needs it
+  [x] 2  Phone pages       the TV's web page: messages, wallpapers, Home Assistant
+  [ ] 3  PIN               the phone pages ask for a PIN
+  [x] 4  Files page        the TV's storage and USB drives from a browser
+  [x] 5  Remote            arrows, OK, Back and Home on the /remote page
+  [x] 6  Clock             network time and your time zone
+  [x] 7  Wallpapers        copies the pictures in ./wallpapers
+  [ ] 8  NEKPLIK           movies and series from USB drives and computers
+```
+
+Run it again any time to add or remove something; what you keep is updated.
 
 - The first time, the TV asks **"Allow USB debugging?"**. Tick **Always allow**, press **OK**, and run the command again if it stopped.
-- **Recommended:** add a PIN for the phone pages, and turn on the Files page and the remote: `PIN=123456 FILES=1 REMOTE=1 sh setup.sh 192.168.1.50`.
+- **Without the questions**, for scripts: `ALL=1 sh setup.sh 192.168.1.50` installs everything, or name what you want: `PIN=123456 FILES=1 REMOTE=1 NEKPLIK=1 sh setup.sh 192.168.1.50`. With these it only adds, never removes.
 
 **5. Make it open with the Home button.** This depends on your TV:
 
