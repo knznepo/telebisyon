@@ -180,6 +180,13 @@ public class MainActivity extends Activity {
         // Opening NEKPLIK: the logo and its sound, once. Also when Android rebuilds this screen in a new
         // process (it closed NEKPLIK to free memory), but not when it's rebuilt after a turn of the screen.
         if (saved == null || !Intro.opened) intro = Intro.show(this, root);
+        // The first time, before Android 11: Android's own "Allow NEKPLIK to access files?", after the intro.
+        android.content.SharedPreferences prefs = getSharedPreferences("nekplik", MODE_PRIVATE);
+        if (android.os.Build.VERSION.SDK_INT >= 23 && android.os.Build.VERSION.SDK_INT < 30 && !Library.canRead(this)
+                && !prefs.getBoolean("askedDrives", false)) {
+            prefs.edit().putBoolean("askedDrives", true).apply();
+            main.postDelayed(this::askForDrives, 4500);
+        }
     }
 
     @Override
@@ -205,7 +212,35 @@ public class MainActivity extends Activity {
             if (e.getAction() == android.view.KeyEvent.ACTION_UP) intro.finish();
             return true;
         }
+        if (message.getVisibility() == View.VISIBLE && !Library.canRead(this) && e.getAction() == android.view.KeyEvent.ACTION_UP
+                && (e.getKeyCode() == android.view.KeyEvent.KEYCODE_DPAD_CENTER || e.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER)) {
+            askForDrives();
+            return true;
+        }
         return super.dispatchKeyEvent(e);
+    }
+
+    // Asks to read USB drives and hard disks: Android's "All files access" screen from Android 11 (not
+    // every TV has one: then nekplik.sh on a computer gives it), the storage permission before.
+    private void askForDrives() {
+        if (Library.canRead(this)) return;
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            Intent[] ways = {
+                new Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, android.net.Uri.parse("package:" + getPackageName())),
+                new Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION) };
+            for (Intent i : ways) {
+                try { startActivity(i); return; } catch (Exception ignored) {}
+            }
+            say("This TV has no screen to let NEKPLIK read USB drives.\nShare them from a phone or computer with NEKPLIK Share instead.");
+        } else if (android.os.Build.VERSION.SDK_INT >= 23) {
+            requestPermissions(new String[] { android.Manifest.permission.READ_EXTERNAL_STORAGE }, 1);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int code, String[] names, int[] results) {
+        super.onRequestPermissionsResult(code, names, results);
+        scan();
     }
 
     @Override
@@ -219,10 +254,6 @@ public class MainActivity extends Activity {
     }
 
     private void scan() {
-        if (!Library.canRead(this)) {
-            say("NEKPLIK can't read drives yet.\nOn a computer, run:  sh nekplik.sh <TV_IP>");
-            return;
-        }
         if (scanning) return; // one at a time: asking the Wi-Fi takes a second or two
         scanning = true;
         new Thread(() -> {
@@ -264,7 +295,10 @@ public class MainActivity extends Activity {
 
     private void show(Library lib) {
         if (lib.empty()) {
-            if (lib.drives.isEmpty() && Library.drives(this).isEmpty())
+            if (!Library.canRead(this))
+                say("No movies yet. Share them from a phone or computer on this Wi-Fi with NEKPLIK Share.\n"
+                        + "For a USB drive in the TV, press OK and let NEKPLIK read it.");
+            else if (lib.drives.isEmpty() && Library.drives(this).isEmpty())
                 say("Connect a USB drive or hard disk, or share your movies from a computer (share.py).\nNEKPLIK shows the Movies and Series folders on it.");
             else say("No movies or series found.\nPut them in a Movies or Series folder on the drive, one folder each.");
             return;

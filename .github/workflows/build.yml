@@ -45,6 +45,15 @@ jobs:
           export KEYSTORE
           sh nekplik/build.sh
           sh nekplik/share-android/build.sh
+      # NEKPLIK Share for Windows: the launcher, share.py and the browser version's page, in one folder.
+      - name: NEKPLIK Share for Windows
+        run: |
+          d="out/NEKPLIK Share"; mkdir -p "$d/web"
+          cp "nekplik/share-app/NEKPLIK Share.bat" nekplik/share.py "$d/"
+          cp nekplik/share-android/res/raw/web.html "$d/web/web.html"
+          cp nekplik/res/drawable-xhdpi/logo.png "$d/web/logo.png"
+          cp nekplik/res/drawable-xxxhdpi/icon.png "$d/web/icon.png"
+          (cd out && zip -qr NEKPLIK-Share-Windows.zip "NEKPLIK Share")
       - uses: actions/upload-artifact@v4
         with:
           name: tvhome-apk
@@ -55,6 +64,22 @@ jobs:
           path: |
             nekplik/out/nekplik.apk
             nekplik/share-android/out/nekplik-share.apk
+            out/NEKPLIK-Share-Windows.zip
+
+  # NEKPLIK Share for Mac: an app only a Mac can make (osacompile, sips, iconutil).
+  mac-share:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: NEKPLIK Share.app
+        run: |
+          cd nekplik/share-app
+          sh make-mac-app.sh
+          ditto -c -k --keepParent "NEKPLIK Share.app" ../../NEKPLIK-Share-Mac.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-share
+          path: NEKPLIK-Share-Mac.zip
 
   emulator-test:
     needs: build
@@ -90,7 +115,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [shellcheck, build, emulator-test]
+    needs: [shellcheck, build, emulator-test, mac-share]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -102,9 +127,12 @@ jobs:
         with:
           name: nekplik-apk
           merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: mac-share
       - env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" tvhome.apk $(find . -name nekplik.apk -o -name nekplik-share.apk) \
+          gh release create "$GITHUB_REF_NAME" tvhome.apk $(find . -name nekplik.apk -o -name nekplik-share.apk -o -name 'NEKPLIK-Share-*.zip') \
             --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" \
             --notes "Install with: sh setup.sh <TV_IP>. NEKPLIK alone: sh nekplik/nekplik.sh <TV_IP>"

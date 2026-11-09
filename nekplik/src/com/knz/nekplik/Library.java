@@ -101,7 +101,8 @@ final class Library {
 
     static Library scan(Context c) {
         Library lib = new Library();
-        List<Drive> all = drives(c);
+        // Without leave to read drives, phones and computers sharing on the Wi-Fi still show.
+        List<Drive> all = canRead(c) ? drives(c) : new ArrayList<>();
         all.addAll(shares(c));
         for (Drive d : all) {
             boolean found = false;
@@ -121,7 +122,7 @@ final class Library {
 
     boolean empty() { return movies.isEmpty() && series.isEmpty(); }
 
-    // Whether nekplik.sh let this app read drives: "All files access" from Android 11, else storage.
+    // Whether this app may read drives (asked on the TV, or given by nekplik.sh): "All files access" from Android 11, else storage.
     static boolean canRead(Context c) {
         if (Build.VERSION.SDK_INT >= 30) return Environment.isExternalStorageManager();
         return Build.VERSION.SDK_INT < 23

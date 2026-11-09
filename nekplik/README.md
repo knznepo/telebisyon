@@ -41,6 +41,8 @@ sh nekplik.sh <TV_IP> off      # uninstalls it
 
 It builds NEKPLIK if the computer can (see [Build it yourself](#build-it-yourself)), or downloads the latest release. It also lets NEKPLIK read drives, since TVs have no screen to ask for that, and puts NEKPLIK at the end of Telebisyon's apps row if Telebisyon is installed. Otherwise, open it from the TV's apps.
 
+**Without a computer:** on the TV, install the free **Downloader** app from the Play Store and open `github.com/knznepo/telebisyon/releases/latest/download/nekplik.apk` in it (or copy `nekplik.apk` to a USB stick and open it with the TV's file manager). NEKPLIK then finds phones and computers sharing on the Wi-Fi straight away; for a USB drive in the TV, press **OK** on its message to let it read drives (on TVs without that screen, `nekplik.sh` gives it).
+
 ## Arrange the drive
 
 A **Movies** and a **Series** folder at the **top** of the drive, one folder per movie or series:
@@ -74,8 +76,8 @@ Plug it in; it shows within seconds. The TV must be able to mount it: see [When 
 
 Movies can stay on a laptop, or on a hard disk plugged into it.
 
-- **Mac:** build the app once, in `share-app/`: `sh make-mac-app.sh` makes **NEKPLIK Share.app**. Double-click it, choose the folder or drive (a hard disk is under **Locations**), and it shares in the background, showing the [browser](#watch-in-a-browser) link with **Copy link** and **Show QR code**. Open it again for the link and QR code, or to **Stop sharing**; next time it offers the same folder.
-- **Windows:** double-click **NEKPLIK Share.bat** in `share-app/`, choose the folder, and it shares until you close its window, which shows the browser link. It needs [Python 3](https://www.python.org/downloads/) (tick *Add python.exe to PATH*); allow *Private networks* when Windows asks.
+- **Mac:** download **NEKPLIK-Share-Mac.zip** from the [latest release](https://github.com/knznepo/telebisyon/releases/latest) (the first time, right-click the app and choose **Open**), or build it in `share-app/`: `sh make-mac-app.sh` makes **NEKPLIK Share.app**. Double-click it, choose the folder or drive (a hard disk is under **Locations**), and it shares in the background, showing the [browser](#watch-in-a-browser) link with **Copy link** and **Show QR code**. Open it again for the link and QR code, or to **Stop sharing**; next time it offers the same folder.
+- **Windows:** download **NEKPLIK-Share-Windows.zip** from the [latest release](https://github.com/knznepo/telebisyon/releases/latest), unzip it and double-click **NEKPLIK Share.bat** (or the one in `share-app/`), choose the folder, and it shares until you close its window, which shows the browser link. It needs [Python 3](https://www.python.org/downloads/) (tick *Add python.exe to PATH*); allow *Private networks* when Windows asks.
 - **Any computer, from a terminal:**
 
   ```sh
