@@ -6,6 +6,11 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      add_nekplik_to:
+        description: "Also put NEKPLIK's files (built from this branch) into this existing release, like v1.6.2"
+        required: false
+        default: ""
 
 jobs:
   shellcheck:
@@ -133,6 +138,34 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" tvhome.apk $(find . -name nekplik.apk -o -name nekplik-share.apk -o -name 'NEKPLIK-Share-*.zip') \
-            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" \
-            --notes "Install with: sh setup.sh <TV_IP>. NEKPLIK alone: sh nekplik/nekplik.sh <TV_IP>"
+          files="tvhome.apk $(find . -name nekplik.apk -o -name nekplik-share.apk -o -name 'NEKPLIK-Share-*.zip' | tr '\n' ' ')"
+          # A release made by hand first gets the files added instead.
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" $files --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$GITHUB_REF_NAME" $files --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME · Telebisyon and NEKPLIK" \
+              --notes "Install with: sh setup.sh <TV_IP>. NEKPLIK alone: sh nekplik/nekplik.sh <TV_IP>"
+          fi
+
+  # Run by hand with "add_nekplik_to": NEKPLIK's files into a release that's already out, leaving
+  # its home screen as it is.
+  add-nekplik:
+    if: github.event_name == 'workflow_dispatch' && inputs.add_nekplik_to != ''
+    needs: [build, mac-share]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: nekplik-apk
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: mac-share
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.add_nekplik_to }}
+        run: |
+          gh release upload "$TAG" $(find . -name nekplik.apk -o -name nekplik-share.apk -o -name 'NEKPLIK-Share-*.zip') \
+            --clobber --repo "$GITHUB_REPOSITORY"
