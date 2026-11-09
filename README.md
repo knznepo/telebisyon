@@ -208,6 +208,8 @@ Yes, with **NEKPLIK**, an optional app in the [nekplik/](nekplik/README.md) fold
 
 Once it's installed, NEKPLIK sits at the end of the apps row on the home screen, like any app. On a phone, the TV's web page gets a **NEKPLIK library** tile: a page listing everything found on the drives, and what needs fixing. How to arrange a drive: [nekplik/docs/library.md](nekplik/docs/library.md).
 
+> **Disclaimer:** NEKPLIK is a personal media library and playback application. It does not provide, host, distribute, or include copyrighted movies or television shows. Users are responsible for ensuring that the media they access through the application is legally obtained and used.
+
 </details>
 
 <details>

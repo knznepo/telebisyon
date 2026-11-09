@@ -188,6 +188,10 @@ cd share-app && sh make-mac-app.sh  # NEKPLIK Share.app, for a Mac
 
 **Signing:** inside the Telebisyon folder, both apps are signed with Telebisyon's `key.jks`; on their own, with a `key.jks` made on the first build. Telebisyon's NEKPLIK library page only works when NEKPLIK and Telebisyon have the **same key**: set `KEYSTORE` and `KEYSTORE_PASS` to Telebisyon's if you move this folder out.
 
+## Disclaimer
+
+NEKPLIK is a personal media library and playback application. It does not provide, host, distribute, or include copyrighted movies or television shows. Users are responsible for ensuring that the media they access through the application is legally obtained and used.
+
 ## Credits
 
 NEKPLIK is part of [Telebisyon](../README.md) by knz. MIT License.
