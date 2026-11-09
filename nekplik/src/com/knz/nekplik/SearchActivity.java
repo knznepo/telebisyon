@@ -37,6 +37,7 @@ public class SearchActivity extends Activity {
     @Override
     protected void onCreate(Bundle saved) {
         super.onCreate(saved);
+        Intro.opened = true; // NEKPLIK is already open: no intro when going back to the main screen
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Ui.BG);
 

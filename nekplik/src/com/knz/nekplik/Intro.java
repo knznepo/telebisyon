@@ -30,7 +30,13 @@ final class Intro {
     private ValueAnimator zoom;
     private boolean done;
 
-    static Intro show(Activity a, FrameLayout root) { return new Intro(a, root); }
+    // Whether this process has shown a screen yet. Android closes NEKPLIK in the background to free
+    // memory (Sony TVs often), then rebuilds the last screen when it's opened again, as if returning to
+    // it: without this, that opening had no intro. The other screens set it, so returning to a
+    // rebuilt film or player doesn't play it.
+    static boolean opened;
+
+    static Intro show(Activity a, FrameLayout root) { opened = true; return new Intro(a, root); }
 
     private Intro(Activity a, FrameLayout root) {
         cover = new FrameLayout(a);

@@ -27,6 +27,7 @@ public class DetailsActivity extends Activity {
     @Override
     protected void onCreate(Bundle saved) {
         super.onCreate(saved);
+        Intro.opened = true; // NEKPLIK is already open: no intro when going back to the main screen
         t = MainActivity.find(getIntent().getStringExtra("folder"));
         if (t == null) { // the app was restarted here: the library comes back first
             new Thread(() -> {

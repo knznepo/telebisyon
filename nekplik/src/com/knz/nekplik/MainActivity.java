@@ -177,7 +177,9 @@ public class MainActivity extends Activity {
         root.addView(message, new FrameLayout.LayoutParams(-1, -1));
         setContentView(root);
         say("Looking for movies…");
-        if (saved == null) intro = Intro.show(this, root); // opening NEKPLIK: the logo and its sound, once
+        // Opening NEKPLIK: the logo and its sound, once. Also when Android rebuilds this screen in a new
+        // process (it closed NEKPLIK to free memory), but not when it's rebuilt after a turn of the screen.
+        if (saved == null || !Intro.opened) intro = Intro.show(this, root);
     }
 
     @Override

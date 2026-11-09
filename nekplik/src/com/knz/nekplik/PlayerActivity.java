@@ -72,6 +72,7 @@ public class PlayerActivity extends Activity {
     @Override
     protected void onCreate(Bundle saved) {
         super.onCreate(saved);
+        Intro.opened = true; // NEKPLIK is already open: no intro when going back to the main screen
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         t = MainActivity.find(getIntent().getStringExtra("folder"));
         if (t == null) { finish(); return; }
