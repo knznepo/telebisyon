@@ -1,4 +1,6 @@
 #!/bin/sh
+# The menu's sel_* ticks are set and read through eval (put, get), which ShellCheck can't follow.
+# shellcheck disable=SC2034,SC2154
 # Sets up a TV: builds the home screen, installs it, turns on the TV's web page (messages,
 # wallpapers, the home screen copy and Home Assistant control), sets the clock to keep itself right
 # (clock.sh), copies any pictures in ./wallpapers, and can add NEKPLIK. Safe to run again after
