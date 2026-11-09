@@ -35,10 +35,26 @@ jobs:
           KEYSTORE: ${{ secrets.RELEASE_KEYSTORE != '' && 'release.jks' || 'key.jks' }}
           KEYSTORE_PASS: ${{ secrets.RELEASE_KEYSTORE_PASS || 'tvhome123' }}
         run: sh build.sh
+      # NEKPLIK and NEKPLIK Share, with the same key as the home screen (its NEKPLIK library page needs
+      # that). Their build scripts change folder, so the key's path is a full one.
+      - name: Build NEKPLIK
+        env:
+          KEYSTORE_PASS: ${{ secrets.RELEASE_KEYSTORE_PASS || 'tvhome123' }}
+        run: |
+          if [ -f release.jks ]; then KEYSTORE="$PWD/release.jks"; else KEYSTORE="$PWD/key.jks"; fi
+          export KEYSTORE
+          sh nekplik/build.sh
+          sh nekplik/share-android/build.sh
       - uses: actions/upload-artifact@v4
         with:
           name: tvhome-apk
           path: out/tvhome.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nekplik-apk
+          path: |
+            nekplik/out/nekplik.apk
+            nekplik/share-android/out/nekplik-share.apk
 
   emulator-test:
     needs: build
@@ -82,8 +98,13 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: tvhome-apk
+      - uses: actions/download-artifact@v4
+        with:
+          name: nekplik-apk
+          merge-multiple: true
       - env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" tvhome.apk --repo "$GITHUB_REPOSITORY" \
-            --title "$GITHUB_REF_NAME" --notes "Install with: sh install.sh <TV_IP>"
+          gh release create "$GITHUB_REF_NAME" tvhome.apk $(find . -name nekplik.apk -o -name nekplik-share.apk) \
+            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" \
+            --notes "Install with: sh setup.sh <TV_IP>. NEKPLIK alone: sh nekplik/nekplik.sh <TV_IP>"
