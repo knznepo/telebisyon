@@ -57,19 +57,8 @@
     background: radial-gradient(circle at 40% 35%, #6d6267, #3a3236); box-shadow: 0 4px 12px rgba(0, 0, 0, .55);
     transform: translate(-50%, -50%); }
   .c.stick.on { filter: none; transform: translate(-50%, -50%); }
-  /* Mobile: the tilt circle, whose dot follows the phone's lean. */
-  .c.tilt { background: radial-gradient(circle, #1b1618 60%, #251f22); border: 1px solid rgba(255, 255, 255, .12);
-    box-shadow: inset 0 4px 16px rgba(0, 0, 0, .6); }
-  .c.tilt::before, .c.tilt::after { content: ""; position: absolute; background: rgba(255, 255, 255, .08); }
-  .c.tilt::before { left: 50%; top: 8%; bottom: 8%; width: 1px; }
-  .c.tilt::after { top: 50%; left: 8%; right: 8%; height: 1px; }
-  .c.tilt .dot { position: absolute; left: 50%; top: 50%; width: 24%; height: 24%; border-radius: 50%;
-    background: radial-gradient(circle at 40% 35%, #8a7d83, #4a4045); box-shadow: 0 4px 12px rgba(0, 0, 0, .55);
-    transform: translate(-50%, -50%); }
-  .c.tilt.live .dot { background: radial-gradient(circle at 40% 35%, #7fe0a8, #2f9a5a); }
-  .c.tilt .cap { position: absolute; left: 10%; right: 10%; bottom: 13%; text-align: center; font-size: 11px; font-weight: 500;
-    letter-spacing: .08em; color: var(--faint); line-height: 1.25; }
-  .c.tilt.on { transform: translate(-50%, -50%) scale(.97); }
+  /* Mobile's switches; "lit" when tilt is moving things. */
+  .c.pb.ui.lit { color: #7fe0a8; }
   .c.label { background: none; color: var(--faint); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .12em; }
 
   /* Turn sideways, and the help. */
@@ -125,7 +114,7 @@
       <li>Close RetroArch and open it again, so it saves the settings and starts listening. Then load a game.</li>
     </ol>
     <p>Pick the controller that matches the game's console. For PlayStation games that use the sticks, open the game's <b>Quick Menu → Controls → Port 1 Controls</b> and set <b>Device Type</b> to <b>DualShock</b>.</p>
-    <p><b>Mobile (tilt to move)</b> plays like a phone game: lean the phone to move, and press the buttons. Tap the circle to set the way you hold it as the middle. The button under it picks what tilt moves: the <b>D-pad</b> (most games) or the <b>stick</b> (N64 and PlayStation games). Phones only allow tilt on a secure page, so the first tap opens the TV's own one: if the browser warns that it isn't private, tap <b>Advanced</b>, then <b>Proceed</b>.</p>
+    <p><b>Mobile (tilt or touch)</b> plays like a phone game: move with the thumb, or by leaning the phone, or both. <b>Move</b> picks a <b>D-pad</b> (most games) or a <b>stick</b> (N64 and PlayStation games), <b>Tilt</b> turns leaning on or off, and <b>Center</b> makes the way you hold the phone now the middle. Phones only allow tilt on a secure page, so with tilt on, this moves to the TV's own one: if the browser warns that it isn't private, tap <b>Advanced</b>, then <b>Proceed</b>.</p>
     <p><b>Menu</b>, at the top, opens RetroArch's Quick Menu in a game: <b>Resume</b> goes back to it, <b>Close Content</b> ends it, and <b>Save State</b> keeps your place. Press it again to close the menu.</p>
     <p>On a computer, the keyboard works too: arrows, <b>Z</b> <b>X</b> <b>A</b> <b>S</b> for the buttons, <b>Q</b> <b>W</b> for the shoulders, <b>Enter</b> for Start, <b>Shift</b> for Select and <b>Esc</b> for Menu.</p>
     <div class="row">
@@ -215,17 +204,21 @@
       { t: "btn", id: SELECT, label: "SELECT", at: ["c", -11, 44], w: 18, h: 7, pill: true, dark: true, small: true },
       { t: "btn", id: START, label: "START", at: ["c", 11, 44], w: 18, h: 7, pill: true, dark: true, small: true }
     ] },
-    // Like a phone game: lean the phone to move (the D-pad, or the left stick), and press the buttons.
-    mobile: { name: "Mobile (tilt to move)", tilt: true, controls: [
-      { t: "tilt", at: ["l", 34, 50], s: 56 },
-      { t: "ui", act: "mode", label: "", at: ["l", 34, 89], w: 34, h: 8, pill: true, dark: true, small: true },
-      { t: "btn", id: L, label: "L", at: ["l", 22, 9], w: 30, h: 10, pill: true, dark: true },
-      { t: "btn", id: R, label: "R", at: ["r", 22, 9], w: 30, h: 10, pill: true, dark: true },
-      { t: "btn", id: X, label: "X", at: ["r", 30, 28], s: 18, col: "#2f62c9" },
-      { t: "btn", id: Y, label: "Y", at: ["r", 60, 42], s: 18, col: "#2f9a4a" },
-      { t: "btn", id: A, label: "A", at: ["r", 26, 61], s: 30, col: "#c8253a" },
-      { t: "btn", id: B, label: "B", at: ["r", 62, 75], s: 24, col: "#d6a51c" }
-    ].concat(START_SELECT) }
+    // Like a phone game: a D-pad or a stick (picked here), and tilting the phone moves it too.
+    mobile: { name: "Mobile (tilt or touch)", tilt: true, make: function () {
+      return [
+        tilt.mode === "stick" ? { t: "stick", stick: 0, at: ["l", 34, 52], s: 46 } : { t: "dpad", at: ["l", 34, 52], s: 46 },
+        { t: "ui", act: "mode", at: ["l", 20, 89], w: 28, h: 8, pill: true, dark: true, small: true },
+        { t: "ui", act: "tilt", at: ["l", 52, 89], w: 26, h: 8, pill: true, dark: true, small: true },
+        { t: "ui", act: "center", label: "CENTER", at: ["c", 0, 10], w: 22, h: 8, pill: true, dark: true, small: true },
+        { t: "btn", id: L, label: "L", at: ["l", 22, 9], w: 30, h: 10, pill: true, dark: true },
+        { t: "btn", id: R, label: "R", at: ["r", 22, 9], w: 30, h: 10, pill: true, dark: true },
+        { t: "btn", id: X, label: "X", at: ["r", 30, 28], s: 18, col: "#2f62c9" },
+        { t: "btn", id: Y, label: "Y", at: ["r", 60, 42], s: 18, col: "#2f9a4a" },
+        { t: "btn", id: A, label: "A", at: ["r", 26, 61], s: 30, col: "#c8253a" },
+        { t: "btn", id: B, label: "B", at: ["r", 62, 75], s: 24, col: "#d6a51c" }
+      ].concat(START_SELECT);
+    } }
   };
   var ORDER = ["nes", "snes", "genesis", "gb", "gba", "n64", "ps", "mobile"];
 
@@ -275,7 +268,8 @@
   var controls = [], u = 1, top0 = 0;
   function build() {
     area.innerHTML = "";
-    controls = KINDS[kind].controls.map(function (c) {
+    var K = KINDS[kind];
+    controls = (K.make ? K.make() : K.controls).map(function (c) {
       var el = document.createElement("div");
       el.className = "c " + c.t + (c.pill ? " pill" : "") + (c.dark ? " dark" : "");
       if (c.t === "btn" || c.t === "cbtn") {
@@ -296,18 +290,17 @@
           '<path class="arrow" d="M50 10l-7 10h14zM50 90l-7-10h14zM10 50l10-7v14zM90 50l-10-7v14z"/></svg>';
       } else if (c.t === "stick") {
         el.innerHTML = '<div class="knob"></div>';
-      } else if (c.t === "tilt") {
-        el.innerHTML = '<div class="dot"></div><div class="cap"></div>';
       } else if (c.t === "ui") {
         el.classList.add("pb");
         el.innerHTML = '<span class="t"></span>';
+        el.firstChild.textContent = c.label || "";
       }
       el.setAttribute("aria-hidden", "true");
       area.appendChild(el);
       return { def: c, el: el };
     });
     place();
-    if (KINDS[kind].tilt) tiltStart(false);
+    if (KINDS[kind].tilt) tiltStart();
     tiltLabels();
   }
 
@@ -374,8 +367,9 @@
       }
     });
     // Mobile: the phone's lean, as the D-pad or the left stick.
-    if (KINDS[kind].tilt && tilt.live && !document.hidden) {
-      if (tilt.mode === "stick") stickNow[0] = [Math.round(tilt.x * 64) * 512, Math.round(tilt.y * 64) * 512];
+    // A thumb on the stick wins over the lean; on the D-pad, both count.
+    if (KINDS[kind].tilt && tilt.on && tilt.live && !document.hidden) {
+      if (tilt.mode === "stick") { if (!stickNow[0]) stickNow[0] = [Math.round(tilt.x * 64) * 512, Math.round(tilt.y * 64) * 512]; }
       else Object.keys(tilt.dirs).forEach(function (id) { if (!want[id]) want[id] = true; });
     }
     var msgs = [], buzz = false;
@@ -385,7 +379,7 @@
     }
     held = want;
     // The N64's C buttons are the right stick, all the way over.
-    var hasRight = KINDS[kind].controls.some(function (c) { return c.t === "stick" && c.stick === 1; });
+    var hasRight = controls.some(function (c) { return c.def.t === "stick" && c.def.stick === 1; });
     if (!hasRight) stickNow[1] = [cx * 32767, cy * 32767];
     for (var s = 0; s < 2; s++) {
       var v = stickNow[s] || [0, 0];
@@ -415,9 +409,6 @@
         c.el.querySelector('[data-d="down"]').classList.toggle("on", !!held[DOWN]);
         c.el.querySelector('[data-d="left"]').classList.toggle("on", !!held[LEFT]);
         c.el.querySelector('[data-d="right"]').classList.toggle("on", !!held[RIGHT]);
-      } else if (d.t === "tilt") {
-        c.el.classList.toggle("live", tilt.live);
-        c.el.firstChild.style.transform = "translate(calc(-50% + " + (tilt.x * c.w * 0.36) + "px), calc(-50% + " + (tilt.y * c.w * 0.36) + "px))";
       } else if (d.t === "stick") {
         var v2 = sticks[d.stick], r = c.w / 2, knob = c.el.firstChild;
         knob.style.transform = "translate(calc(-50% + " + (v2[0] / 32767 * r * 0.6) + "px), calc(-50% + " + (v2[1] / 32767 * r * 0.6) + "px))";
@@ -433,10 +424,12 @@
     e.preventDefault();
     try { area.setPointerCapture(e.pointerId); } catch (x) {}
     var p = point(e), c = hit(p.x, p.y);
-    if (c && (c.def.t === "ui" || c.def.t === "tilt")) {
+    if (tilt.ask) askTilt(); // iPhones allow motion only from a press
+    if (c && c.def.t === "ui") {
       c.el.classList.add("on"); setTimeout(function () { c.el.classList.remove("on"); }, 140);
-      if (c.def.t === "tilt") tiltStart(true);
-      else if (c.def.act === "mode") { tilt.mode = tilt.mode === "stick" ? "dpad" : "stick"; save("pad.tiltmode", tilt.mode); tiltLabels(); update(); }
+      if (c.def.act === "mode") { letGo(); tilt.mode = tilt.mode === "stick" ? "dpad" : "stick"; save("pad.tiltmode", tilt.mode); build(); update(); }
+      else if (c.def.act === "tilt") { tilt.on = !tilt.on; save("pad.tilt", tilt.on ? "on" : "off"); if (tilt.on) tiltStart(); else { tilt.live = false; tilt.dirs = {}; } tiltLabels(); update(); }
+      else if (c.def.act === "center") { tilt.zero = null; }
       return;
     }
     fingers[e.pointerId] = { x: p.x, y: p.y, ctrl: c, stick: c && c.def.t === "stick" };
@@ -464,36 +457,43 @@
 
   // ---- Tilt, for Mobile ----
   // The phone's lean, from its accelerometer, turned to the screen's way up: right and down are positive,
-  // -1 to 1, from where it was held when centred. Browsers give motion only to secure (https) pages, so
-  // on http this offers the TV's https page (port 7980, the calls' one).
-  var tilt = { mode: saved("pad.tiltmode", "dpad") === "stick" ? "stick" : "dpad", listening: false, live: false,
-    zero: null, sign: 1, x: 0, y: 0, rx: 0, ry: 0, dirs: {}, note: "", heard: 0 };
+  // -1 to 1, from how it was held when tilt started (or Center was pressed). It moves the D-pad or the
+  // stick, beside the thumb. Browsers give motion only to secure (https) pages, so with tilt on, the
+  // http page moves to the TV's https one (port 7980, the calls' one), taking the choices along.
+  var tilt = { mode: saved("pad.tiltmode", "dpad") === "stick" ? "stick" : "dpad", on: saved("pad.tilt", "on") !== "off",
+    listening: false, live: false, ask: false, zero: null, sign: 1, x: 0, y: 0, rx: 0, ry: 0, dirs: {}, note: "", heard: 0 };
   var DEAD = 4, FULL = 22, ON = 11, OFF = 8; // degrees
   var IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
   function tiltLabels() {
     controls.forEach(function (c) {
-      if (c.def.act === "mode") c.el.firstChild.textContent = tilt.mode === "stick" ? "TILT: STICK" : "TILT: D-PAD";
-      if (c.def.t === "tilt") c.el.lastChild.textContent = tilt.note || (tilt.live ? "TAP TO CENTER" : "TAP TO TURN ON TILT");
+      var t = c.el.firstChild;
+      if (c.def.act === "mode") t.textContent = tilt.mode === "stick" ? "MOVE: STICK" : "MOVE: D-PAD";
+      if (c.def.act === "tilt") {
+        t.textContent = !tilt.on ? "TILT: OFF" : tilt.live ? "TILT: ON" : tilt.note || "TILT: …";
+        c.el.classList.toggle("lit", tilt.on && tilt.live);
+      }
+      if (c.def.act === "center") c.el.style.opacity = tilt.on && tilt.live ? "" : ".35";
     });
   }
 
-  // tap: a press on the circle (which may ask for permission, or move to the secure page).
-  function tiltStart(tap) {
+  function tiltStart() {
+    if (!tilt.on || tilt.listening) return;
     if (!window.isSecureContext) {
-      tilt.note = "TILT NEEDS THE SECURE PAGE: TAP";
-      tiltLabels();
-      if (tap) location.href = "https://" + location.hostname + ":7980/pad#kind=" + kind + "&player=" + playerSel.value;
+      tilt.note = "TILT: OPENING…"; tiltLabels();
+      location.replace("https://" + location.hostname + ":7980/pad#kind=" + kind + "&player=" + playerSel.value);
       return;
     }
-    if (typeof DeviceMotionEvent === "undefined") { tilt.note = "NO TILT ON THIS DEVICE"; tiltLabels(); return; }
-    if (tap && tilt.live) { tilt.zero = null; return; } // centre again, on the way it's held now
-    // iPhones send nothing until asked, and ask only on a tap; other phones just send.
-    if (tap && typeof DeviceMotionEvent.requestPermission === "function")
-      DeviceMotionEvent.requestPermission().then(function (r) {
-        if (r === "granted") listen(); else { tilt.note = "TILT NOT ALLOWED"; tiltLabels(); }
-      }).catch(function () { listen(); });
-    else listen();
+    if (typeof DeviceMotionEvent === "undefined") { tilt.note = "TILT: NONE"; tiltLabels(); return; }
+    if (IOS && typeof DeviceMotionEvent.requestPermission === "function") { tilt.ask = true; tilt.note = "TILT: PRESS A BUTTON"; tiltLabels(); return; }
+    listen();
+  }
+
+  function askTilt() {
+    tilt.ask = false;
+    DeviceMotionEvent.requestPermission().then(function (r) {
+      if (r === "granted") listen(); else { tilt.note = "TILT: NOT ALLOWED"; tiltLabels(); }
+    }).catch(function () { tilt.note = "TILT: NOT ALLOWED"; tiltLabels(); });
   }
 
   function listen() {
@@ -501,14 +501,14 @@
     if (!tilt.listening) {
       tilt.listening = true;
       window.addEventListener("devicemotion", onMotion);
-      setTimeout(function () { if (!tilt.heard && !IOS) { tilt.note = "NO TILT ON THIS DEVICE"; tiltLabels(); } }, 2500);
+      setTimeout(function () { if (!tilt.heard) { tilt.note = "TILT: NONE"; tiltLabels(); } }, 2500);
     }
     tiltLabels();
   }
 
   function onMotion(e) {
     var g = e.accelerationIncludingGravity;
-    if (!g || g.x == null || !KINDS[kind].tilt) return;
+    if (!g || g.x == null || !KINDS[kind].tilt || !tilt.on) return;
     tilt.heard++;
     var ang = ((screen.orientation && screen.orientation.angle) || window.orientation || 0) * Math.PI / 180;
     var sx = g.x * Math.cos(ang) - g.y * Math.sin(ang), sy = g.x * Math.sin(ang) + g.y * Math.cos(ang), gz = g.z;
