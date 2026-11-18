@@ -346,13 +346,14 @@ public class Messages extends Service {
         } else reply(s, 404, "{\"error\":\"no such page\"}");
     }
 
-    // For the /pad page: RetroArch's package (or null), whether it's listening for this player, and
-    // what's in front.
+    // For the /pad page: RetroArch's package (or null), whether it's listening for this player and for
+    // commands (the Menu button), and whether it's in front.
     private void padState(Socket s, int player) throws Exception {
         String ra = Pad.retroarch(this);
         player = Math.max(1, Math.min(Pad.PLAYERS, player));
         reply(s, 200, new JSONObject().put("retroarch", ra == null ? JSONObject.NULL : ra)
                 .put("listening", ra != null && Pad.listening(player)).put("player", player)
+                .put("commands", ra != null && Pad.commands())
                 .put("front", ra != null && ra.equals(frontApp())).toString());
     }
 

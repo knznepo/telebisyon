@@ -107,12 +107,12 @@
     <p id="helpstate"></p>
     <ol>
       <li>On the TV, open <b>RetroArch</b>.</li>
-      <li>Go to <b>Settings → Network</b> and turn on <b>Network RetroPad</b>.</li>
+      <li>Go to <b>Settings → Network</b> and turn on <b>Network Commands</b> (for Menu) and <b>Network RetroPad</b>.</li>
       <li>Below it, turn on <b>User 1 Network RetroPad</b>. For a second phone, also turn on <b>User 2</b>, and so on.</li>
       <li>Close RetroArch and open it again, so it saves the settings and starts listening. Then load a game.</li>
     </ol>
     <p>Pick the controller that matches the game's console. For PlayStation games that use the sticks, open the game's <b>Quick Menu → Controls → Port 1 Controls</b> and set <b>Device Type</b> to <b>DualShock</b>.</p>
-    <p><b>Menu</b>, at the top, opens RetroArch's Quick Menu in a game: <b>Resume</b> goes back to it, <b>Close Content</b> ends it, and <b>Save State</b> keeps your place. It presses the TV's Back button, so it needs Telebisyon's remote turned on (<b>sh remote.sh</b>, once).</p>
+    <p><b>Menu</b>, at the top, opens RetroArch's Quick Menu in a game: <b>Resume</b> goes back to it, <b>Close Content</b> ends it, and <b>Save State</b> keeps your place. Press it again to close the menu.</p>
     <p>On a computer, the keyboard works too: arrows, <b>Z</b> <b>X</b> <b>A</b> <b>S</b> for the buttons, <b>Q</b> <b>W</b> for the shoulders, <b>Enter</b> for Start, <b>Shift</b> for Select and <b>Esc</b> for Menu.</p>
     <div class="row">
       <button type="button" class="main" id="openra">Open RetroArch on the TV</button>
@@ -492,19 +492,18 @@
     }
   }
 
-  // Menu: the TV's Back button, which RetroArch on Android answers with its Quick Menu (in a game) or
-  // by going back a level (in its menus). Telebisyon's remote service presses it.
+  // Menu: RetroArch's MENU_TOGGLE, through its Network Commands, which open and close its Quick Menu.
   function menu() {
     letGo();
     if (navigator.vibrate) navigator.vibrate(10);
-    fetch("/remote/key", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: "back" }) })
-      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; }); })
-      .catch(function (e) {
-        var t = $("statustext"), el = $("status");
-        el.className = "status bad";
-        t.textContent = e && e.off ? "Menu needs the remote on: sh remote.sh" : "Menu didn't reach the TV";
-        clearTimeout(menuNote); menuNote = setTimeout(show, 4000);
-      });
+    var why = !wsOpen ? "Menu didn't reach the TV"
+      : state && state.retroarch && !state.commands ? "For Menu, turn on Network Commands in RetroArch" : "";
+    if (wsOpen) send("m");
+    if (why) {
+      $("status").className = "status bad"; $("statustext").textContent = why;
+      clearTimeout(menuNote); menuNote = setTimeout(show, 5000);
+      check();
+    }
   }
   var menuNote = null;
   $("menu").addEventListener("click", function () { menu(); $("menu").blur(); });

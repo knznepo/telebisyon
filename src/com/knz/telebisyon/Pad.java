@@ -21,8 +21,11 @@ import java.nio.charset.StandardCharsets;
 // itself, as from a controller.
 //
 // Whatever is held is let go when the page goes away, changes player, or stops saying it's there.
+//
+// Menu goes to RetroArch's Network Commands instead (UDP 55355, Settings > Network > Network Commands):
+// MENU_TOGGLE opens its Quick Menu in a game. (The TV's Back key doesn't, on every TV.)
 final class Pad {
-    static final int BASE_PORT = 55400, PLAYERS = 4;
+    static final int BASE_PORT = 55400, PLAYERS = 4, COMMAND_PORT = 55355;
     static final String[] RETROARCH = {"com.retroarch", "com.retroarch.aarch64", "com.retroarch.ra32"};
     private static final int JOYPAD = 1, ANALOG = 5; // RETRO_DEVICE_*
 
@@ -42,11 +45,16 @@ final class Pad {
 
     // Whether something already holds this player's port: RetroArch, listening. Only a quick bind and
     // close, so it's asked only while the page waits for RetroArch.
-    static boolean listening(int player) {
+    static boolean listening(int player) { return taken(BASE_PORT + player - 1); }
+
+    // Whether RetroArch's Network Commands are on, the same way.
+    static boolean commands() { return taken(COMMAND_PORT); }
+
+    private static boolean taken(int port) {
         try (DatagramSocket probe = new DatagramSocket(null)) {
             probe.setReuseAddress(false);
             // On 127.0.0.1, as IPv4: RetroArch listens on IPv4's 0.0.0.0, which an IPv6 socket wouldn't meet.
-            probe.bind(new InetSocketAddress(local(), BASE_PORT + player - 1));
+            probe.bind(new InetSocketAddress(local(), port));
             return false;
         } catch (Exception e) {
             return true;
@@ -136,7 +144,7 @@ final class Pad {
 
         // "p 2": player 2. "b <id> <0|1>": a RetroPad button (B 0, Y 1, Select 2, Start 3, Up 4, Down 5,
         // Left 6, Right 7, A 8, X 9, L 10, R 11, L2 12, R2 13, L3 14, R3 15). "a <stick> <axis> <value>":
-        // a stick (0 left, 1 right; 0 x, 1 y; -32767 to 32767). "h": still here.
+        // a stick (0 left, 1 right; 0 x, 1 y; -32767 to 32767). "m": RetroArch's menu. "h": still here.
         void handle(String m) throws Exception {
             String[] p = m.split(" ");
             switch (p[0]) {
@@ -161,6 +169,12 @@ final class Pad {
                     int v = Math.max(-32767, Math.min(32767, Integer.parseInt(p[3])));
                     analog[stick * 2 + axis] = v;
                     send(ANALOG, stick, axis, v);
+                    return;
+                }
+                case "m": {
+                    release();
+                    byte[] cmd = "MENU_TOGGLE\n".getBytes(StandardCharsets.US_ASCII);
+                    udp.send(new DatagramPacket(cmd, cmd.length, LOCAL, COMMAND_PORT));
                     return;
                 }
                 default: // "h", or something this doesn't know

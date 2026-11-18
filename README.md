@@ -255,10 +255,10 @@ Yes, for **RetroArch** on the TV: open `http://<TV_IP>:7979/pad` (or **Game cont
 - **Pick the console** at the top: **NES**, **SNES**, **Sega Genesis / Mega Drive**, **Game Boy**, **Game Boy Advance**, **N64** or **PlayStation**. Each shows that console's buttons, sent the way RetroArch's cores for it expect: the Sega's A, B and C, the N64's Z and C buttons, the PlayStation's △ ○ ✕ □ and sticks.
 - **Up to 4 players**, one phone each: pick **Player 1** to **4**.
 - **Hold several buttons** at once, and slide a thumb from one to the next.
-- **Menu**, at the top, opens RetroArch's Quick Menu during a game: **Resume** to go back, **Close Content** to quit the game, **Save State** to keep your place. It presses the TV's Back button, so it needs the remote turned on (`sh remote.sh <TV_IP>`, or **Remote** in `setup.sh`).
+- **Menu**, at the top, opens RetroArch's Quick Menu during a game: **Resume** to go back, **Close Content** to quit the game, **Save State** to keep your place.
 - **On a computer**, the keyboard works too: arrows, **Z X A S** for the buttons, **Q W** for the shoulders, **Enter** for Start, **Shift** for Select.
 
-**Turn it on once, in RetroArch on the TV:** Settings → Network → turn on **Network RetroPad**, and below it **User 1 Network RetroPad** (User 2 for a second phone, and so on). Close RetroArch and open it again, then load a game. The page says when RetroArch is listening.
+**Turn it on once, in RetroArch on the TV:** Settings → Network → turn on **Network Commands** (for Menu) and **Network RetroPad**, and below it **User 1 Network RetroPad** (User 2 for a second phone, and so on). Close RetroArch and open it again, then load a game. The page says when RetroArch is listening.
 
 - It doesn't need `remote.sh` or debugging. RetroArch reads the buttons itself, from the TV's own web page, the same way as from a controller.
 - **Set a PIN** (`sh pin.sh <TV_IP> 123456`): without one, anyone on your Wi-Fi could open the page.

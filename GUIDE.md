@@ -106,7 +106,7 @@ It asks what to do: **1** installs everything (the home screen, phone pages, Fil
 
 Tip: add these to your phone's home screen (in the browser's Share menu, choose **Add to Home Screen**).
 
-**The game controller needs RetroArch on the TV,** set up once: in RetroArch, open **Settings → Network**, turn on **Network RetroPad**, and below it **User 1 Network RetroPad** (also **User 2**, **3** and **4** for more phones). Close RetroArch and open it again, then load a game. The page's status says **Player 1 · ready** once RetroArch is listening; the **?** button there shows these steps too. It doesn't need debugging or `remote.sh`.
+**The game controller needs RetroArch on the TV,** set up once: in RetroArch, open **Settings → Network**, turn on **Network Commands** (for the Menu button) and **Network RetroPad**, and below it **User 1 Network RetroPad** (also **User 2**, **3** and **4** for more phones). Close RetroArch and open it again, then load a game. The page's status says **Player 1 · ready** once RetroArch is listening; the **?** button there shows these steps too. It doesn't need debugging or `remote.sh`.
 
 **Anyone on your Wi-Fi can use these pages unless you set a PIN:** `sh pin.sh 192.168.1.50 123456` (browsers ask for it once; `off` instead of a PIN removes it). To turn the pages off: `sh messages.sh 192.168.1.50 off`. To turn them back on: `sh messages.sh 192.168.1.50`. The Files page alone: `sh files.sh 192.168.1.50 off`.
 
@@ -121,7 +121,7 @@ See **"Can Home Assistant control the TV?"** in [README.md](README.md#web-page) 
 | The pages don't open | The TV must be on and on the same Wi-Fi. Run `sh messages.sh 192.168.1.50` again. |
 | The remote says it's off | Run `sh remote.sh 192.168.1.50` (with debugging on). Updates can turn it off; running `setup.sh` with `REMOTE=1` turns it back on. |
 | The game controller says RetroArch isn't listening | In RetroArch, turn on **Settings → Network → Network RetroPad** and **User 1 Network RetroPad** (or the player you picked), then close RetroArch and open it again. |
-| **Menu** on the game controller does nothing | It presses the TV's Back button, which needs the remote: run `sh remote.sh 192.168.1.50` once. Or press **Back** on the TV's own remote: RetroArch opens its Quick Menu either way. |
+| **Menu** on the game controller does nothing | In RetroArch, turn on **Settings → Network → Network Commands**, then close RetroArch and open it again. |
 | Game buttons do nothing in a game | Pick the console that matches the game at the top of the page. For PlayStation games with sticks, set the game's **Quick Menu → Controls → Port 1 Controls → Device Type** to **DualShock**. |
 | The TV's clock is wrong | `sh clock.sh 192.168.1.50` turns on internet time and sets your time zone. |
 | The TV's IP address changed | Use the new one. Setting a fixed IP for the TV in your router stops this from happening. |
