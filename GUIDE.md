@@ -123,7 +123,7 @@ See **"Can Home Assistant control the TV?"** in [README.md](README.md#web-page) 
 | The game controller says RetroArch isn't listening | In RetroArch, turn on **Settings → Network → Network RetroPad** and **User 1 Network RetroPad** (or the player you picked), then close RetroArch and open it again. |
 | **Menu** on the game controller does nothing | In RetroArch, turn on **Settings → Network → Network Commands**, then close RetroArch and open it again. |
 | Tilt does nothing on **Mobile** | Check the switch under the controls says **TILT: ON**. Phones only allow tilt on a secure page, so the page moves to `https://192.168.1.50:7980/pad` (tap **Advanced**, then **Proceed** if the browser warns). On an iPhone, press any button and allow motion. **Center** sets the middle. |
-| Game buttons do nothing in a game | Pick the console that matches the game at the top of the page. For PlayStation games with sticks, set the game's **Quick Menu → Controls → Port 1 Controls → Device Type** to **DualShock**. |
+| Game buttons do nothing in a game | Pick the console that matches the game at the top of the page. PlayStation sticks: most games only read the D-pad, so keep **Stick as D-pad** on; for games made for the sticks, set the game's **Quick Menu → Controls → Port 1 Controls → Device Type** to **DualShock**. |
 | The TV's clock is wrong | `sh clock.sh 192.168.1.50` turns on internet time and sets your time zone. |
 | The TV's IP address changed | Use the new one. Setting a fixed IP for the TV in your router stops this from happening. |
 | Home opens the TV's old home screen | Run `sh setup.sh 192.168.1.50` again and answer **y** when asked. On Google TV, use `GOOGLE_TV=1 YES_SETUP=1` (see above). |

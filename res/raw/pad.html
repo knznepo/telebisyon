@@ -113,7 +113,7 @@
       <li>Below it, turn on <b>User 1 Network RetroPad</b>. For a second phone, also turn on <b>User 2</b>, and so on.</li>
       <li>Close RetroArch and open it again, so it saves the settings and starts listening. Then load a game.</li>
     </ol>
-    <p>Pick the controller that matches the game's console. For PlayStation games that use the sticks, open the game's <b>Quick Menu → Controls → Port 1 Controls</b> and set <b>Device Type</b> to <b>DualShock</b>.</p>
+    <p>Pick the controller that matches the game's console. On <b>PlayStation</b>, the left stick also presses the D-pad (most PlayStation games only read the D-pad); the switch between the sticks turns that off. For PlayStation games that use the sticks, open the game's <b>Quick Menu → Controls → Port 1 Controls</b> and set <b>Device Type</b> to <b>DualShock</b>.</p>
     <p><b>Mobile (tilt or touch)</b> plays like a phone game: move with the thumb, or by leaning the phone, or both. <b>Move</b> picks a <b>D-pad</b> (most games) or a <b>stick</b> (N64 and PlayStation games), <b>Tilt</b> turns leaning on or off, and <b>Center</b> makes the way you hold the phone now the middle. Phones only allow tilt on a secure page, so with tilt on, this moves to the TV's own one: if the browser warns that it isn't private, tap <b>Advanced</b>, then <b>Proceed</b>.</p>
     <p><b>Menu</b>, at the top, opens RetroArch's Quick Menu in a game: <b>Resume</b> goes back to it, <b>Close Content</b> ends it, and <b>Save State</b> keeps your place. Press it again to close the menu.</p>
     <p>On a computer, the keyboard works too: arrows, <b>Z</b> <b>X</b> <b>A</b> <b>S</b> for the buttons, <b>Q</b> <b>W</b> for the shoulders, <b>Enter</b> for Start, <b>Shift</b> for Select and <b>Esc</b> for Menu.</p>
@@ -189,7 +189,8 @@
       { t: "cbtn", axis: 0, dir: 1, label: "▶", at: ["r", 12, 36], s: 11 },
       { t: "label", label: "C", at: ["r", 26, 36], s: 8 }
     ] },
-    ps: { name: "PlayStation", controls: [
+    // stickPad: the left stick also presses the D-pad (a switch), as most PlayStation games read only that.
+    ps: { name: "PlayStation", stickPad: true, controls: [
       { t: "btn", id: L2, label: "L2", at: ["l", 52, 9], w: 26, h: 10, pill: true, dark: true },
       { t: "btn", id: L, label: "L1", at: ["l", 22, 9], w: 26, h: 10, pill: true, dark: true },
       { t: "btn", id: R, label: "R1", at: ["r", 22, 9], w: 26, h: 10, pill: true, dark: true },
@@ -202,7 +203,8 @@
       { t: "stick", stick: 0, at: ["l", 58, 78], s: 26 },
       { t: "stick", stick: 1, at: ["r", 58, 78], s: 26 },
       { t: "btn", id: SELECT, label: "SELECT", at: ["c", -11, 44], w: 18, h: 7, pill: true, dark: true, small: true },
-      { t: "btn", id: START, label: "START", at: ["c", 11, 44], w: 18, h: 7, pill: true, dark: true, small: true }
+      { t: "btn", id: START, label: "START", at: ["c", 11, 44], w: 18, h: 7, pill: true, dark: true, small: true },
+      { t: "ui", act: "stickpad", at: ["c", 0, 62], w: 42, h: 7, pill: true, dark: true, small: true }
     ] },
     // Like a phone game: a D-pad or a stick (picked here), and tilting the phone moves it too.
     mobile: { name: "Mobile (tilt or touch)", tilt: true, make: function () {
@@ -367,6 +369,17 @@
       }
     });
     // Mobile: the phone's lean, as the D-pad or the left stick.
+    // PlayStation: the left stick pressed past halfway also presses the D-pad, in its direction.
+    if (KINDS[kind].stickPad && stickPad && stickNow[0]) {
+      var px = stickNow[0][0] / 32767, py = stickNow[0][1] / 32767;
+      if (Math.hypot(px, py) > 0.5) {
+        var deg = Math.atan2(py, px) * 180 / Math.PI;
+        if (deg > -67.5 && deg < 67.5) want[RIGHT] = want[RIGHT] || true;
+        if (deg > 112.5 || deg < -112.5) want[LEFT] = want[LEFT] || true;
+        if (deg > 22.5 && deg < 157.5) want[DOWN] = want[DOWN] || true;
+        if (deg < -22.5 && deg > -157.5) want[UP] = want[UP] || true;
+      }
+    }
     // A thumb on the stick wins over the lean; on the D-pad, both count.
     if (KINDS[kind].tilt && tilt.on && tilt.live && !document.hidden) {
       if (tilt.mode === "stick") { if (!stickNow[0]) stickNow[0] = [Math.round(tilt.x * 64) * 512, Math.round(tilt.y * 64) * 512]; }
@@ -430,6 +443,7 @@
       if (c.def.act === "mode") { letGo(); tilt.mode = tilt.mode === "stick" ? "dpad" : "stick"; save("pad.tiltmode", tilt.mode); build(); update(); }
       else if (c.def.act === "tilt") { tilt.on = !tilt.on; save("pad.tilt", tilt.on ? "on" : "off"); if (tilt.on) tiltStart(); else { tilt.live = false; tilt.dirs = {}; } tiltLabels(); update(); }
       else if (c.def.act === "center") { tilt.zero = null; }
+      else if (c.def.act === "stickpad") { stickPad = !stickPad; save("pad.stickpad", stickPad ? "on" : "off"); tiltLabels(); update(); }
       return;
     }
     fingers[e.pointerId] = { x: p.x, y: p.y, ctrl: c, stick: c && c.def.t === "stick" };
@@ -463,6 +477,7 @@
   var tilt = { mode: saved("pad.tiltmode", "dpad") === "stick" ? "stick" : "dpad", on: saved("pad.tilt", "on") !== "off",
     listening: false, live: false, ask: false, zero: null, sign: 1, x: 0, y: 0, rx: 0, ry: 0, dirs: {}, note: "", heard: 0 };
   var DEAD = 4, FULL = 22, ON = 11, OFF = 8; // degrees
+  var stickPad = saved("pad.stickpad", "on") !== "off";
   var IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
   function tiltLabels() {
@@ -474,6 +489,7 @@
         c.el.classList.toggle("lit", tilt.on && tilt.live);
       }
       if (c.def.act === "center") c.el.style.opacity = tilt.on && tilt.live ? "" : ".35";
+      if (c.def.act === "stickpad") { t.textContent = stickPad ? "STICK AS D-PAD: ON" : "STICK AS D-PAD: OFF"; c.el.classList.toggle("lit", stickPad); }
     });
   }
 

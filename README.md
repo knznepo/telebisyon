@@ -263,7 +263,7 @@ Yes, for **RetroArch** on the TV: open `http://<TV_IP>:7979/pad` (or **Game cont
 
 - It doesn't need `remote.sh` or debugging. RetroArch reads the buttons itself, from the TV's own web page, the same way as from a controller.
 - **Set a PIN** (`sh pin.sh <TV_IP> 123456`): without one, anyone on your Wi-Fi could open the page.
-- For PlayStation games that use the sticks, set the game's **Quick Menu → Controls → Port 1 Controls → Device Type** to **DualShock**.
+- **PlayStation:** most PlayStation games only read the D-pad, so the left stick also presses it (**Stick as D-pad**, a switch between the sticks). For games that use the sticks themselves, also set the game's **Quick Menu → Controls → Port 1 Controls → Device Type** to **DualShock**.
 - Touch buttons can't be felt like real ones, so fast games are harder than with a real controller. Wi-Fi adds a little delay too, usually too small to notice.
 
 </details>
