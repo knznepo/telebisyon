@@ -234,6 +234,14 @@
   function saved(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } }
   function save(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 
+  // From the http page's tilt circle: the controller and player picked there (this page keeps its own).
+  (function () {
+    var h = {};
+    location.hash.slice(1).split("&").forEach(function (kv) { var p = kv.split("="); if (p[1]) h[p[0]] = decodeURIComponent(p[1]); });
+    if (KINDS[h.kind]) { save("pad.kind", h.kind); save("pad.seen", "1"); }
+    if (/^[1-4]$/.test(h.player || "")) save("pad.player", h.player);
+    if (location.hash) history.replaceState(null, "", location.pathname);
+  })();
   ORDER.forEach(function (k) { var o = document.createElement("option"); o.value = k; o.textContent = KINDS[k].name; kindSel.appendChild(o); });
   var kind = KINDS[saved("pad.kind", "snes")] ? saved("pad.kind", "snes") : "snes";
   kindSel.value = kind;
@@ -475,7 +483,7 @@
     if (!window.isSecureContext) {
       tilt.note = "TILT NEEDS THE SECURE PAGE: TAP";
       tiltLabels();
-      if (tap) location.href = "https://" + location.hostname + ":7980/pad";
+      if (tap) location.href = "https://" + location.hostname + ":7980/pad#kind=" + kind + "&player=" + playerSel.value;
       return;
     }
     if (typeof DeviceMotionEvent === "undefined") { tilt.note = "NO TILT ON THIS DEVICE"; tiltLabels(); return; }
@@ -600,7 +608,8 @@
     $("openra").hidden = false;
     if (state.listening) {
       el.classList.add("ok"); t.textContent = "Player " + state.player + " · ready";
-      help.textContent = "RetroArch is listening for player " + state.player + ". Load a game and play.";
+      help.textContent = state.commands ? "RetroArch is listening for player " + state.player + ". Load a game and play."
+        : "RetroArch is listening for player " + state.player + ". For the Menu button, also turn on Network Commands, once:";
     } else {
       el.classList.add("warn"); t.textContent = "RetroArch isn't listening";
       help.textContent = "RetroArch isn't listening for player " + state.player + " yet. Turn on its Network RetroPad, once:";
@@ -617,6 +626,7 @@
     if (why) {
       $("status").className = "status bad"; $("statustext").textContent = why;
       clearTimeout(menuNote); menuNote = setTimeout(show, 5000);
+      if (wsOpen) { $("helpstate").textContent = "Menu needs RetroArch's Network Commands, which are off. Turn them on, once:"; $("help").hidden = false; }
       check();
     }
   }
