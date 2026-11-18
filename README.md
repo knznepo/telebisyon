@@ -35,12 +35,12 @@ Looking for the **TV cleanup** (turning off bloatware, ads and sponsored rows) o
 
 <table>
 <tr>
-<td width="60%" valign="top"><img src="docs/web-home.png" alt="The TV's home screen in a computer's browser"><br><sub>The TV's home screen in a browser. Tap a tile to open it on the TV.</sub></td>
-<td width="40%" valign="top"><img src="docs/web-phone.png" alt="The same page on a phone"><br><sub>The same page on a phone.</sub></td>
+<td width="60%" valign="top"><img src="docs/web-home.jpg" alt="The TV's home screen in a computer's browser"><br><sub>The TV's home screen in a browser. Tap a tile to open it on the TV.</sub></td>
+<td width="40%" valign="top"><img src="docs/web-phone.jpg" alt="The same page on a phone"><br><sub>The same page on a phone.</sub></td>
 </tr>
 <tr>
-<td valign="top"><img src="docs/web-files.png" alt="The file manager"><br><sub>Files on the TV and USB drives.</sub></td>
-<td valign="top"><img src="docs/web-wallpapers.png" alt="The wallpapers page"><br><sub>Wallpapers, shuffle and the photo frame.</sub></td>
+<td valign="top"><img src="docs/web-files.jpg" alt="The file manager"><br><sub>Files on the TV and USB drives.</sub></td>
+<td valign="top"><img src="docs/web-wallpapers.jpg" alt="The wallpapers page"><br><sub>Wallpapers, shuffle and the photo frame.</sub></td>
 </tr>
 <tr>
 <td colspan="2" valign="top"><img src="docs/web-pad.png" alt="The game controller page on a phone held sideways, with the SNES layout"><br><sub>Your phone as a game controller for RetroArch on the TV, here with the SNES layout. Also NES, Sega Genesis, Game Boy, Game Boy Advance, N64 and PlayStation.</sub></td>
@@ -189,7 +189,7 @@ Then on `http://<TV_IP>:7979/files`: browse the TV's storage and any USB drive o
 
 Yes. Use the web page, or `sh send.sh <TV_IP> "Title" "Message"`. A message shows in a corner over whatever is playing and goes away by itself (after 30 seconds unless you choose otherwise).
 
-<img src="docs/web-message.png" alt="The message page on a phone" width="300">
+<img src="docs/web-message.jpg" alt="The message page on a phone" width="300">
 
 ```sh
 DURATION=10 POSITION=4 sh send.sh <TV_IP> "Dinner" "It's ready"     # centred, for 10 seconds
