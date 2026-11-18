@@ -4,7 +4,7 @@
 
 ### A calm, fast home screen for Android TV, that you can run from your phone.
 
-Your apps, your photos and a clock on the TV. Messages, wallpapers and Home Assistant control from any phone on your Wi-Fi.
+Your apps, your photos and a clock on the TV. Messages, wallpapers, a remote, a game controller for RetroArch and Home Assistant control from any phone on your Wi-Fi.
 
 [![Latest release](https://img.shields.io/github/v/release/knznepo/telebisyon?label=download&color=black)](https://github.com/knznepo/telebisyon/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-black)](LICENSE)
@@ -14,7 +14,7 @@ Your apps, your photos and a clock on the TV. Messages, wallpapers and Home Assi
 
 </div>
 
-Telebisyon is a fork of [**TV Detox**](https://github.com/Ansub/tv-detox) by Ansub Khan. It keeps TV Detox's home screen and adds a web page you open on your phone, your own photos, messages and smart home control.
+Telebisyon is a fork of [**TV Detox**](https://github.com/Ansub/tv-detox) by Ansub Khan. It keeps TV Detox's home screen and adds a web page you open on your phone, your own photos, messages, a phone remote and game controller, and smart home control.
 
 Looking for the **TV cleanup** (turning off bloatware, ads and sponsored rows) or help with a **specific TV brand**? That's TV Detox's part. See [TV Detox's README](https://github.com/Ansub/tv-detox#readme).
 
@@ -24,6 +24,7 @@ Looking for the **TV cleanup** (turning off bloatware, ads and sponsored rows) o
 - **A web page on the TV** (`http://<TV_IP>:7979`) for any phone or computer on your Wi-Fi: a live copy of the home screen whose tiles open on the TV, a message sender, a wallpaper manager and a **file manager** for the TV's storage and USB drives. It can sit behind a **PIN**.
 - **Messages** over whatever is playing, compatible with PiPup, with an optional chime.
 - **A remote on your phone or computer:** arrows, OK, Back, Home, volume, play/pause and power.
+- **A game controller for RetroArch** on your phone: NES, SNES, Sega Genesis, Game Boy, Game Boy Advance, N64 and PlayStation layouts, for up to 4 players.
 - **NEKPLIK** (optional): your own movies and series in a streaming-app style, from a USB drive, a hard disk, a computer or a phone on the Wi-Fi, with search, collections and subtitles. A phone or computer sharing them also serves NEKPLIK to any browser on the Wi-Fi. See [nekplik/](nekplik/README.md).
 - **Call the TV** from a phone's browser, with video or audio only. It plays on the TV straight away, over whatever is on: the show keeps playing, turned down while you talk. Nobody has to answer. Audio only works like an intercom, with hold to talk.
 - **Home Assistant control**: what's playing, pause and play, volume, open an app.
@@ -40,6 +41,9 @@ Looking for the **TV cleanup** (turning off bloatware, ads and sponsored rows) o
 <tr>
 <td valign="top"><img src="docs/web-files.png" alt="The file manager"><br><sub>Files on the TV and USB drives.</sub></td>
 <td valign="top"><img src="docs/web-wallpapers.png" alt="The wallpapers page"><br><sub>Wallpapers, shuffle and the photo frame.</sub></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><img src="docs/web-pad.png" alt="The game controller page on a phone held sideways, with the SNES layout"><br><sub>Your phone as a game controller for RetroArch on the TV, here with the SNES layout. Also NES, Sega Genesis, Game Boy, Game Boy Advance, N64 and PlayStation.</sub></td>
 </tr>
 </table>
 
@@ -134,6 +138,7 @@ Run it again any time to add or remove something; what you keep is updated.
 | `http://<TV_IP>:7979/files` | Browse the TV and USB drives, upload, download, rename, delete and install APKs. Off until you run `sh files.sh <TV_IP>` |
 | `http://<TV_IP>:7979/remote` | The TV's remote: arrows, OK, Back, Home, volume, play/pause and power. Arrows need `sh remote.sh <TV_IP>` once |
 | `http://<TV_IP>:7979/call` | Call the TV with video or audio only. It plays on the TV straight away |
+| `http://<TV_IP>:7979/pad` | Play RetroArch games with your phone as the controller. Turn on RetroArch's Network RetroPad once |
 
 Tip: add these to your phone's home screen (in the browser's Share menu, choose **Add to Home Screen**).
 
@@ -238,6 +243,26 @@ sh remote.sh <TV_IP> off      # off
 - On **Android 13 and newer** (like recent Sony and Google TV), the arrows press the real keys and work everywhere. On older TVs, like a Mi Box on Android 9, Android doesn't let an app press keys, so the remote moves the highlight itself: that works in most apps, but some that draw their own screens (YouTube, say) may not follow.
 - **Why no trackpad or mouse pointer:** TVs ignore pretend taps (they have no touchscreen), and TV apps are made to be moved around with the highlight, so a pointer couldn't click in most of them.
 - The remote's accessibility service only acts when the page asks. It reads the screen only on TVs before Android 13, to move the highlight.
+
+</details>
+
+<details>
+<summary><b>Can I use my phone as a game controller?</b></summary>
+<br>
+
+Yes, for **RetroArch** on the TV: open `http://<TV_IP>:7979/pad` (or **Game controller** on the web page's home, which shows once RetroArch is installed), and turn the phone sideways.
+
+- **Pick the console** at the top: **NES**, **SNES**, **Sega Genesis / Mega Drive**, **Game Boy**, **Game Boy Advance**, **N64** or **PlayStation**. Each shows that console's buttons, sent the way RetroArch's cores for it expect: the Sega's A, B and C, the N64's Z and C buttons, the PlayStation's △ ○ ✕ □ and sticks.
+- **Up to 4 players**, one phone each: pick **Player 1** to **4**.
+- **Hold several buttons** at once, and slide a thumb from one to the next.
+- **On a computer**, the keyboard works too: arrows, **Z X A S** for the buttons, **Q W** for the shoulders, **Enter** for Start, **Shift** for Select.
+
+**Turn it on once, in RetroArch on the TV:** Settings → Network → turn on **Network RetroPad**, and below it **User 1 Network RetroPad** (User 2 for a second phone, and so on). Close RetroArch and open it again, then load a game. The page says when RetroArch is listening.
+
+- It doesn't need `remote.sh` or debugging. RetroArch reads the buttons itself, from the TV's own web page, the same way as from a controller.
+- **Set a PIN** (`sh pin.sh <TV_IP> 123456`): without one, anyone on your Wi-Fi could open the page.
+- For PlayStation games that use the sticks, set the game's **Quick Menu → Controls → Port 1 Controls → Device Type** to **DualShock**.
+- Touch buttons can't be felt like real ones, so fast games are harder than with a real controller. Wi-Fi adds a little delay too, usually too small to notice.
 
 </details>
 

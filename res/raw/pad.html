@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0909">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Game controller · Telebisyon</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' rx='16' fill='%231c1c1e'/%3E%3Cpath d='M11,35 L36,13.5 L61,35 M19,29 L19,61 L53,61 L53,29 M29,61 L29,45 L43,45 L43,61' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/style.css">
+<style>
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body { background: radial-gradient(circle at 50% -20%, #2a2226, #0b0909 70%); user-select: none; -webkit-user-select: none;
+    -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+
+  /* The bar along the top: back, controller, player, status, full screen, help. */
+  .bar { position: fixed; inset: 0 0 auto 0; height: 48px; display: flex; align-items: center; gap: 8px;
+    padding: 0 max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left)); z-index: 5; }
+  .bar a, .bar button, .bar select { height: 34px; border-radius: 999px; border: 1px solid var(--line); background: var(--glass);
+    color: var(--text); padding: 0 12px; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; cursor: pointer; }
+  .bar select { flex: none; width: auto; max-width: 42vw; appearance: none; -webkit-appearance: none; padding-right: 28px;
+    background: var(--glass) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") right 9px center / 14px no-repeat; }
+  .bar select option { color: #000; }
+  .bar .icon { width: 34px; padding: 0; justify-content: center; }
+  .bar svg { width: 18px; height: 18px; }
+  .status { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .status i { width: 9px; height: 9px; border-radius: 50%; background: #888; flex: none; }
+  .status.ok i { background: #45d483; box-shadow: 0 0 8px #45d483; }
+  .status.warn i { background: #ffb547; }
+  .status.bad i { background: #ff6b5e; }
+
+  /* The controller. Every control is placed by script, in units of the area's height. */
+  #area { position: fixed; left: 0; right: 0; top: 48px; bottom: 0; touch-action: none; }
+  .c { position: absolute; display: grid; place-items: center; transform: translate(-50%, -50%); border-radius: 50%;
+    color: #fff; font-weight: 600; letter-spacing: .02em; line-height: 1; pointer-events: none; transition: filter 60ms, transform 60ms; }
+  .c.pb { background: var(--col, #3a3236); box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .28), 0 4px 14px rgba(0, 0, 0, .45);
+    border: 1px solid rgba(255, 255, 255, .14); }
+  .c.pb.pill { border-radius: 999px; }
+  /* The label in the middle of the button's face, above its 4px lip, cut to the height of its capitals
+     so it sits in the middle whatever the font. */
+  .c.pb { padding: 0 0 4px; }
+  .c .t { display: block; line-height: 1; text-box: trim-both cap alphabetic; }
+  .c.pb.dark { --col: #2b2528; color: var(--dim); font-weight: 500; }
+  .c.on { filter: brightness(1.45); transform: translate(-50%, -50%) scale(.92); }
+  .c.dpad { border-radius: 14%; }
+  .c.dpad svg { width: 100%; height: 100%; overflow: visible; }
+  .c.dpad path { fill: #2f282b; stroke: rgba(255, 255, 255, .14); stroke-width: 1.2; }
+  .c.dpad .arm.on { fill: #6b5f64; }
+  .c.dpad .arrow { fill: rgba(255, 255, 255, .5); stroke: none; }
+  .c.stick { background: radial-gradient(circle, #1b1618 55%, #251f22); border: 1px solid rgba(255, 255, 255, .12);
+    box-shadow: inset 0 4px 16px rgba(0, 0, 0, .6); }
+  .c.stick .knob { position: absolute; left: 50%; top: 50%; width: 52%; height: 52%; border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #6d6267, #3a3236); box-shadow: 0 4px 12px rgba(0, 0, 0, .55);
+    transform: translate(-50%, -50%); }
+  .c.stick.on { filter: none; transform: translate(-50%, -50%); }
+  .c.label { background: none; color: var(--faint); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .12em; }
+
+  /* Turn sideways, and the help. */
+  #turn { position: fixed; inset: 48px 0 0 0; z-index: 4; display: none; place-items: center; text-align: center; padding: 24px;
+    background: rgba(11, 9, 9, .92); }
+  #turn svg { width: 64px; height: 64px; margin-bottom: 12px; }
+  #turn button { margin-top: 18px; height: 38px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line); background: var(--glass); cursor: pointer; }
+  @media (orientation: portrait) { body:not(.anyway) #turn { display: grid; } }
+  #help { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .6); }
+  #help .panel { max-width: 560px; width: 100%; max-height: calc(100% - 16px); overflow: auto; }
+  #help h2 { margin: 0 0 10px; }
+  #help ol { padding-left: 20px; margin: 10px 0; }
+  #help li { margin: 6px 0; }
+  #help p { color: var(--dim); margin: 8px 0; font-size: 15px; }
+  #help b { color: var(--text); font-weight: 500; }
+  #help .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  #help .row button { height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line); background: var(--glass); cursor: pointer; }
+  #help .row button.main { background: #fff; color: var(--ink); font-weight: 500; }
+  @media (max-width: 560px) { .bar .wide { display: none; } }
+</style>
+</head>
+<body>
+<div class="bar">
+  <a href="/remote" class="icon" aria-label="Back to the remote"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></a>
+  <select id="kind" aria-label="Controller"></select>
+  <select id="player" aria-label="Player">
+    <option value="1">Player 1</option><option value="2">Player 2</option><option value="3">Player 3</option><option value="4">Player 4</option>
+  </select>
+  <span class="status" id="status" role="status" aria-live="polite"><i></i><span id="statustext">Connecting…</span></span>
+  <button type="button" class="icon" id="full" aria-label="Full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <button type="button" class="icon" id="helpbtn" aria-label="How to set up RetroArch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2.2-2.4 3.7M12 17.2v.1"/></svg></button>
+</div>
+
+<div id="area" aria-label="Game controller"></div>
+
+<div id="turn">
+  <div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 4.5a8 8 0 0 1 10 0M15.5 3l1.5 1.5-1.5 1.5"/></svg>
+    <div>Turn your phone sideways to play.</div>
+    <button type="button" id="anyway">Use it upright</button>
+  </div>
+</div>
+
+<div id="help" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="helptitle">
+    <h2 id="helptitle">Play with RetroArch</h2>
+    <p id="helpstate"></p>
+    <ol>
+      <li>On the TV, open <b>RetroArch</b>.</li>
+      <li>Go to <b>Settings → Network</b> and turn on <b>Network RetroPad</b>.</li>
+      <li>Below it, turn on <b>User 1 Network RetroPad</b>. For a second phone, also turn on <b>User 2</b>, and so on.</li>
+      <li>Close RetroArch and open it again, so it saves the settings and starts listening. Then load a game.</li>
+    </ol>
+    <p>Pick the controller that matches the game's console. For PlayStation games that use the sticks, open the game's <b>Quick Menu → Controls → Port 1 Controls</b> and set <b>Device Type</b> to <b>DualShock</b>.</p>
+    <p>On a computer, the keyboard works too: arrows, <b>Z</b> <b>X</b> <b>A</b> <b>S</b> for the buttons, <b>Q</b> <b>W</b> for the shoulders, <b>Enter</b> for Start and <b>Shift</b> for Select.</p>
+    <div class="row">
+      <button type="button" class="main" id="openra">Open RetroArch on the TV</button>
+      <button type="button" id="helpclose">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // RetroPad buttons, as RetroArch numbers them.
+  var B = 0, Y = 1, SELECT = 2, START = 3, UP = 4, DOWN = 5, LEFT = 6, RIGHT = 7, A = 8, X = 9, L = 10, R = 11, L2 = 12, R2 = 13;
+
+  // Each controller: where its controls go and which RetroPad button each one is, the way RetroArch's
+  // cores for that console read them. at: [edge, across, down]: "l" and "r" count from that side, "c"
+  // from the middle; all in hundredths of the area's height. s: size; w, h: a pill's.
+  var START_SELECT = [
+    { t: "btn", id: SELECT, label: "SELECT", at: ["c", -12, 84], w: 20, h: 8, pill: true, dark: true, small: true },
+    { t: "btn", id: START, label: "START", at: ["c", 12, 84], w: 20, h: 8, pill: true, dark: true, small: true }
+  ];
+  var KINDS = {
+    nes: { name: "NES", controls: [
+      { t: "dpad", at: ["l", 30, 56], s: 46 },
+      { t: "btn", id: B, label: "B", at: ["r", 54, 60], s: 24, col: "#c8253a" },
+      { t: "btn", id: A, label: "A", at: ["r", 24, 60], s: 24, col: "#c8253a" }
+    ].concat(START_SELECT) },
+    snes: { name: "SNES", controls: [
+      { t: "btn", id: L, label: "L", at: ["l", 26, 10], w: 34, h: 11, pill: true, dark: true },
+      { t: "btn", id: R, label: "R", at: ["r", 26, 10], w: 34, h: 11, pill: true, dark: true },
+      { t: "dpad", at: ["l", 30, 56], s: 44 },
+      { t: "btn", id: X, label: "X", at: ["r", 38, 36], s: 19, col: "#2f62c9" },
+      { t: "btn", id: Y, label: "Y", at: ["r", 59, 56], s: 19, col: "#2f9a4a" },
+      { t: "btn", id: A, label: "A", at: ["r", 17, 56], s: 19, col: "#c8253a" },
+      { t: "btn", id: B, label: "B", at: ["r", 38, 76], s: 19, col: "#d6a51c" }
+    ].concat(START_SELECT) },
+    genesis: { name: "Sega Genesis / Mega Drive", controls: [
+      { t: "dpad", at: ["l", 30, 56], s: 44 },
+      { t: "btn", id: L, label: "X", at: ["r", 64, 40], s: 17, dark: true },
+      { t: "btn", id: X, label: "Y", at: ["r", 42, 36], s: 17, dark: true },
+      { t: "btn", id: R, label: "Z", at: ["r", 20, 32], s: 17, dark: true },
+      { t: "btn", id: Y, label: "A", at: ["r", 64, 64], s: 20, col: "#3a3236" },
+      { t: "btn", id: B, label: "B", at: ["r", 42, 60], s: 20, col: "#3a3236" },
+      { t: "btn", id: A, label: "C", at: ["r", 20, 56], s: 20, col: "#3a3236" },
+      { t: "btn", id: SELECT, label: "MODE", at: ["c", -12, 84], w: 20, h: 8, pill: true, dark: true, small: true },
+      { t: "btn", id: START, label: "START", at: ["c", 12, 84], w: 20, h: 8, pill: true, dark: true, small: true }
+    ] },
+    gb: { name: "Game Boy", controls: [
+      { t: "dpad", at: ["l", 30, 56], s: 44 },
+      { t: "btn", id: B, label: "B", at: ["r", 50, 64], s: 22, col: "#a3245b" },
+      { t: "btn", id: A, label: "A", at: ["r", 22, 52], s: 22, col: "#a3245b" }
+    ].concat(START_SELECT) },
+    gba: { name: "Game Boy Advance", controls: [
+      { t: "btn", id: L, label: "L", at: ["l", 26, 10], w: 34, h: 11, pill: true, dark: true },
+      { t: "btn", id: R, label: "R", at: ["r", 26, 10], w: 34, h: 11, pill: true, dark: true },
+      { t: "dpad", at: ["l", 30, 56], s: 44 },
+      { t: "btn", id: B, label: "B", at: ["r", 50, 64], s: 22, col: "#4b3fa8" },
+      { t: "btn", id: A, label: "A", at: ["r", 22, 52], s: 22, col: "#4b3fa8" }
+    ].concat(START_SELECT) },
+    // Mupen64Plus-Next: A is RetroPad B, B is Y, Z is L2; the C buttons are the right stick.
+    n64: { name: "N64", controls: [
+      { t: "btn", id: L, label: "L", at: ["l", 22, 10], w: 30, h: 11, pill: true, dark: true },
+      { t: "btn", id: L2, label: "Z", at: ["l", 60, 42], s: 16, dark: true },
+      { t: "btn", id: R, label: "R", at: ["r", 22, 10], w: 30, h: 11, pill: true, dark: true },
+      { t: "stick", stick: 0, at: ["l", 28, 62], s: 40 },
+      { t: "dpad", at: ["l", 68, 80], s: 24 },
+      { t: "btn", id: START, label: "START", at: ["c", 0, 72], s: 14, col: "#c8253a", small: true },
+      { t: "btn", id: B, label: "A", at: ["r", 30, 74], s: 20, col: "#2f62c9" },
+      { t: "btn", id: Y, label: "B", at: ["r", 54, 60], s: 17, col: "#2f9a4a" },
+      { t: "cbtn", axis: 1, dir: -1, label: "▲", at: ["r", 26, 24], s: 11 },
+      { t: "cbtn", axis: 1, dir: 1, label: "▼", at: ["r", 26, 48], s: 11 },
+      { t: "cbtn", axis: 0, dir: -1, label: "◀", at: ["r", 40, 36], s: 11 },
+      { t: "cbtn", axis: 0, dir: 1, label: "▶", at: ["r", 12, 36], s: 11 },
+      { t: "label", label: "C", at: ["r", 26, 36], s: 8 }
+    ] },
+    ps: { name: "PlayStation", controls: [
+      { t: "btn", id: L2, label: "L2", at: ["l", 52, 9], w: 26, h: 10, pill: true, dark: true },
+      { t: "btn", id: L, label: "L1", at: ["l", 22, 9], w: 26, h: 10, pill: true, dark: true },
+      { t: "btn", id: R, label: "R1", at: ["r", 22, 9], w: 26, h: 10, pill: true, dark: true },
+      { t: "btn", id: R2, label: "R2", at: ["r", 52, 9], w: 26, h: 10, pill: true, dark: true },
+      { t: "dpad", at: ["l", 28, 44], s: 36 },
+      { t: "btn", id: X, label: "△", at: ["r", 32, 27], s: 16, col: "#2b2528", fg: "#4fd1a5" },
+      { t: "btn", id: Y, label: "□", at: ["r", 49, 44], s: 16, col: "#2b2528", fg: "#f08ad2" },
+      { t: "btn", id: A, label: "○", at: ["r", 15, 44], s: 16, col: "#2b2528", fg: "#ff6b6b" },
+      { t: "btn", id: B, label: "✕", at: ["r", 32, 61], s: 16, col: "#2b2528", fg: "#7fa8ff" },
+      { t: "stick", stick: 0, at: ["l", 58, 78], s: 26 },
+      { t: "stick", stick: 1, at: ["r", 58, 78], s: 26 },
+      { t: "btn", id: SELECT, label: "SELECT", at: ["c", -11, 44], w: 18, h: 7, pill: true, dark: true, small: true },
+      { t: "btn", id: START, label: "START", at: ["c", 11, 44], w: 18, h: 7, pill: true, dark: true, small: true }
+    ] }
+  };
+  var ORDER = ["nes", "snes", "genesis", "gb", "gba", "n64", "ps"];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var area = $("area"), kindSel = $("kind"), playerSel = $("player");
+  function saved(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } }
+  function save(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  ORDER.forEach(function (k) { var o = document.createElement("option"); o.value = k; o.textContent = KINDS[k].name; kindSel.appendChild(o); });
+  var kind = KINDS[saved("pad.kind", "snes")] ? saved("pad.kind", "snes") : "snes";
+  kindSel.value = kind;
+  playerSel.value = saved("pad.player", "1");
+
+  // ---- The line to the TV ----
+  var ws = null, wsOpen = false, retry = 0, heart = null;
+  function connect() {
+    try { ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/pad/ws"); }
+    catch (e) { setTimeout(connect, 2000); return; }
+    ws.onopen = function () {
+      wsOpen = true; retry = 0;
+      send("p " + playerSel.value);
+      update(); // whatever is held right now
+      clearInterval(heart);
+      heart = setInterval(function () { if (wsOpen) ws.send("h"); }, 2000);
+      check();
+    };
+    ws.onclose = function () {
+      wsOpen = false; clearInterval(heart);
+      // What the TV held is let go there; let go here too.
+      held = {}; sticks = [[0, 0], [0, 0]]; draw();
+      show();
+      setTimeout(connect, Math.min(5000, 500 * Math.pow(2, retry++)));
+    };
+    ws.onerror = function () {};
+  }
+  function send(m) { if (wsOpen) ws.send(m); }
+
+  // ---- Controls on screen ----
+  var controls = [], u = 1, top0 = 0;
+  function build() {
+    area.innerHTML = "";
+    controls = KINDS[kind].controls.map(function (c) {
+      var el = document.createElement("div");
+      el.className = "c " + c.t + (c.pill ? " pill" : "") + (c.dark ? " dark" : "");
+      if (c.t === "btn" || c.t === "cbtn") {
+        el.classList.add("pb"); // not "btn": the pages' own buttons have that one
+        el.innerHTML = '<span class="t"></span>';
+        el.firstChild.textContent = c.label;
+        if (c.col) el.style.setProperty("--col", c.col);
+        if (c.t === "cbtn") el.style.setProperty("--col", "#d6a51c");
+        if (c.fg) el.style.color = c.fg;
+      } else if (c.t === "label") {
+        el.textContent = c.label;
+      } else if (c.t === "dpad") {
+        el.innerHTML = '<svg viewBox="0 0 100 100">' +
+          '<path class="arm" data-d="up" d="M34 4h32v30L50 50 34 34z"/>' +
+          '<path class="arm" data-d="down" d="M34 96h32V66L50 50 34 66z"/>' +
+          '<path class="arm" data-d="left" d="M4 34v32h30L50 50 34 34z"/>' +
+          '<path class="arm" data-d="right" d="M96 34v32H66L50 50 66 34z"/>' +
+          '<path class="arrow" d="M50 10l-7 10h14zM50 90l-7-10h14zM10 50l10-7v14zM90 50l-10-7v14z"/></svg>';
+      } else if (c.t === "stick") {
+        el.innerHTML = '<div class="knob"></div>';
+      }
+      el.setAttribute("aria-hidden", "true");
+      area.appendChild(el);
+      return { def: c, el: el };
+    });
+    place();
+  }
+
+  // Sizes in hundredths of the area's height, unless the area is too narrow for the two sides.
+  function place() {
+    var W = area.clientWidth, H = area.clientHeight;
+    u = Math.min(H / 100, W / 190);
+    top0 = (H - 100 * u) / 2;
+    controls.forEach(function (c) {
+      var d = c.def, at = d.at;
+      var x = at[0] === "l" ? at[1] * u : at[0] === "r" ? W - at[1] * u : W / 2 + at[1] * u;
+      var y = top0 + at[2] * u;
+      var w = (d.w || d.s) * u, h = (d.h || d.s) * u;
+      c.x = x; c.y = y; c.w = w; c.h = h;
+      c.el.style.left = x + "px"; c.el.style.top = y + "px";
+      c.el.style.width = w + "px"; c.el.style.height = h + "px";
+      c.el.style.fontSize = (d.small ? Math.max(9, Math.min(h * 0.42, w * 0.19)) : Math.max(11, Math.min(w, h) * 0.42)) + "px";
+    });
+  }
+
+  // ---- Touch: every finger, sliding across buttons too ----
+  var fingers = {}, keys = {}, held = {}, sticks = [[0, 0], [0, 0]];
+
+  // The control a point is on, with a little room around each, so a thumb near the edge still counts.
+  function hit(px, py) {
+    var best = null, bestD = Infinity;
+    controls.forEach(function (c) {
+      if (c.def.t === "label") return;
+      var dx = Math.abs(px - c.x), dy = Math.abs(py - c.y), pad = c.def.t === "dpad" ? 1.15 : 1.25;
+      var inside = c.def.pill ? dx <= c.w / 2 * pad && dy <= c.h / 2 * pad
+        : Math.hypot(dx / (c.w / 2), dy / (c.h / 2)) <= pad;
+      if (!inside) return;
+      var d = Math.hypot(dx, dy);
+      if (d < bestD) { bestD = d; best = c; }
+    });
+    return best;
+  }
+
+  function dpadDirs(c, px, py) {
+    var dx = (px - c.x) / (c.w / 2), dy = (py - c.y) / (c.h / 2), out = [];
+    if (Math.hypot(dx, dy) < 0.2) return out; // the middle: nothing
+    var a = Math.atan2(dy, dx) * 180 / Math.PI; // 0 right, 90 down
+    if (a > -67.5 && a < 67.5) out.push(RIGHT);
+    if (a > 112.5 || a < -112.5) out.push(LEFT);
+    if (a > 22.5 && a < 157.5) out.push(DOWN);
+    if (a < -22.5 && a > -157.5) out.push(UP);
+    return out;
+  }
+
+  function update() {
+    var want = {}, cx = 0, cy = 0, stickNow = [null, null];
+    Object.keys(keys).forEach(function (id) { want[id] = true; });
+    Object.keys(fingers).forEach(function (k) {
+      var f = fingers[k], c = f.ctrl;
+      if (!c) return;
+      var d = c.def;
+      if (d.t === "btn") want[d.id] = c;
+      else if (d.t === "dpad") dpadDirs(c, f.x, f.y).forEach(function (id) { want[id] = c; });
+      else if (d.t === "cbtn") { if (d.axis === 0) cx = d.dir; else cy = d.dir; }
+      else if (d.t === "stick") {
+        var r = c.w / 2, dx = f.x - c.x, dy = f.y - c.y, m = Math.hypot(dx, dy);
+        if (m > r) { dx = dx / m * r; dy = dy / m * r; }
+        stickNow[d.stick] = [Math.round(dx / r * 32767), Math.round(dy / r * 32767)];
+      }
+    });
+    var msgs = [], buzz = false;
+    for (var id = 0; id < 16; id++) {
+      var now = !!want[id], was = !!held[id];
+      if (now !== was) { msgs.push("b " + id + " " + (now ? 1 : 0)); if (now) buzz = true; }
+    }
+    held = want;
+    // The N64's C buttons are the right stick, all the way over.
+    var hasRight = KINDS[kind].controls.some(function (c) { return c.t === "stick" && c.stick === 1; });
+    if (!hasRight) stickNow[1] = [cx * 32767, cy * 32767];
+    for (var s = 0; s < 2; s++) {
+      var v = stickNow[s] || [0, 0];
+      for (var ax = 0; ax < 2; ax++) {
+        if (v[ax] === sticks[s][ax]) continue;
+        if (s === 1 && !hasRight && v[ax]) buzz = true; // a C button
+        msgs.push("a " + s + " " + ax + " " + v[ax]);
+      }
+      sticks[s] = v;
+    }
+    if (msgs.length) {
+      send(msgs.join(";"));
+      if (buzz && navigator.vibrate) navigator.vibrate(10);
+    }
+    draw();
+  }
+
+  function draw() {
+    controls.forEach(function (c) {
+      var d = c.def;
+      if (d.t === "btn") c.el.classList.toggle("on", !!held[d.id]);
+      else if (d.t === "cbtn") {
+        var v = sticks[1][d.axis];
+        c.el.classList.toggle("on", v !== 0 && Math.sign(v) === d.dir);
+      } else if (d.t === "dpad") {
+        c.el.querySelector('[data-d="up"]').classList.toggle("on", !!held[UP]);
+        c.el.querySelector('[data-d="down"]').classList.toggle("on", !!held[DOWN]);
+        c.el.querySelector('[data-d="left"]').classList.toggle("on", !!held[LEFT]);
+        c.el.querySelector('[data-d="right"]').classList.toggle("on", !!held[RIGHT]);
+      } else if (d.t === "stick") {
+        var v2 = sticks[d.stick], r = c.w / 2, knob = c.el.firstChild;
+        knob.style.transform = "translate(calc(-50% + " + (v2[0] / 32767 * r * 0.6) + "px), calc(-50% + " + (v2[1] / 32767 * r * 0.6) + "px))";
+      }
+    });
+  }
+
+  function point(e) {
+    var r = area.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  area.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    try { area.setPointerCapture(e.pointerId); } catch (x) {}
+    var p = point(e), c = hit(p.x, p.y);
+    fingers[e.pointerId] = { x: p.x, y: p.y, ctrl: c, stick: c && c.def.t === "stick" };
+    update();
+  });
+  area.addEventListener("pointermove", function (e) {
+    var f = fingers[e.pointerId];
+    if (!f) return;
+    e.preventDefault();
+    var p = point(e);
+    f.x = p.x; f.y = p.y;
+    // A stick keeps its finger wherever it goes; anything else follows the finger to what it's over now.
+    if (!f.stick) {
+      var c = hit(p.x, p.y);
+      // A finger on the D-pad keeps it while it stays near, so rolling a thumb doesn't drop the press.
+      if (f.ctrl && f.ctrl.def.t === "dpad" && (!c || c.def.t !== "btn") &&
+          Math.hypot(p.x - f.ctrl.x, p.y - f.ctrl.y) < f.ctrl.w * 0.85) c = f.ctrl;
+      f.ctrl = c;
+    }
+    update();
+  });
+  function lift(e) { if (fingers[e.pointerId]) { delete fingers[e.pointerId]; update(); } }
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(function (ev) { area.addEventListener(ev, lift); });
+  area.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+  // Let go of everything when the page is put away.
+  function letGo() { fingers = {}; keys = {}; update(); }
+  document.addEventListener("visibilitychange", function () { if (document.hidden) letGo(); else check(); });
+  window.addEventListener("blur", letGo);
+
+  // ---- A keyboard, on a computer ----
+  var KEYMAP = { ArrowUp: UP, ArrowDown: DOWN, ArrowLeft: LEFT, ArrowRight: RIGHT, z: B, x: A, a: Y, s: X, q: L, w: R,
+    Enter: START, Shift: SELECT, "1": L2, "2": R2 };
+  function keyId(e) { var k = e.key.length === 1 ? e.key.toLowerCase() : e.key; return KEYMAP.hasOwnProperty(k) ? KEYMAP[k] : null; }
+  document.addEventListener("keydown", function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey || e.target.tagName === "SELECT") return;
+    var id = keyId(e);
+    if (id === null) return;
+    e.preventDefault();
+    if (keys[id]) return;
+    keys[id] = true;
+    update();
+  });
+  document.addEventListener("keyup", function (e) {
+    var id = keyId(e);
+    if (id === null || !keys[id]) return;
+    delete keys[id];
+    update();
+  });
+
+  // ---- Choices ----
+  kindSel.addEventListener("change", function () {
+    letGo();
+    kind = kindSel.value; save("pad.kind", kind);
+    build(); kindSel.blur();
+  });
+  playerSel.addEventListener("change", function () {
+    letGo();
+    save("pad.player", playerSel.value);
+    send("p " + playerSel.value);
+    playerSel.blur();
+    check();
+  });
+  window.addEventListener("resize", place);
+  $("anyway").addEventListener("click", function () { document.body.classList.add("anyway"); setTimeout(place, 50); });
+
+  $("full").addEventListener("click", function () {
+    var d = document.documentElement;
+    if (document.fullscreenElement) { document.exitFullscreen(); return; }
+    var go = d.requestFullscreen ? d.requestFullscreen({ navigationUI: "hide" }) : null;
+    if (go && go.then) go.then(function () {
+      if (screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(function () {});
+    }).catch(function () {});
+  });
+
+  // ---- Whether RetroArch is there and listening ----
+  var state = null, poll = null;
+  function check() {
+    clearTimeout(poll);
+    fetch("/pad/state?player=" + playerSel.value).then(function (r) {
+      if (r.status === 401) { location.reload(); throw 0; }
+      return r.json();
+    }).then(function (st) {
+      state = st; show();
+      // While RetroArch isn't listening, look again now and then (it only takes a moment's look).
+      if (st.retroarch && !st.listening && !document.hidden) poll = setTimeout(check, 5000);
+    }).catch(function () { state = null; show(); if (!document.hidden) poll = setTimeout(check, 5000); });
+  }
+  function show() {
+    var el = $("status"), t = $("statustext"), help = $("helpstate");
+    el.className = "status";
+    if (!wsOpen) { el.classList.add("bad"); t.textContent = "Can't reach the TV"; help.textContent = "This phone can't reach the TV. Check they're on the same Wi-Fi."; return; }
+    if (!state) { t.textContent = "Connected"; help.textContent = ""; return; }
+    if (!state.retroarch) {
+      el.classList.add("bad"); t.textContent = "RetroArch isn't on this TV";
+      help.textContent = "RetroArch isn't installed on this TV. Install it from the TV's app store, then come back.";
+      $("openra").hidden = true; return;
+    }
+    $("openra").hidden = false;
+    if (state.listening) {
+      el.classList.add("ok"); t.textContent = "Player " + state.player + " · ready";
+      help.textContent = "RetroArch is listening for player " + state.player + ". Load a game and play.";
+    } else {
+      el.classList.add("warn"); t.textContent = "RetroArch isn't listening";
+      help.textContent = "RetroArch isn't listening for player " + state.player + " yet. Turn on its Network RetroPad, once:";
+    }
+  }
+
+  $("helpbtn").addEventListener("click", function () { letGo(); $("help").hidden = false; check(); });
+  $("helpclose").addEventListener("click", function () { $("help").hidden = true; });
+  $("help").addEventListener("click", function (e) { if (e.target === $("help")) $("help").hidden = true; });
+  $("openra").addEventListener("click", function () {
+    if (!state || !state.retroarch) return;
+    fetch("/open", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ app: state.retroarch }) })
+      .then(function () { setTimeout(check, 3000); }).catch(function () {});
+  });
+
+  build();
+  connect();
+  check();
+  // The first time, show how to set RetroArch up.
+  if (saved("pad.seen", "") !== "1") { $("help").hidden = false; save("pad.seen", "1"); }
+</script>
+</body>
+</html>

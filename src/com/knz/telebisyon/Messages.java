@@ -168,7 +168,7 @@ public class Messages extends Service {
             }
             if (path.length() > 1 && path.endsWith("/")) path = path.substring(0, path.length() - 1);
             long length = 0;
-            String type = "", cookie = "", pin = "", range = null, origin = null, host = "";
+            String type = "", cookie = "", pin = "", range = null, origin = null, host = "", wsKey = null;
             for (String l : lines) {
                 int colon = l.indexOf(':');
                 if (colon < 0) continue;
@@ -180,6 +180,7 @@ public class Messages extends Service {
                 else if (name.equals("range")) range = value;
                 else if (name.equals("origin")) origin = value;
                 else if (name.equals("host")) host = value;
+                else if (name.equals("sec-websocket-key")) wsKey = value;
             }
             // Another website open in a browser here can't make changes on the TV: browsers say where
             // a request comes from, and it must be one of these pages. (Scripts don't say.)
@@ -192,6 +193,14 @@ public class Messages extends Service {
             if (!tv && !signedIn(method, path, cookie, pin.isEmpty() ? form(query).optString("pin") : pin)) {
                 if (method.equals("GET") && PAGES.contains(path)) reply(s, 200, "text/html; charset=utf-8", page("login"));
                 else reply(s, 401, "{\"error\":\"PIN needed\"}");
+                return;
+            }
+            // The game controller's line to RetroArch (Pad). Browsers say where a WebSocket comes from,
+            // always: only this TV's own /pad page may hold one.
+            if (method.equals("GET") && path.equals("/pad/ws")) {
+                if (wsKey == null) reply(s, 400, "{\"error\":\"WebSocket only\"}");
+                else if (origin == null || !origin.equals((secure ? "https://" : "http://") + host)) reply(s, 403, "{\"error\":\"not from this TV's pages\"}");
+                else Pad.serve(s, in, wsKey);
                 return;
             }
             // Pictures go straight to a file, so they can be far bigger than any other request.
@@ -263,6 +272,10 @@ public class Messages extends Service {
                 files.handle(s, method, path, j);
             } else if (path.equals("/nekplik") || path.startsWith("/nekplik/")) {
                 nekplik(s, path, form(query));
+            } else if (method.equals("GET") && path.equals("/pad")) {
+                reply(s, 200, "text/html; charset=utf-8", page("pad"));
+            } else if (method.equals("GET") && path.equals("/pad/state")) {
+                padState(s, form(query).optInt("player", 1));
             } else if (path.equals("/remote") || path.startsWith("/remote/")) {
                 remote(s, method, path, params(query, text));
             } else if (path.equals("/call/tv") || path.startsWith("/call/tv/")) {
@@ -331,6 +344,16 @@ public class Messages extends Service {
                 reply(s, 404, "{\"error\":\"no such picture\"}");
             }
         } else reply(s, 404, "{\"error\":\"no such page\"}");
+    }
+
+    // For the /pad page: RetroArch's package (or null), whether it's listening for this player, and
+    // what's in front.
+    private void padState(Socket s, int player) throws Exception {
+        String ra = Pad.retroarch(this);
+        player = Math.max(1, Math.min(Pad.PLAYERS, player));
+        reply(s, 200, new JSONObject().put("retroarch", ra == null ? JSONObject.NULL : ra)
+                .put("listening", ra != null && Pad.listening(player)).put("player", player)
+                .put("front", ra != null && ra.equals(frontApp())).toString());
     }
 
     // The /remote page (remote.html). Volume and play/pause go to /volume and /media; the rest needs the
@@ -737,7 +760,7 @@ public class Messages extends Service {
                 .put("time", now).put("tzOffset", tz.getOffset(now) / 60000).put("h24", h24)
                 .put("locale", java.util.Locale.getDefault().toLanguageTag())
                 .put("avatarStamp", getSharedPreferences(MainActivity.PREFS, 0).getLong(MainActivity.PREF_AVATAR_STAMP, 0))
-                .put("nekplik", nekplikInstalled());
+                .put("nekplik", nekplikInstalled()).put("retroarch", Pad.retroarch(this) != null);
         org.json.JSONArray tiles = new org.json.JSONArray();
         for (MainActivity.Shown t : MainActivity.shown) {
             JSONObject o = new JSONObject().put("key", t.key).put("label", t.label)
@@ -867,7 +890,7 @@ public class Messages extends Service {
     // (POST /notify, /cancel) never need it, so what speaks PiPup keeps working.
     static final String PREF_PIN_HASH = "pinhash", PREF_PIN_SALT = "pinsalt", PREF_PIN_TOKEN = "pintoken";
     private static final String COOKIE = "telebisyon";
-    private static final java.util.List<String> PAGES = java.util.Arrays.asList("/", "/message", "/notify", "/wallpapers", "/files", "/call", "/remote", "/nekplik");
+    private static final java.util.List<String> PAGES = java.util.Arrays.asList("/", "/message", "/notify", "/wallpapers", "/files", "/call", "/remote", "/nekplik", "/pad");
     private static int failures;
     private static long lockedUntil;
 
