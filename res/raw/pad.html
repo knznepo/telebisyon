@@ -23,6 +23,8 @@
     background: var(--glass) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") right 9px center / 14px no-repeat; }
   .bar select option { color: #000; }
   .bar .icon { width: 34px; padding: 0; justify-content: center; }
+  .bar #menu { flex: none; font-weight: 500; }
+  .bar #menu:active { background: #fff; color: var(--ink); }
   .bar svg { width: 18px; height: 18px; }
   .status { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--dim);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -83,6 +85,7 @@
   <select id="player" aria-label="Player">
     <option value="1">Player 1</option><option value="2">Player 2</option><option value="3">Player 3</option><option value="4">Player 4</option>
   </select>
+  <button type="button" id="menu" aria-label="RetroArch's menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"/></svg>Menu</button>
   <span class="status" id="status" role="status" aria-live="polite"><i></i><span id="statustext">Connecting…</span></span>
   <button type="button" class="icon" id="full" aria-label="Full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   <button type="button" class="icon" id="helpbtn" aria-label="How to set up RetroArch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2.2-2.4 3.7M12 17.2v.1"/></svg></button>
@@ -109,7 +112,8 @@
       <li>Close RetroArch and open it again, so it saves the settings and starts listening. Then load a game.</li>
     </ol>
     <p>Pick the controller that matches the game's console. For PlayStation games that use the sticks, open the game's <b>Quick Menu → Controls → Port 1 Controls</b> and set <b>Device Type</b> to <b>DualShock</b>.</p>
-    <p>On a computer, the keyboard works too: arrows, <b>Z</b> <b>X</b> <b>A</b> <b>S</b> for the buttons, <b>Q</b> <b>W</b> for the shoulders, <b>Enter</b> for Start and <b>Shift</b> for Select.</p>
+    <p><b>Menu</b>, at the top, opens RetroArch's Quick Menu in a game: <b>Resume</b> goes back to it, <b>Close Content</b> ends it, and <b>Save State</b> keeps your place. It presses the TV's Back button, so it needs Telebisyon's remote turned on (<b>sh remote.sh</b>, once).</p>
+    <p>On a computer, the keyboard works too: arrows, <b>Z</b> <b>X</b> <b>A</b> <b>S</b> for the buttons, <b>Q</b> <b>W</b> for the shoulders, <b>Enter</b> for Start, <b>Shift</b> for Select and <b>Esc</b> for Menu.</p>
     <div class="row">
       <button type="button" class="main" id="openra">Open RetroArch on the TV</button>
       <button type="button" id="helpclose">Done</button>
@@ -415,6 +419,7 @@
   function keyId(e) { var k = e.key.length === 1 ? e.key.toLowerCase() : e.key; return KEYMAP.hasOwnProperty(k) ? KEYMAP[k] : null; }
   document.addEventListener("keydown", function (e) {
     if (e.metaKey || e.ctrlKey || e.altKey || e.target.tagName === "SELECT") return;
+    if (e.key === "Escape" && !e.repeat && $("help").hidden) { e.preventDefault(); menu(); return; }
     var id = keyId(e);
     if (id === null) return;
     e.preventDefault();
@@ -486,6 +491,23 @@
       help.textContent = "RetroArch isn't listening for player " + state.player + " yet. Turn on its Network RetroPad, once:";
     }
   }
+
+  // Menu: the TV's Back button, which RetroArch on Android answers with its Quick Menu (in a game) or
+  // by going back a level (in its menus). Telebisyon's remote service presses it.
+  function menu() {
+    letGo();
+    if (navigator.vibrate) navigator.vibrate(10);
+    fetch("/remote/key", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: "back" }) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; }); })
+      .catch(function (e) {
+        var t = $("statustext"), el = $("status");
+        el.className = "status bad";
+        t.textContent = e && e.off ? "Menu needs the remote on: sh remote.sh" : "Menu didn't reach the TV";
+        clearTimeout(menuNote); menuNote = setTimeout(show, 4000);
+      });
+  }
+  var menuNote = null;
+  $("menu").addEventListener("click", function () { menu(); $("menu").blur(); });
 
   $("helpbtn").addEventListener("click", function () { letGo(); $("help").hidden = false; check(); });
   $("helpclose").addEventListener("click", function () { $("help").hidden = true; });
