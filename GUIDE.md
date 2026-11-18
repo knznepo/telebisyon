@@ -100,7 +100,7 @@ It asks what to do: **1** installs everything (the home screen, phone pages, Fil
 | `http://192.168.1.50:7979/message` | Send a message to the TV screen, with an optional chime |
 | `http://192.168.1.50:7979/wallpapers` | Upload photos, pick the wallpaper, shuffle them, set up the photo frame, and set your profile picture |
 | `http://192.168.1.50:7979/remote` | The TV's remote: arrows, OK, Back, Home, volume, play/pause and power. Arrows need `sh remote.sh 192.168.1.50` once (volume works without) |
-| `http://192.168.1.50:7979/pad` | Play RetroArch games with your phone as the controller (see below). Pick the console (NES, SNES, Sega Genesis, Game Boy, Game Boy Advance, N64 or PlayStation) and the player (1 to 4), and turn the phone sideways |
+| `http://192.168.1.50:7979/pad` | Play RetroArch games with your phone as the controller (see below). Pick the console (NES, SNES, Sega Genesis, Game Boy, Game Boy Advance, N64 or PlayStation, or Mobile to move by tilting the phone) and the player (1 to 4), and turn the phone sideways |
 | `http://192.168.1.50:7979/call` | Call the TV with video or audio only. It plays on the TV straight away, over whatever is on, with nothing to answer. Audio only has **Hold to talk**, like an intercom. The first time, your browser warns that the connection isn't private: tap **Advanced**, then **Proceed** |
 | `http://192.168.1.50:7979/files` | Browse the TV and USB drives, upload (drag files onto the page), download, rename, delete, and install APKs. Off until you run `sh files.sh 192.168.1.50` |
 
@@ -122,6 +122,7 @@ See **"Can Home Assistant control the TV?"** in [README.md](README.md#web-page) 
 | The remote says it's off | Run `sh remote.sh 192.168.1.50` (with debugging on). Updates can turn it off; running `setup.sh` with `REMOTE=1` turns it back on. |
 | The game controller says RetroArch isn't listening | In RetroArch, turn on **Settings → Network → Network RetroPad** and **User 1 Network RetroPad** (or the player you picked), then close RetroArch and open it again. |
 | **Menu** on the game controller does nothing | In RetroArch, turn on **Settings → Network → Network Commands**, then close RetroArch and open it again. |
+| Tilt does nothing on **Mobile** | Tap the circle: phones only allow tilt on a secure page, so it opens `https://192.168.1.50:7980/pad` (tap **Advanced**, then **Proceed** if the browser warns). On an iPhone, allow **Motion & Orientation** when asked. Tap the circle again to set the middle. |
 | Game buttons do nothing in a game | Pick the console that matches the game at the top of the page. For PlayStation games with sticks, set the game's **Quick Menu → Controls → Port 1 Controls → Device Type** to **DualShock**. |
 | The TV's clock is wrong | `sh clock.sh 192.168.1.50` turns on internet time and sets your time zone. |
 | The TV's IP address changed | Use the new one. Setting a fixed IP for the TV in your router stops this from happening. |

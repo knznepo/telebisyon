@@ -24,7 +24,7 @@ Looking for the **TV cleanup** (turning off bloatware, ads and sponsored rows) o
 - **A web page on the TV** (`http://<TV_IP>:7979`) for any phone or computer on your Wi-Fi: a live copy of the home screen whose tiles open on the TV, a message sender, a wallpaper manager and a **file manager** for the TV's storage and USB drives. It can sit behind a **PIN**.
 - **Messages** over whatever is playing, compatible with PiPup, with an optional chime.
 - **A remote on your phone or computer:** arrows, OK, Back, Home, volume, play/pause and power.
-- **A game controller for RetroArch** on your phone: NES, SNES, Sega Genesis, Game Boy, Game Boy Advance, N64 and PlayStation layouts, for up to 4 players.
+- **A game controller for RetroArch** on your phone: NES, SNES, Sega Genesis, Game Boy, Game Boy Advance, N64 and PlayStation layouts, or **Mobile**, where you tilt the phone to move, like a phone game. Up to 4 players.
 - **NEKPLIK** (optional): your own movies and series in a streaming-app style, from a USB drive, a hard disk, a computer or a phone on the Wi-Fi, with search, collections and subtitles. A phone or computer sharing them also serves NEKPLIK to any browser on the Wi-Fi. See [nekplik/](nekplik/README.md).
 - **Call the TV** from a phone's browser, with video or audio only. It plays on the TV straight away, over whatever is on: the show keeps playing, turned down while you talk. Nobody has to answer. Audio only works like an intercom, with hold to talk.
 - **Home Assistant control**: what's playing, pause and play, volume, open an app.
@@ -252,7 +252,8 @@ sh remote.sh <TV_IP> off      # off
 
 Yes, for **RetroArch** on the TV: open `http://<TV_IP>:7979/pad` (or **Game controller** on the web page's home, which shows once RetroArch is installed), and turn the phone sideways.
 
-- **Pick the console** at the top: **NES**, **SNES**, **Sega Genesis / Mega Drive**, **Game Boy**, **Game Boy Advance**, **N64** or **PlayStation**. Each shows that console's buttons, sent the way RetroArch's cores for it expect: the Sega's A, B and C, the N64's Z and C buttons, the PlayStation's △ ○ ✕ □ and sticks.
+- **Pick the console** at the top: **NES**, **SNES**, **Sega Genesis / Mega Drive**, **Game Boy**, **Game Boy Advance**, **N64** or **PlayStation**, or **Mobile (tilt to move)**. Each shows that console's buttons, sent the way RetroArch's cores for it expect: the Sega's A, B and C, the N64's Z and C buttons, the PlayStation's △ ○ ✕ □ and sticks.
+- **Mobile (tilt to move)** plays retro games like phone games: lean the phone to move, and press **A**, **B**, **X**, **Y**, **L**, **R**, **Start** and **Select** on screen. Tap the circle to set how you hold the phone as the middle. The button under it picks whether tilt moves the **D-pad** (most games) or the **stick** (N64 and PlayStation games). Phones only allow tilt on secure pages, so the first tap opens the TV's own one (`https://<TV_IP>:7980/pad`): if the browser warns that it isn't private, tap **Advanced**, then **Proceed**.
 - **Up to 4 players**, one phone each: pick **Player 1** to **4**.
 - **Hold several buttons** at once, and slide a thumb from one to the next.
 - **Menu**, at the top, opens RetroArch's Quick Menu during a game: **Resume** to go back, **Close Content** to quit the game, **Save State** to keep your place.
