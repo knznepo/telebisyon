@@ -114,7 +114,7 @@
       <li>Close RetroArch and open it again, so it saves the settings and starts listening. Then load a game.</li>
     </ol>
     <p>Pick the controller that matches the game's console. On <b>PlayStation</b>, the left stick also presses the D-pad (most PlayStation games only read the D-pad); the switch between the sticks turns that off. For PlayStation games that use the sticks, open the game's <b>Quick Menu → Controls → Port 1 Controls</b> and set <b>Device Type</b> to <b>DualShock</b>.</p>
-    <p><b>Mobile (tilt or touch)</b> plays like a phone game: move with the thumb, or by leaning the phone, or both. <b>Move</b> picks a <b>D-pad</b> (most games) or a <b>stick</b> (N64 and PlayStation games), <b>Tilt</b> turns leaning on or off, and <b>Center</b> makes the way you hold the phone now the middle. Phones only allow tilt on a secure page, so with tilt on, this moves to the TV's own one: if the browser warns that it isn't private, tap <b>Advanced</b>, then <b>Proceed</b>.</p>
+    <p><b>Mobile (tilt or touch)</b> plays like a phone game: move with the thumb, or by leaning the phone, or both. <b>Move</b> picks a <b>D-pad</b> or a <b>stick</b> (which also presses the D-pad, so it works in any game; <b>Stick as D-pad</b> turns that off), <b>Tilt</b> turns leaning on or off, and <b>Center</b> makes the way you hold the phone now the middle. Phones only allow tilt on a secure page, so with tilt on, this moves to the TV's own one: if the browser warns that it isn't private, tap <b>Advanced</b>, then <b>Proceed</b>.</p>
     <p><b>Menu</b>, at the top, opens RetroArch's Quick Menu in a game: <b>Resume</b> goes back to it, <b>Close Content</b> ends it, and <b>Save State</b> keeps your place. Press it again to close the menu.</p>
     <p>On a computer, the keyboard works too: arrows, <b>Z</b> <b>X</b> <b>A</b> <b>S</b> for the buttons, <b>Q</b> <b>W</b> for the shoulders, <b>Enter</b> for Start, <b>Shift</b> for Select and <b>Esc</b> for Menu.</p>
     <div class="row">
@@ -207,8 +207,8 @@
       { t: "ui", act: "stickpad", at: ["c", 0, 62], w: 42, h: 7, pill: true, dark: true, small: true }
     ] },
     // Like a phone game: a D-pad or a stick (picked here), and tilting the phone moves it too.
-    mobile: { name: "Mobile (tilt or touch)", tilt: true, make: function () {
-      return [
+    mobile: { name: "Mobile (tilt or touch)", tilt: true, stickPad: true, make: function () {
+      return (tilt.mode === "stick" ? [{ t: "ui", act: "stickpad", at: ["c", 0, 22], w: 42, h: 7, pill: true, dark: true, small: true }] : []).concat([
         tilt.mode === "stick" ? { t: "stick", stick: 0, at: ["l", 34, 52], s: 46 } : { t: "dpad", at: ["l", 34, 52], s: 46 },
         { t: "ui", act: "mode", at: ["l", 20, 89], w: 28, h: 8, pill: true, dark: true, small: true },
         { t: "ui", act: "tilt", at: ["l", 52, 89], w: 26, h: 8, pill: true, dark: true, small: true },
@@ -219,7 +219,7 @@
         { t: "btn", id: Y, label: "Y", at: ["r", 60, 42], s: 18, col: "#2f9a4a" },
         { t: "btn", id: A, label: "A", at: ["r", 26, 61], s: 30, col: "#c8253a" },
         { t: "btn", id: B, label: "B", at: ["r", 62, 75], s: 24, col: "#d6a51c" }
-      ].concat(START_SELECT);
+      ]).concat(START_SELECT);
     } }
   };
   var ORDER = ["nes", "snes", "genesis", "gb", "gba", "n64", "ps", "mobile"];
@@ -369,7 +369,12 @@
       }
     });
     // Mobile: the phone's lean, as the D-pad or the left stick.
-    // PlayStation: the left stick pressed past halfway also presses the D-pad, in its direction.
+    // A thumb on the stick wins over the lean; on the D-pad, both count.
+    if (KINDS[kind].tilt && tilt.on && tilt.live && !document.hidden) {
+      if (tilt.mode === "stick") { if (!stickNow[0]) stickNow[0] = [Math.round(tilt.x * 64) * 512, Math.round(tilt.y * 64) * 512]; }
+      else Object.keys(tilt.dirs).forEach(function (id) { if (!want[id]) want[id] = true; });
+    }
+    // PlayStation and Mobile: the left stick (or the lean on it) past halfway also presses the D-pad, its way.
     if (KINDS[kind].stickPad && stickPad && stickNow[0]) {
       var px = stickNow[0][0] / 32767, py = stickNow[0][1] / 32767;
       if (Math.hypot(px, py) > 0.5) {
@@ -379,11 +384,6 @@
         if (deg > 22.5 && deg < 157.5) want[DOWN] = want[DOWN] || true;
         if (deg < -22.5 && deg > -157.5) want[UP] = want[UP] || true;
       }
-    }
-    // A thumb on the stick wins over the lean; on the D-pad, both count.
-    if (KINDS[kind].tilt && tilt.on && tilt.live && !document.hidden) {
-      if (tilt.mode === "stick") { if (!stickNow[0]) stickNow[0] = [Math.round(tilt.x * 64) * 512, Math.round(tilt.y * 64) * 512]; }
-      else Object.keys(tilt.dirs).forEach(function (id) { if (!want[id]) want[id] = true; });
     }
     var msgs = [], buzz = false;
     for (var id = 0; id < 16; id++) {
